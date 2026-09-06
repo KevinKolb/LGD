@@ -23,7 +23,7 @@ current and archive the executed PDF once it's signed.
 | User | Role | Can act for |
 | --- | --- | --- |
 | Kevin Kolb | admin | every landlord |
-| Steve Hartnett | landlord | LGD Properties |
+| Pam Hartnett | landlord | LGD Properties |
 | Gay Robertson | landlord | Gay Robertson Properties |
 
 A landlord user only ever sees and creates leases for their own company. The admin
@@ -70,7 +70,7 @@ cp .env.example .env
 ```bash
 python -m app.accounts init
 python -m app.accounts set-password kevin
-python -m app.accounts set-password steve
+python -m app.accounts set-password pam
 python -m app.accounts set-password gay
 ```
 

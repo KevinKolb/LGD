@@ -168,14 +168,14 @@ writes a starter file with the two landlords and three users this app was built 
 | User | Role | Can act for |
 | --- | --- | --- |
 | `kevin` (Kevin Kolb) | admin | every landlord |
-| `steve` (Steve Hartnett) | landlord | LGD Properties |
+| `pam` (Pam Hartnett) | landlord | LGD Properties |
 | `gay` (Gay Robertson) | landlord | Gay Robertson Properties |
 
 Nobody can log in until a password is set for them:
 
 ```bash
 python -m app.accounts set-password kevin
-python -m app.accounts set-password steve
+python -m app.accounts set-password pam
 python -m app.accounts set-password gay
 ```
 
@@ -198,7 +198,7 @@ Free checks first — none of these create a document:
 ```bash
 pytest                                                 # stubbed, spends nothing
 python -m app.accounts list                            # confirms accounts.json is valid
-curl -u steve:PASSWORD http://localhost:8000/api/config # steve should see only LGD Properties
+curl -u pam:PASSWORD http://localhost:8000/api/config   # pam should see only LGD Properties
 curl -u kevin:PASSWORD http://localhost:8000/api/config # kevin should see both landlords
 ```
 

@@ -27,12 +27,12 @@ STARTER: dict[str, Any] = {
         {
             "id": "lgd",
             "company": "LGD Properties",
-            "signer_name": "Steve Hartnett",
-            "email": "steveahartnett@yahoo.com",
+            "signer_name": "Pam Hartnett",
+            "email": "pamelahartnett@yahoo.com",
         },
         {
             "id": "robertson",
-            "company": "Gay Robertson Properties",
+            "company": "Orange Street LLC",
             "signer_name": "Gay Robertson",
             "email": "hrobertson@yahoo.com",
         },
@@ -45,8 +45,8 @@ STARTER: dict[str, Any] = {
             "password_hash": "",
         },
         {
-            "username": "steve",
-            "display_name": "Steve Hartnett",
+            "username": "pam",
+            "display_name": "Pam Hartnett",
             "role": ROLE_LANDLORD,
             "landlord_id": "lgd",
             "password_hash": "",
