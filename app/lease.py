@@ -1,8 +1,9 @@
 """Lease form model and PandaDoc token mapping.
 
-Every field here corresponds to a blank in the source lease, transcribed in
-`originals/lease_transcript_verbatim.md`. Section numbers in comments refer to
-that document.
+Every field here corresponds to a blank in the source lease, kept as the live
+working copy at `originals/lease.md`. Section numbers in comments refer to that
+document. (The original scan's untouched transcript lives separately at
+`originals/lease_transcript_verbatim.md` and is not to be edited.)
 
 Terminology note: the lease document says "Lessee". The landlord-facing
 dashboard calls the same person an "Approved Potential Tenant". The model keeps

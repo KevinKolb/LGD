@@ -9,7 +9,8 @@ current and archive the executed PDF once it's signed.
 
 | Path | What it is |
 | --- | --- |
-| [originals/](originals/) | The source lease, transcribed verbatim. **Do not edit.** |
+| [originals/lease.md](originals/lease.md) | The **live** lease text. Edit this one. |
+| [originals/lease_transcript_verbatim.md](originals/lease_transcript_verbatim.md) | The original scan, transcribed verbatim. **Do not edit.** |
 | [pandadoc/](pandadoc/) | One-time PandaDoc setup and the template body to paste in |
 | [landlord/](landlord/) | The dashboard — a single static page behind HTTP Basic |
 | [app/](app/) | FastAPI service: JSON API, PandaDoc client, webhook receiver |
@@ -155,11 +156,25 @@ passwords and send them to the tenant directly, not to a shared inbox.
 
 PandaDoc is stubbed throughout, so the suite is free to run and safe offline.
 
-## The original lease
+## The lease text: two files, two purposes
 
 `originals/lease_transcript_verbatim.md` is a character-for-character transcript of
-the scanned paper lease and is not to be edited. Its known typos ("commended" for
-commenced, "solidarity" for solidarily, and others catalogued at the end of that file)
-are reproduced deliberately in the PandaDoc template body: they appear in the executed
-paper lease, and correcting them changes the instrument. That is a decision for a
-lawyer, not a find-and-replace.
+the original scanned paper lease. It is a historical record and is **not to be
+edited** — ever.
+
+`originals/lease.md` is the **live working copy**, meant to be edited over time as
+the lease's actual terms change. It started identical to the verbatim transcript, and
+is kept free of process notes and commentary so it stays a clean document to edit —
+see [`CLAUDE.md`](CLAUDE.md) for that context instead.
+[`pandadoc/lease_template_body.md`](pandadoc/lease_template_body.md) is a
+**generated file** (blanks replaced by PandaDoc tokens), produced by
+[`pandadoc/generate_template_body.py`](pandadoc/generate_template_body.py) — never
+edit it directly. After editing `originals/lease.md`, run
+`python pandadoc/generate_template_body.py` and re-paste the result into PandaDoc.
+
+The verbatim transcript preserves several original OCR-era wording quirks
+("commended" for commenced, "solidarity" for solidarily, and others) that were
+reviewed and deliberately corrected in `originals/lease.md` on 2026-09-06 — see
+`CLAUDE.md` for the full before/after list. Any further correction to the lease's
+wording is a legal decision, not a find-and-replace: it belongs in
+`originals/lease.md`, made deliberately, never silently.

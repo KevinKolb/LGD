@@ -54,11 +54,17 @@ this app never sends a key to the client.
 
 ## 3. Build the lease template
 
-1. **Templates → New template → Start from scratch.**
-2. Name it something like `LGD Residential Lease`.
-3. Paste the body from [`lease_template_body.md`](lease_template_body.md). It is the
-   lease from `originals/lease_transcript_verbatim.md` with the blanks replaced by
-   tokens.
+1. Run `python pandadoc/generate_template_body.py` to make sure
+   [`lease_template_body.md`](lease_template_body.md) reflects the current
+   [`originals/lease.md`](../originals/lease.md) — it's a generated file, never
+   hand-edited, so this is always safe and fast to re-run.
+2. **Templates → New template → Start from scratch.**
+3. Name it something like `LGD Residential Lease`.
+4. Paste the body from `lease_template_body.md`. Its own header lists the current
+   token table; its footer has a print-layout checklist (page size, margins,
+   fonts, page breaks, per-page initials) to work through once the wording is in —
+   none of that can live in a text file, so it's a manual pass in PandaDoc's own
+   editor.
 
 ### 3a. Roles
 
@@ -75,27 +81,13 @@ mismatch makes document creation fail:
 ### 3b. Tokens
 
 Tokens are the `[Group.Name]` placeholders already in the pasted text. PandaDoc picks
-them up automatically. Confirm under **Manage → Tokens** that all seventeen appear:
-
-| Token | Fills |
-| --- | --- |
-| `Lessor.Name` | Lessor on the opening line |
-| `Lessee.Names` | Tenant names on the opening line |
-| `Premises.Address` | "the premises known as ___" |
-| `Term.StartDay` | §1 "the ___ day of" |
-| `Term.StartMonth` | §1 start month |
-| `Term.StartYear` | §1 start year, last two digits |
-| `Term.EndMonth` | §1 "ending on the last day of ___" |
-| `Term.EndYear` | §1 end year, last two digits |
-| `Rent.Monthly` | §2 monthly rental |
-| `Rent.Discounted` | §2 net rental if paid on time |
-| `Deposit.Amount` | §3 security deposit |
-| `Occupants.List` | §4 occupants |
-| `Utilities.Excluded` | §13 "except ___" |
-| `Execution.City` | Execution block city |
-| `Execution.Day` | Execution block day |
-| `Execution.Month` | Execution block month |
-| `Execution.Year` | Execution block year, last two digits |
+them up automatically. Confirm under **Manage → Tokens** that all the tokens listed
+in `lease_template_body.md`'s own "Tokens" section (right at the top of that
+generated file) appear — that table is regenerated from the current lease every
+time, so it's the source of truth on which section each token fills, not a copy
+here that can go stale (an earlier version of this section did exactly that: it
+said `Utilities.Excluded` fills §13, which was true before the §6 SMOKING clause
+was added and everything after §5 shifted up by one).
 
 The years are two digits because the lease pre-prints `20__`. The app sends `26` for
 2026 — do not add another `20` in the template.

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legal Review — Louisiana / Orleans Parish</title>
+<style>
+  @page {
+    size: letter;
+    margin: 0.85in;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Georgia, "Times New Roman", Times, serif;
+      font-size: 9pt;
+      color: #444;
+    }
+  }
+  html, body { margin: 0; padding: 0; background: #fff; color: #111; }
+  body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.42;
+    max-width: 7.5in;
+    margin: 0 auto;
+    padding: 0.25in 0 1in;
+  }
+  h1 {
+    font-size: 16pt;
+    margin: 0 0 0.05in;
+  }
+  .subtitle {
+    color: #555;
+    font-size: 10pt;
+    margin: 0 0 0.3in;
+  }
+  .disclaimer {
+    background: #f4f1e8;
+    border: 1px solid #d8d0b8;
+    padding: 0.12in 0.16in;
+    font-size: 9.5pt;
+    margin: 0 0 0.35in;
+    page-break-inside: avoid;
+  }
+  h2 {
+    font-size: 12.5pt;
+    border-bottom: 1.5px solid #222;
+    padding-bottom: 0.04in;
+    margin: 0.35in 0 0.12in;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 10.5pt;
+    margin: 0.2in 0 0.05in;
+    page-break-after: avoid;
+  }
+  .item {
+    margin: 0 0 0.16in;
+    page-break-inside: avoid;
+  }
+  .item .verdict {
+    font-weight: 600;
+  }
+  .item .cite {
+    color: #444;
+    font-size: 9.5pt;
+    font-style: italic;
+  }
+  .severity {
+    display: inline-block;
+    font-size: 8.5pt;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.02in 0.08in;
+    border-radius: 3px;
+    margin-right: 0.08in;
+    vertical-align: middle;
+  }
+  .severity.high { background: #f6d9d6; color: #7a1f16; }
+  .severity.medium { background: #fbe9c7; color: #6b4a08; }
+  .severity.ok { background: #d8ebe0; color: #1c5c3c; }
+  .fix-checkbox {
+    display: inline-block;
+    width: 0.14in;
+    height: 0.14in;
+    border: 1px solid #333;
+    margin-right: 0.08in;
+    vertical-align: middle;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.1in 0 0.2in;
+    font-size: 10pt;
+  }
+  th, td {
+    border: 1px solid #bbb;
+    padding: 0.05in 0.08in;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #eee; }
+  .sources {
+    margin-top: 0.4in;
+    padding-top: 0.15in;
+    border-top: 1px solid #999;
+    font-size: 9pt;
+    color: #333;
+  }
+  .sources li { margin-bottom: 0.05in; }
+  .footer-note {
+    margin-top: 0.4in;
+    padding-top: 0.15in;
+    border-top: 1px solid #999;
+    font-size: 8.5pt;
+    color: #444;
+  }
+  @media print {
+    .footer-note { display: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @media screen {
+    body { padding: 0.5in 0.75in 1in; box-shadow: 0 0 12px rgba(0,0,0,.15); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Legal Review — Louisiana &amp; Orleans Parish</h1>
+<p class="subtitle">
+  Lower Garden District lease · reviewed 2026-09-06 · legality and lessor
+  protection, with attention to Louisiana state law and Orleans Parish
+  ordinances specifically
+</p>
+
+<div class="disclaimer">
+  <strong>Not legal advice.</strong> This is Claude's research summary, not an
+  attorney's opinion. Section numbers below refer to <code>originals/lease.md</code>
+  as of the review date. Every citation should be independently verified before
+  being relied on — see <code>LEGAL_RESEARCH.md</code> in the repository for
+  source URLs and which sources were read in full versus only seen through a
+  search tool's summary. Check the box next to an item once it has actually
+  been addressed or a decision has been made not to.
+</div>
+
+<h2>Missing entirely — not tied to one existing section</h2>
+<p style="margin-top:-0.05in; color:#555; font-size:9.5pt;">
+  These carry the most exposure: federal and Orleans-Parish-specific
+  requirements the lease currently says nothing about at all.
+</p>
+
+<div class="item">
+  <span class="fix-checkbox"></span><span class="severity high">HIGH</span>
+  <span class="verdict">Federal lead-based paint disclosure.</span>
+  Any pre-1978 rental requires a signed lead warning statement, the EPA
+  "Protect Your Family From Lead in Your Home" pamphlet, and disclosure of any
+  known lead hazards, with records kept 3 years. Penalties run up to
+  <strong>$21,018 per violation</strong>, plus a private right of action.
+  New Orleans' housing stock skews old; the lease currently has no such
+  disclosure at all, though its own ancestor template (NOMAR) does.
+  <div class="cite">40 CFR Part 745 / 42 U.S.C. § 4852d — EPA Lead-Based Paint
+  Disclosure Rule</div>
+</div>
+
+<div class="item">
+  <span class="fix-checkbox"></span><span class="severity high">HIGH</span>
+  <span class="verdict">Orleans Parish "Healthy Homes" registration.</span>
+  As of 2026, every rental property in Orleans Parish must be registered via
+  OneStopApp and hold a Certificate of Compliance attesting to Minimum Rental
+  Standards (HVAC, water, electrical, mold-free envelope). Non-compliance risks
+  daily fines, subpoenas, and revocation of the right to rent the unit at all.
+  The ordinance carries anti-retaliation protections independent of anything
+  the lease says — an eviction motivated by a tenant's code complaint carries
+  its own liability regardless of what §9/§11 otherwise permit.
+  <div class="cite">City of New Orleans Healthy Homes ordinance, 2026
+  mandatory registration phase</div>
+</div>
+
+<div class="item">
+  <span class="fix-checkbox"></span><span class="severity high">HIGH</span>
+  <span class="verdict">Fair Housing Act — service/assistance animals.</span>
+  A blanket "no pets" clause does not override the federal duty to
+  accommodate a disability-related assistance animal, regardless of lease
+  language. §5 PETS currently has no carve-out — real exposure to HUD/DOJ
+  enforcement and private suits, not just a drafting nicety.
+  <div class="cite">42 U.S.C. § 3604(f)(3)(B) — Fair Housing Act reasonable
+  accommodation; HUD guidance on assistance animals</div>
+</div>
+
+<div class="item">
+  <span class="fix-checkbox"></span><span class="severity medium">MEDIUM</span>
+  <span class="verdict">Louisiana smoke detector requirement.</span>
+  One- and two-family dwellings must have at minimum a 10-year sealed-battery
+  smoke detector at time of lease. Not mentioned anywhere currently. Worth a
+  clause documenting compliance <em>and</em> shifting ongoing
+  testing/battery/notification duty to the tenant — which also strengthens
+  the landlord's position under the notice-based liability standard used in
+  §16 (see below).
+  <div class="cite">La. R.S. 40:1581</div>
+</div>
+
+<div class="item">
+  <span class="fix-checkbox"></span><span class="severity medium">MEDIUM</span>
+  <span class="verdict">Flood / hazard insurance disclaimer for tenant belongings.</span>
+  Not a hard statutory requirement for leases (Louisiana's property-disclosure
+  statute applies to sales), but the lease's own NOMAR ancestor template has
+  exactly this clause, and given New Orleans' flood history, its absence here
+  is an easy, low-cost gap to close.
+  <div class="cite">Cf. La. R.S. 9:3196 et seq. (sales disclosure, for
+  comparison only — does not itself apply to leases)</div>
+</div>
+
+<h2>Section by section</h2>
+
+<table>
+  <tr><th style="width:22%">Section</th><th>Finding</th></tr>
+  <tr><td>Preamble / §1 TERM</td><td>No issues. Month-to-month auto-renewal on missed notice is a valid contractual override of Louisiana's default tacit-reconduction rule.</td></tr>
+  <tr>
+    <td>§2 RENT</td>
+    <td>
+      <span class="severity medium">MEDIUM</span> The $50 NSF check fee may
+      <strong>exceed Louisiana's statutory cap</strong> — greater of $25 or 5%
+      of the check's face amount (La. R.S. 9:2782) — on a smaller check (e.g. a
+      partial payment). The statute also separately requires a
+      <strong>conspicuously posted notice</strong> of the fee on the
+      premises; a lease clause alone may not satisfy that.
+    </td>
+  </tr>
+  <tr>
+    <td>§3 SECURITY DEPOSIT</td>
+    <td>
+      <span class="severity medium">MEDIUM</span> The 30-day accounting clock
+      is tied to "keys returned + premises vacated." La. R.S. 9:3251 ties it
+      to <strong>receipt of the tenant's forwarding address in writing</strong>
+      instead — a materially different trigger. Aligning the lease's language
+      to the statute's actual formula gives a cleaner compliance defense.
+      Bad-faith non-compliance exposes the landlord to actual damages plus the
+      greater of $300 or 2× the wrongfully-retained amount, plus attorney's
+      fees.
+    </td>
+  </tr>
+  <tr><td>§4 OCCUPANTS</td><td>No issue.</td></tr>
+  <tr><td>§5 PETS</td><td><span class="severity high">HIGH</span> See Fair Housing Act item above — the top-priority addition.</td></tr>
+  <tr><td>§6 SMOKING</td><td>No issue found.</td></tr>
+  <tr>
+    <td>§7 PARKING / §8 SUBLEASE</td>
+    <td>
+      <span class="severity medium">MEDIUM</span> Louisiana law (La. C.C. art.
+      2713) construes <strong>ambiguous</strong> sublease restrictions
+      <em>against</em> the landlord. The clause conditions subletting on
+      "written consent of Lessor" without saying consent may be withheld
+      arbitrarily / in sole discretion — tightening that phrase closes an
+      opening to argue consent was unreasonably withheld.
+    </td>
+  </tr>
+  <tr><td>§9 DEFAULT OR ABANDONMENT / §10 OTHER VIOLATIONS</td><td>No issue. Rent-acceleration language is standard, though courts can reduce it if "manifestly unreasonable" (general contract-law point, low priority, not specific to this clause).</td></tr>
+  <tr>
+    <td>§11 WAIVER UPON TERMINATION</td>
+    <td>
+      <span class="severity medium">MEDIUM — citation error</span> The waiver
+      of eviction notice is squarely valid under La. C.C.P. art. 4701. But the
+      second citation, <strong>"La. CCP 2713," is wrong</strong> — Article
+      2713 is about a lessee's right to sublease/assign, unrelated to
+      eviction notice. Worth fixing regardless of severity: citing the wrong
+      statute undermines a document meant to be relied on in eviction court.
+    </td>
+  </tr>
+  <tr><td>§12 WARRANTY / §13 OCCUPANCY</td><td>No issue. The casualty/force-majeure language already reasonably covers hurricane damage via "other unforeseen event."</td></tr>
+  <tr>
+    <td>§14 UTILITIES / §15 ADDITIONS OR ALTERATIONS</td>
+    <td>
+      <span class="severity ok">INFORMATIONAL</span> No statutory issue.
+      Louisiana has <strong>no statutory landlord-entry-notice requirement at
+      all</strong> — unusually landlord-friendly. Since the only real
+      protection here is the vague "peaceful possession" doctrine, a broader,
+      explicit entry clause (covering routine inspection, not just repairs)
+      reduces litigation risk rather than increasing it.
+    </td>
+  </tr>
+  <tr>
+    <td>§16 LIABILITY</td>
+    <td>
+      <span class="severity ok">GOOD — already sound</span> This clause's
+      structure (no liability except for defects the landlord "knew or should
+      have known" and failed to remedy after written notice) already tracks
+      La. R.S. 9:3221 closely — real, deliberate legal work, not boilerplate.
+      One independent limit regardless of wording: La. C.C. art. 2699 makes a
+      warranty waiver <strong>void, no matter what the lease says</strong>,
+      for residential defects that "seriously affect health or safety." Not
+      something a rewrite fixes — a limit that exists on top of any lease
+      language.
+    </td>
+  </tr>
+  <tr>
+    <td>§17 SIGNS AND ACCESS</td>
+    <td>
+      <span class="severity ok">LIKELY FINE</span> Checked specifically
+      whether Louisiana protects a tenant's right to display political signs
+      (some states, e.g. California, Washington, do by statute). No such
+      Louisiana statute found, so the political-sign ban is likely
+      enforceable as drafted. Caveat: state law was checked, not New Orleans
+      municipal code specifically — lower-confidence flag, not a guarantee.
+    </td>
+  </tr>
+  <tr><td>§18 PATIO/YARD / §19 ATTORNEY'S FEES / §20 OTHER</td><td>No new issues (§19 already covered in depth in <code>LEGAL_RESEARCH.md</code>).</td></tr>
+  <tr><td>Execution block</td><td>No issue.</td></tr>
+</table>
+
+<div class="sources">
+  <strong>Primary sources referenced (verify independently before relying on
+  any citation):</strong>
+  <ul>
+    <li>La. C.C. art. 2699 — waiver of warranty for vices or defects</li>
+    <li>La. R.S. 9:3221 — assumption of responsibility by lessee; liability of owner</li>
+    <li>La. R.S. 9:3251 — security deposit return, itemization, bad-faith penalty</li>
+    <li>La. R.S. 9:2782 — nonsufficient-fund check fee cap and posted-notice requirement</li>
+    <li>La. C.C.P. art. 4701 — termination of lease, notice to vacate, waiver of notice</li>
+    <li>La. C.C. art. 2713 — lessee's right to sublease, assign, or encumber</li>
+    <li>La. C.C. art. 2682 — landlord's basic obligations, incl. peaceful possession</li>
+    <li>La. R.S. 40:1581 — smoke detectors in one- or two-family dwellings</li>
+    <li>City of New Orleans Healthy Homes ordinance (2026 mandatory registration phase)</li>
+    <li>42 U.S.C. § 4852d and 40 CFR Part 745 — federal lead-based paint disclosure</li>
+    <li>42 U.S.C. § 3604(f)(3)(B) — Fair Housing Act reasonable accommodation</li>
+  </ul>
+  Full source URLs and verification notes: <code>LEGAL_RESEARCH.md</code> in the
+  repository root.
+</div>
+
+<div class="footer-note">
+  Generated from the legal review presented in conversation on 2026-09-06.
+  This is a static file, not derived from a script — if the review changes,
+  this file needs to be updated (or regenerated) separately. Hidden from
+  print (this note, not the disclaimer above it).
+</div>
+
+</body>
+</html>

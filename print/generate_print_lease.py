@@ -1,0 +1,366 @@
+#!/usr/bin/env python3
+"""Generate a self-contained, print-ready HTML lease from `originals/lease.md`.
+
+Same idea as `pandadoc/generate_template_body.py`: `originals/lease.md` is the
+only file anyone edits; this script derives a *different* output from it -
+here, a blank paper lease meant to be opened in any browser and printed
+(Ctrl+P / Cmd+P), rather than pasted into PandaDoc.
+
+Unlike the PandaDoc version, blanks stay as literal blank lines (there's no
+tenant yet to fill a token with) and the signature lines stay as real
+underscore lines too - this is meant to be signed by hand on paper.
+
+Usage:
+    python print/generate_print_lease.py
+
+No third-party dependencies: the output is one HTML file with its CSS
+inline, so it prints correctly offline, from any browser, on any machine -
+nothing to install.
+"""
+from __future__ import annotations
+
+import html
+import re
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SOURCE = REPO_ROOT / "originals" / "lease.md"
+OUTPUT = REPO_ROOT / "print" / "lease_print.html"
+
+# Reused verbatim from pandadoc/generate_template_body.py's approach: a blank
+# line in lease.md is not reliably a real paragraph break (the scanned
+# document's page cuts sometimes fall mid-sentence), so a block that doesn't
+# end in sentence-final punctuation gets merged into the next one.
+SENTENCE_END = re.compile(r'[.!?:]["\')]?$')
+STARTS_NEW_SECTION = re.compile(r"^\d+\.\s*\*\*")
+BLANK = re.compile(r"_{2,}")
+
+# The title's company-specific branding becomes a blank (see .title-blank in
+# the CSS below), per the request: this lease is shared across multiple
+# landlords, so no single landlord's name belongs in a document title meant
+# to be reused by all of them.
+
+HTML_HEAD = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Residential Lease</title>
+<style>
+  @page {
+    size: letter;
+    margin: 0.85in;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Georgia, "Times New Roman", Times, serif;
+      font-size: 9pt;
+      color: #444;
+    }
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+  body {
+    font-family: Georgia, "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.4;
+    max-width: 7.5in;
+    margin: 0 auto;
+    padding: 0.25in 0 1in;
+  }
+  .title-blank {
+    display: block;
+    border-bottom: 1px solid #000;
+    height: 1.1em;
+    margin: 0 auto 0.15in;
+    max-width: 5.5in;
+  }
+  h1.subtitle {
+    text-align: center;
+    font-size: 15pt;
+    letter-spacing: 0.06em;
+    margin: 0 0 0.5in;
+    font-weight: bold;
+  }
+  p {
+    margin: 0 0 0.85em;
+    text-align: justify;
+    orphans: 3;
+    widows: 3;
+  }
+  p.section {
+    page-break-after: avoid;
+  }
+  .blank {
+    display: inline-block;
+    min-width: 2.4em;
+    border-bottom: 1px solid #000;
+  }
+  .blank.long { min-width: 5.5in; }
+  .blank.medium { min-width: 3in; }
+  .blank.short { min-width: 1.4em; }
+  .blank.tiny { min-width: 0.9em; }
+  .signature-block {
+    page-break-inside: avoid;
+    page-break-before: avoid;
+    margin-top: 0.3in;
+  }
+  .sig-line {
+    margin-top: 0.3in;
+    border-top: 1px solid #000;
+    max-width: 4.2in;
+    padding-top: 0.12em;
+    font-size: 10pt;
+    letter-spacing: 0.04em;
+  }
+  .footer-note {
+    margin-top: 0.6in;
+    padding-top: 0.2in;
+    border-top: 1px solid #999;
+    font-size: 8.5pt;
+    color: #444;
+    page-break-inside: avoid;
+  }
+  @media print {
+    .footer-note { display: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @media screen {
+    body { padding: 0.5in 0.75in 1in; box-shadow: 0 0 12px rgba(0,0,0,.15); }
+  }
+</style>
+</head>
+<body>
+<span class="title-blank" aria-hidden="true"></span>
+<h1 class="subtitle">RESIDENTIAL LEASE</h1>
+"""
+
+HTML_FOOTER = """
+<div class="footer-note">
+  This is a blank lease generated from <code>originals/lease.md</code> by
+  <code>print/generate_print_lease.py</code> for printing and hand-filling on
+  paper. It will not appear on a printed copy (hidden in print styles).
+  Regenerate after editing <code>originals/lease.md</code>. The "Page X of Y"
+  footer is a CSS page-number counter: it renders correctly when printed from
+  Chrome, Edge, or Safari (18.2+), but not from Firefox, which does not yet
+  support this CSS feature as of early 2026 - if you print from Firefox, that
+  footer will simply be missing rather than wrong.
+</div>
+</body>
+</html>
+"""
+
+def flatten_paragraph(text: str) -> str:
+    return re.sub(r"[ \t]*\n[ \t]*", " ", text).strip()
+
+
+def extract_body_blocks(source_text: str) -> list[str]:
+    """Same merge logic as the PandaDoc generator - see its docstring."""
+    blocks = re.split(r"\n\s*\n", source_text.strip())
+    kept: list[str] = []
+    for block in blocks:
+        stripped = block.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("# "):
+            continue
+        if stripped == "---":
+            continue
+        if re.match(r"^## PAGE \d+$", stripped):
+            continue
+        kept.append(flatten_paragraph(stripped))
+
+    merged: list[str] = []
+    for block in kept:
+        continues_prior = (
+            merged
+            and not SENTENCE_END.search(merged[-1])
+            and not STARTS_NEW_SECTION.match(block)
+        )
+        if continues_prior:
+            merged[-1] = f"{merged[-1]} {block}"
+        else:
+            merged.append(block)
+    return merged
+
+
+def split_source(source_text: str) -> tuple[str, str]:
+    """Split the RAW source into (everything through the execution sentence,
+    everything after it) - done before any paragraph-merge logic runs.
+
+    The merge logic in `extract_body_blocks` is right to glue together prose
+    that doesn't end in a period, but the signature tail is not prose: a
+    blank line and a role label like "Lessor/Agent" both fail the
+    "ends in a period" test too, so if the merge logic ever saw them it
+    would glue all four signature entries into one unreadable blob (this is
+    exactly the bug that shipped in the first version of this script).
+    Keeping the tail out of that pipeline entirely avoids the whole class of
+    bug rather than special-casing around it.
+    """
+    marker = "Executed in duplicate at"
+    start = source_text.find(marker)
+    if start == -1:
+        raise SystemExit(
+            f"Could not find {marker!r} in originals/lease.md - has the "
+            "execution sentence moved or changed?"
+        )
+    end_of_sentence = source_text.find(".", start)
+    if end_of_sentence == -1:
+        raise SystemExit("Execution sentence has no closing period - malformed?")
+    return source_text[: end_of_sentence + 1], source_text[end_of_sentence + 1 :]
+
+
+def parse_signature_labels(signature_source: str) -> list[str]:
+    """The role label for each signature line, in order (e.g. "Lessor/Agent",
+    "Lessee", "Lessee", "Lessee").
+
+    Each entry in `signature_source` is an underscore line immediately
+    followed by its label - a single newline apart, not a blank-line-
+    separated paragraph of its own - so splitting on blank lines yields one
+    block *per entry*, not one block per line. The underscore run is dropped
+    here (it's rendered as a CSS border-top rule instead, see
+    `render_signature_lines`); keeping both would double up the line.
+    """
+    blocks = [b.strip() for b in re.split(r"\n\s*\n", signature_source.strip()) if b.strip()]
+    labels = [BLANK.sub("", b).strip() for b in blocks]
+    labels = [label for label in labels if label]
+    if not labels:
+        raise SystemExit(
+            "No signature role labels found after the execution sentence in "
+            "originals/lease.md - has the signature block moved or changed?"
+        )
+    return labels
+
+
+def render_blank(width: str = "short") -> str:
+    return f'<span class="blank {width}"></span>'
+
+
+def markup_blanks(paragraph: str) -> str:
+    """Turn one paragraph of lease.md text into paragraph-inner HTML:
+    spread out the occupants blanks, escape everything, restore the bold
+    section labels, then turn each run of underscores into a styled blank
+    sized by its surrounding context (checked by a keyword in the nearby
+    text, not by position - see `choose_width`). Falls back to a plain
+    'short' blank for any run none of those keywords match, rather than
+    failing the whole build over what's purely cosmetic sizing.
+    """
+    spread = spread_occupants_blanks(paragraph)
+    escaped = html.escape(spread)
+    escaped = convert_bold(escaped)
+
+    def choose_width(match: re.Match) -> str:
+        start, end = match.span()
+        # 40 chars is enough to reach "Lessor" from the far side of
+        # "(hereinafter referred to as " (29 chars) - the very first blank
+        # in the document, where the landlord's own name goes, sits right
+        # before that phrase rather than after it.
+        context = escaped[max(0, start - 40) : min(len(escaped), end + 40)]
+        for needle, width in [
+            ("Lessor", "long"), ("Lessee", "long"), ("premises known as", "long"),
+            ("day of", "tiny"), ("dollars", "medium"), ("except", "medium"),
+            ("duplicate at", "medium"),
+        ]:
+            if needle in context:
+                return render_blank(width)
+        return render_blank("short")
+
+    marked = BLANK.sub(choose_width, escaped)
+    marked = marked.replace(LINE_BREAK_SENTINEL, "<br>")
+    marked = marked.replace(OCCUPANTS_BLANK_SENTINEL, render_blank("long"))
+    return marked
+
+
+
+def render_signature_lines(labels: list[str]) -> str:
+    """One block per signature: a horizontal rule to sign on, the role label
+    underneath it - each entry kept visually separate, never run together."""
+    rows = "\n".join(
+        f'<div class="sig-line">{html.escape(label)}</div>' for label in labels
+    )
+    return f'<div class="signature-block">\n{rows}\n</div>'
+
+
+BOLD = re.compile(r"\*\*(.+?)\*\*")
+
+
+def convert_bold(escaped_text: str) -> str:
+    """`**word**` (lease.md's markdown bold) -> `<strong>word</strong>`.
+
+    Must run on already-html-escaped text: `html.escape` leaves literal `*`
+    characters untouched, so this is safe to apply afterward, and the
+    <strong> tags it inserts are ours, not escaped user content.
+    """
+    return BOLD.sub(r"<strong>\1</strong>", escaped_text)
+
+
+OCCUPANTS_BLANKS = re.compile(
+    r"(occupied by the following persons only)((?:\s*_{2,})+)"
+)
+
+# Sentinels survive html.escape() (which would otherwise mangle a literal
+# "<br>" or "<span>") and get swapped for real HTML only after every escaping
+# step has already run.
+LINE_BREAK_SENTINEL = "\x00BR\x00"
+OCCUPANTS_BLANK_SENTINEL = "\x00OCCBLANK\x00"
+
+
+def spread_occupants_blanks(paragraph: str) -> str:
+    """The occupant blanks read as a squeezed inline mess if left on the
+    same line as the heading text; give each its own full-width writable
+    line instead, the way a form meant to be handwritten on actually needs.
+
+    Uses a dedicated sentinel rather than emitting plain underscores: the
+    generic `choose_width` context-sniffing in `markup_blanks` only looks
+    ~60 characters back from each blank, which is nowhere near enough to
+    still see "persons only" once a first 60-underscore blank sits in
+    between it and a second one - so leaving these to the generic pass
+    would size the first blank right and the rest wrong. Deciding the width
+    here, once, is simpler than making the generic heuristic handle it.
+    """
+    def expand(match: re.Match) -> str:
+        blanks = re.findall(r"_{2,}", match.group(2))
+        lines = LINE_BREAK_SENTINEL.join(OCCUPANTS_BLANK_SENTINEL for _ in blanks)
+        return f"{match.group(1)}{LINE_BREAK_SENTINEL}{lines}"
+
+    return OCCUPANTS_BLANKS.sub(expand, paragraph)
+
+
+def render_paragraph_tag(block: str, marked_html: str) -> str:
+    attrs = ' class="section"' if STARTS_NEW_SECTION.match(block) else ""
+    return f"<p{attrs}>{marked_html}</p>"
+
+
+def generate(source_text: str) -> str:
+    body_source, signature_source = split_source(source_text)
+    body_blocks = extract_body_blocks(body_source)
+    labels = parse_signature_labels(signature_source)
+
+    paragraphs = [
+        render_paragraph_tag(block, markup_blanks(block)) for block in body_blocks
+    ]
+    signature_html = render_signature_lines(labels)
+
+    return (
+        HTML_HEAD
+        + "\n".join(paragraphs)
+        + "\n"
+        + signature_html
+        + HTML_FOOTER
+    )
+
+
+def main() -> None:
+    if not SOURCE.is_file():
+        raise SystemExit(f"{SOURCE} does not exist.")
+    text = SOURCE.read_text(encoding="utf-8")
+    output = generate(text)
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text(output, encoding="utf-8")
+    print(f"Wrote {OUTPUT} from {SOURCE}.")
+
+
+if __name__ == "__main__":
+    main()
