@@ -22,19 +22,23 @@ from app.config import REPO_ROOT, ROLE_ADMIN, ROLE_LANDLORD
 DEFAULT_PATH = REPO_ROOT / "accounts.json"
 MIN_PASSWORD_LENGTH = 12
 
+# Placeholder contact details, not anyone's real information: this file is
+# committed to the repo (and so is public if the repo is), while the actual
+# `accounts.json` it generates is gitignored. Fill in real names and emails
+# in accounts.json after running `init`, never here.
 STARTER: dict[str, Any] = {
     "landlords": [
         {
             "id": "lgd",
             "company": "LGD Properties",
-            "signer_name": "Pam Hartnett",
-            "email": "pamelahartnett@yahoo.com",
+            "signer_name": "REPLACE ME",
+            "email": "replace-me@example.com",
         },
         {
             "id": "robertson",
             "company": "Orange Street LLC",
-            "signer_name": "Gay Robertson",
-            "email": "hrobertson@yahoo.com",
+            "signer_name": "REPLACE ME",
+            "email": "replace-me@example.com",
         },
     ],
     "users": [
@@ -46,14 +50,14 @@ STARTER: dict[str, Any] = {
         },
         {
             "username": "pam",
-            "display_name": "Pam Hartnett",
+            "display_name": "REPLACE ME",
             "role": ROLE_LANDLORD,
             "landlord_id": "lgd",
             "password_hash": "",
         },
         {
             "username": "gay",
-            "display_name": "Gay Robertson",
+            "display_name": "REPLACE ME",
             "role": ROLE_LANDLORD,
             "landlord_id": "robertson",
             "password_hash": "",

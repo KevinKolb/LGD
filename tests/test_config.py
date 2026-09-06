@@ -50,7 +50,7 @@ def test_loads_landlords_and_users(load) -> None:
     assert [landlord.id for landlord in settings.landlords] == ["lgd", "robertson"]
     assert [user.username for user in settings.users] == ["kevin", "steve", "gay"]
     assert settings.landlord_by_id("lgd").company == "LGD Properties"
-    assert settings.landlord_by_id("lgd").signer_name == "Steve Hartnett"
+    assert settings.landlord_by_id("lgd").signer_name == "Pat Landlord"
 
 
 def test_missing_accounts_file_explains_the_fix(tmp_path, monkeypatch) -> None:

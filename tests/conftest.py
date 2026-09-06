@@ -24,14 +24,14 @@ GAY = ("gay", PASSWORDS["gay"])
 LANDLORD_LGD = {
     "id": "lgd",
     "company": "LGD Properties",
-    "signer_name": "Steve Hartnett",
-    "email": "steveahartnett@yahoo.com",
+    "signer_name": "Pat Landlord",
+    "email": "steve-landlord@example.com",
 }
 LANDLORD_ROBERTSON = {
     "id": "robertson",
-    "company": "Gay Robertson Properties",
-    "signer_name": "Gay Robertson",
-    "email": "hrobertson@yahoo.com",
+    "company": "Jamie Reyes Properties",
+    "signer_name": "Jamie Reyes",
+    "email": "gay-landlord@example.com",
 }
 
 
@@ -47,14 +47,14 @@ def accounts_document() -> dict[str, Any]:
             },
             {
                 "username": "steve",
-                "display_name": "Steve Hartnett",
+                "display_name": "Pat Landlord",
                 "role": "landlord",
                 "landlord_id": "lgd",
                 "password_hash": hash_password(PASSWORDS["steve"], iterations=1_000),
             },
             {
                 "username": "gay",
-                "display_name": "Gay Robertson",
+                "display_name": "Jamie Reyes",
                 "role": "landlord",
                 "landlord_id": "robertson",
                 "password_hash": hash_password(PASSWORDS["gay"], iterations=1_000),

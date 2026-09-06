@@ -112,7 +112,7 @@ def test_admin_sees_both_landlords(client) -> None:
     assert body["user"]["is_admin"] is True
     assert body["landlords"] == [
         {"id": "lgd", "name": "LGD Properties"},
-        {"id": "robertson", "name": "Gay Robertson Properties"},
+        {"id": "robertson", "name": "Jamie Reyes Properties"},
     ]
 
 
@@ -120,7 +120,7 @@ def test_admin_sees_both_landlords(client) -> None:
     "credentials,expected",
     [
         (STEVE, {"id": "lgd", "name": "LGD Properties"}),
-        (GAY, {"id": "robertson", "name": "Gay Robertson Properties"}),
+        (GAY, {"id": "robertson", "name": "Jamie Reyes Properties"}),
     ],
 )
 def test_a_landlord_sees_only_their_own(client, credentials, expected) -> None:
@@ -198,8 +198,8 @@ def test_preview_shows_company_as_lessor_and_person_as_signer(client) -> None:
     assert tokens["Term.StartYear"] == "26"
     assert body["recipients"][0] == {
         "role": "Lessor",
-        "name": "Steve Hartnett",
-        "email": "steveahartnett@yahoo.com",
+        "name": "Pat Landlord",
+        "email": "steve-landlord@example.com",
     }
 
 
@@ -234,8 +234,8 @@ def test_creation_sends_the_right_template_and_recipients(client, fake_pandadoc)
     assert created["metadata"]["landlord_id"] == "robertson"
 
     tokens = {token["name"]: token["value"] for token in created["tokens"]}
-    assert tokens["Lessor.Name"] == "Gay Robertson Properties"
-    assert created["recipients"][0]["email"] == "hrobertson@yahoo.com"
+    assert tokens["Lessor.Name"] == "Jamie Reyes Properties"
+    assert created["recipients"][0]["email"] == "gay-landlord@example.com"
 
 
 def test_document_is_sent_silently_by_default(client, fake_pandadoc) -> None:
