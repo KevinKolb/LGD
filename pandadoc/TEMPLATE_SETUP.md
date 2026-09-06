@@ -169,7 +169,7 @@ writes a starter file with the two landlords and three users this app was built 
 | --- | --- | --- |
 | `kevin` (Kevin Kolb) | admin | every landlord |
 | `pam` (Pam Hartnett) | landlord | LGD Properties |
-| `gay` (Gay Robertson) | landlord | Gay Robertson Properties |
+| `gay` (Gay Robertson) | landlord | Orange Street LLC |
 
 Nobody can log in until a password is set for them:
 

@@ -24,7 +24,7 @@ current and archive the executed PDF once it's signed.
 | --- | --- | --- |
 | Kevin Kolb | admin | every landlord |
 | Pam Hartnett | landlord | LGD Properties |
-| Gay Robertson | landlord | Gay Robertson Properties |
+| Gay Robertson | landlord | Orange Street LLC |
 
 A landlord user only ever sees and creates leases for their own company. The admin
 sees and can act for both. See [pandadoc/TEMPLATE_SETUP.md](pandadoc/TEMPLATE_SETUP.md)
