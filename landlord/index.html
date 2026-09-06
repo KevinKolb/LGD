@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LGD Lease Maker</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1c1a;
+    --muted: #6b6a66;
+    --line: #dcdad4;
+    --accent: #1f5d4c;
+    --accent-ink: #ffffff;
+    --danger: #9b2c2c;
+    --ok: #1f5d4c;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 13px; }
+  #whoami { text-align: right; }
+  #mode-banner {
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #fbe6c2;
+    color: #6b4708;
+    border-bottom: 1px solid #e3c893;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 24px; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  fieldset {
+    border: 0; padding: 0; margin: 0 0 18px;
+  }
+  legend {
+    padding: 0; margin-bottom: 8px;
+    font-weight: 600; font-size: 14px;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: var(--accent);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .pair { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+  .grid { display: grid; gap: 14px; }
+  .grid.two { grid-template-columns: 1fr 1fr; }
+  .grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 640px) {
+    .grid.two, .grid.three { grid-template-columns: 1fr; }
+  }
+  .tenant {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: #fcfcfa;
+  }
+  .tenant .row-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .tenant .row-head strong { font-size: 13px; }
+  .tenant .row-head span { font-size: 12px; color: var(--muted); }
+  button {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: progress; }
+  button.secondary {
+    background: transparent; color: var(--accent);
+  }
+  button.link {
+    background: none; border: none; color: var(--danger);
+    padding: 0; font-size: 12px; cursor: pointer; text-decoration: underline;
+  }
+  .actions { display: flex; gap: 10px; align-items: center; }
+  .note {
+    font-size: 12px; color: var(--muted); margin-top: 6px;
+  }
+  .result { border-left: 4px solid var(--ok); }
+  .result.error { border-left-color: var(--danger); }
+  .urlbox {
+    display: flex; gap: 8px; margin: 10px 0;
+  }
+  .urlbox input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; background: #eceae4; color: var(--ink); white-space: nowrap;
+  }
+  .badge.signed { background: #d8ebe3; color: #14513f; }
+  .badge.viewed { background: #e7eef7; color: #1f4266; }
+  .badge.dead { background: #f3dede; color: var(--danger); }
+  .empty { color: var(--muted); font-style: italic; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LGD Lease Maker</h1>
+    <p>Generate a lease and send it for signature</p>
+  </div>
+  <p id="whoami"></p>
+</header>
+
+<div id="mode-banner" hidden></div>
+
+<main>
+  <section>
+    <h2>New lease</h2>
+    <p class="hint">
+      Fills the blanks in the standard residential lease and sends it to PandaDoc
+      for signature. You get back a signing link to pass to the approved potential
+      tenant.
+    </p>
+
+    <form id="lease-form">
+      <fieldset>
+        <legend>Property</legend>
+        <div class="grid two">
+          <div>
+            <label for="lessor_id">Landlord (Lessor)</label>
+            <select id="lessor_id" name="lessor_id" required></select>
+          </div>
+          <div>
+            <label for="premises_address">Premises address</label>
+            <input id="premises_address" name="premises_address" required
+                   placeholder="1556 Camp Street, Unit B" maxlength="300">
+            <p class="note">New Orleans, Louisiana &mdash; private residence only.</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Approved potential tenants</legend>
+        <div id="tenants"></div>
+        <button type="button" class="secondary" id="add-tenant">
+          Add approved potential tenant
+        </button>
+        <p class="note">Up to three. The first one receives the signing link.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Term &mdash; section 1</legend>
+        <div class="grid two">
+          <div>
+            <label for="term_start">Commences on</label>
+            <input type="date" id="term_start" name="term_start" required>
+          </div>
+          <div>
+            <label for="term_end_month_name">Ends on the last day of</label>
+            <div class="pair">
+              <select id="term_end_month_name" required
+                      aria-label="Lease end month"></select>
+              <select id="term_end_year" required
+                      aria-label="Lease end year"></select>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Money &mdash; sections 2 and 3</legend>
+        <div class="grid three">
+          <div>
+            <label for="monthly_rent">Monthly rent</label>
+            <input type="number" id="monthly_rent" name="monthly_rent"
+                   min="1" step="0.01" required placeholder="1850.00">
+          </div>
+          <div>
+            <label for="discounted_rent">Rent if paid on time</label>
+            <input type="number" id="discounted_rent" name="discounted_rent"
+                   min="0" step="0.01" placeholder="auto">
+            <p class="note" id="discount-note"></p>
+          </div>
+          <div>
+            <label for="security_deposit">Security deposit</label>
+            <input type="number" id="security_deposit" name="security_deposit"
+                   min="0" step="0.01" required placeholder="1850.00">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Occupancy and utilities &mdash; sections 4 and 13</legend>
+        <div class="grid two">
+          <div>
+            <label for="occupants">Occupants (these persons only)</label>
+            <textarea id="occupants" name="occupants" required
+                      placeholder="Jane Doe; John Doe"></textarea>
+          </div>
+          <div>
+            <label for="utilities_excluded">Utilities the tenant does not pay</label>
+            <input id="utilities_excluded" name="utilities_excluded"
+                   value="none" maxlength="200" placeholder="water, trash">
+            <p class="note">Fills &ldquo;pay all utilities&hellip; except ___&rdquo;.</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Execution block</legend>
+        <div class="grid two">
+          <div>
+            <label for="execution_city">Executed at</label>
+            <input id="execution_city" name="execution_city" value="New Orleans"
+                   required maxlength="100">
+          </div>
+          <div>
+            <label for="execution_date">Execution date</label>
+            <input type="date" id="execution_date" name="execution_date" required>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="button" class="secondary" id="preview">Preview</button>
+        <button type="submit" id="submit">Generate lease</button>
+        <span class="note" id="form-status"></span>
+      </div>
+      <p class="note" id="cost-note">Preview costs nothing.</p>
+    </form>
+  </section>
+
+  <section class="result" id="result" hidden>
+    <h2 id="result-title">Lease created</h2>
+    <div id="result-body"></div>
+  </section>
+
+  <section>
+    <h2>Leases</h2>
+    <p class="hint">Status updates arrive from PandaDoc automatically.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th id="landlord-heading" hidden>Landlord</th>
+            <th>Approved potential tenant</th>
+            <th>Term</th>
+            <th>Status</th>
+            <th>Signing link</th>
+            <th>Signed PDF</th>
+          </tr>
+        </thead>
+        <tbody id="lease-rows">
+          <tr><td colspan="7" class="empty">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const STATUS_LABELS = {
+  "document.uploaded": "Processing",
+  "document.draft": "Draft",
+  "document.sent": "Sent",
+  "document.viewed": "Viewed",
+  "document.waiting_approval": "Awaiting approval",
+  "document.approved": "Approved",
+  "document.rejected": "Rejected",
+  "document.completed": "Signed",
+  "document.voided": "Voided",
+  "document.declined": "Declined",
+  "document.error": "Error",
+};
+
+const STATUS_CLASS = {
+  "document.completed": "signed",
+  "document.viewed": "viewed",
+  "document.declined": "dead",
+  "document.voided": "dead",
+  "document.rejected": "dead",
+  "document.error": "dead",
+};
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+let discountAmount = "50";
+let isAdmin = false;
+let isSandbox = false;
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (value !== null && value !== undefined) node.setAttribute(key, value);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+// --- Approved potential tenant rows -------------------------------------
+
+function tenantRow(index) {
+  const wrap = el("div", { class: "tenant" });
+  const head = el("div", { class: "row-head" });
+  head.append(
+    el("strong", { text: `Approved potential tenant ${index + 1}` }),
+    index === 0
+      ? el("span", { text: "Receives the signing link" })
+      : el("button", { type: "button", class: "link", text: "Remove" })
+  );
+  const grid = el("div", { class: "grid three" });
+  grid.append(
+    field(`First name`, "text", "first_name", true),
+    field(`Last name`, "text", "last_name", true),
+    field(`Email`, "email", "email", true)
+  );
+  wrap.append(head, grid);
+
+  const remove = head.querySelector("button");
+  if (remove) {
+    remove.addEventListener("click", () => {
+      wrap.remove();
+      renumberTenants();
+    });
+  }
+  return wrap;
+}
+
+function field(labelText, type, name, required) {
+  const box = el("div");
+  const id = `${name}-${Math.random().toString(36).slice(2, 8)}`;
+  box.append(
+    el("label", { for: id, text: labelText }),
+    el("input", {
+      id,
+      type,
+      "data-name": name,
+      required: required ? "required" : null,
+      maxlength: type === "email" ? "254" : "100",
+    })
+  );
+  return box;
+}
+
+function renumberTenants() {
+  const rows = document.querySelectorAll("#tenants .tenant");
+  rows.forEach((row, index) => {
+    row.querySelector(".row-head strong").textContent =
+      `Approved potential tenant ${index + 1}`;
+  });
+  document.getElementById("add-tenant").disabled = rows.length >= 3;
+}
+
+function collectTenants() {
+  return Array.from(document.querySelectorAll("#tenants .tenant")).map((row) => {
+    const value = (name) =>
+      row.querySelector(`[data-name="${name}"]`).value.trim();
+    return {
+      first_name: value("first_name"),
+      last_name: value("last_name"),
+      email: value("email"),
+    };
+  });
+}
+
+// --- Form ---------------------------------------------------------------
+
+function updateDiscountNote() {
+  const rent = parseFloat(document.getElementById("monthly_rent").value);
+  const note = document.getElementById("discount-note");
+  if (Number.isFinite(rent)) {
+    const net = Math.max(0, rent - parseFloat(discountAmount));
+    note.textContent = `Blank leaves it at ${net.toFixed(2)} (rent less $${discountAmount}).`;
+  } else {
+    note.textContent = `Blank applies the $${discountAmount} on-time discount.`;
+  }
+}
+
+function buildPayload() {
+  const get = (id) => document.getElementById(id).value.trim();
+  const discounted = get("discounted_rent");
+  return {
+    lessor_id: get("lessor_id"),
+    premises_address: get("premises_address"),
+    tenants: collectTenants(),
+    term_start: get("term_start"),
+    term_end_month: `${get("term_end_year")}-${get("term_end_month_name")}`,
+    monthly_rent: get("monthly_rent"),
+    discounted_rent: discounted === "" ? null : discounted,
+    security_deposit: get("security_deposit"),
+    occupants: get("occupants"),
+    utilities_excluded: get("utilities_excluded") || "none",
+    execution_city: get("execution_city"),
+    execution_date: get("execution_date"),
+  };
+}
+
+function describeError(payload, fallback) {
+  if (!payload || !payload.detail) return fallback;
+  if (typeof payload.detail === "string") return payload.detail;
+  if (Array.isArray(payload.detail)) {
+    return payload.detail
+      .map((item) => {
+        const where = (item.loc || []).filter((p) => p !== "body").join(" > ");
+        return where ? `${where}: ${item.msg}` : item.msg;
+      })
+      .join("; ");
+  }
+  return fallback;
+}
+
+function showResult(created, payload) {
+  const section = document.getElementById("result");
+  const title = document.getElementById("result-title");
+  const body = document.getElementById("result-body");
+  section.hidden = false;
+  section.classList.toggle("error", !created);
+  body.replaceChildren();
+
+  if (!created) {
+    title.textContent = "Could not create the lease";
+    body.append(el("p", { text: payload }));
+    section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    return;
+  }
+
+  title.textContent = "Lease created";
+  const tenant = payload.tenants[0];
+  body.append(
+    el("p", {
+      text: `Send this signing link to ${tenant.name} (${tenant.email}):`,
+    })
+  );
+
+  const urlbox = el("div", { class: "urlbox" });
+  const input = el("input", { type: "text", readonly: "readonly", value: payload.signing_url });
+  const copy = el("button", { type: "button", class: "secondary", text: "Copy" });
+  copy.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(payload.signing_url);
+    copy.textContent = "Copied";
+    setTimeout(() => (copy.textContent = "Copy"), 1500);
+  });
+  urlbox.append(input, copy);
+  body.append(urlbox);
+
+  const subject = encodeURIComponent("Your lease is ready to sign");
+  const mailBody = encodeURIComponent(
+    `Hello ${tenant.name},\n\nYour lease is ready for signature:\n\n` +
+      `${payload.signing_url}\n\nThank you.`
+  );
+  body.append(
+    el("p", {},
+      el("a", { href: `mailto:${tenant.email}?subject=${subject}&body=${mailBody}` },
+        "Open a pre-filled email")
+    )
+  );
+
+  if (payload.emailed_by_pandadoc) {
+    body.append(el("p", { class: "note", text: "PandaDoc also emailed the tenant directly." }));
+  }
+  if (payload.signing_url_kind === "session_link") {
+    body.append(el("p", {
+      class: "note",
+      text: "This is a temporary session link and will expire. Regenerate it if the tenant waits too long.",
+    }));
+  }
+  section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function showPreview(payload) {
+  const section = document.getElementById("result");
+  const title = document.getElementById("result-title");
+  const body = document.getElementById("result-body");
+  section.hidden = false;
+  section.classList.remove("error");
+  body.replaceChildren();
+
+  title.textContent = "Preview — nothing sent yet";
+  body.append(el("p", { class: "note", text: payload.document_name }));
+
+  const signers = el("table");
+  signers.append(
+    el("thead", {}, el("tr", {},
+      el("th", { text: "Role" }), el("th", { text: "Name" }), el("th", { text: "Email" })))
+  );
+  const signerBody = el("tbody");
+  for (const person of payload.recipients) {
+    signerBody.append(el("tr", {},
+      el("td", { text: person.role }),
+      el("td", { text: person.name }),
+      el("td", { text: person.email })));
+  }
+  signers.append(signerBody);
+  body.append(el("p", { text: "Signers:" }), signers);
+
+  const tokens = el("table");
+  tokens.append(
+    el("thead", {}, el("tr", {},
+      el("th", { text: "Blank" }), el("th", { text: "Value" })))
+  );
+  const tokenBody = el("tbody");
+  for (const token of payload.tokens) {
+    tokenBody.append(el("tr", {},
+      el("td", { text: token.name }),
+      el("td", { text: token.value })));
+  }
+  tokens.append(tokenBody);
+  body.append(el("p", { text: "Filled blanks:" }), tokens);
+
+  section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// --- Lease table --------------------------------------------------------
+
+function columnCount() {
+  return isAdmin ? "7" : "6";
+}
+
+async function loadLeases() {
+  const tbody = document.getElementById("lease-rows");
+  try {
+    const response = await fetch("/api/leases");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const { leases } = await response.json();
+    tbody.replaceChildren();
+    if (!leases.length) {
+      tbody.append(el("tr", {}, el("td", { colspan: columnCount(), class: "empty", text: "No leases yet." })));
+      return;
+    }
+    for (const lease of leases) {
+      const status = el("td", {});
+      status.append(el("span", {
+        class: `badge ${STATUS_CLASS[lease.status] || ""}`.trim(),
+        text: STATUS_LABELS[lease.status] || lease.status,
+      }));
+      // A sandbox lease is not legally binding, so it must stay obvious.
+      if (lease.mode === "sandbox") {
+        status.append(" ", el("span", { class: "badge dead", text: "Sandbox" }));
+      }
+
+      const link = lease.signing_url
+        ? el("a", { href: lease.signing_url, target: "_blank", rel: "noopener", text: "Open" })
+        : el("span", { class: "empty", text: "—" });
+
+      const signed = lease.status === "document.completed"
+        ? el("a", {
+            href: `/api/leases/${encodeURIComponent(lease.document_id)}/document`,
+            text: lease.archive_file ? "Download" : "Fetch",
+          })
+        : el("span", { class: "empty", text: "—" });
+
+      const row = el("tr", {}, el("td", { text: lease.premises_address }));
+      if (isAdmin) row.append(el("td", { text: lease.lessor_name }));
+      row.append(
+        el("td", { text: lease.tenants.map((t) => t.name).join(", ") }),
+        el("td", { text: `${lease.term_start} to ${lease.term_end}` }),
+        status,
+        el("td", {}, link),
+        el("td", {}, signed)
+      );
+      tbody.append(row);
+    }
+  } catch (error) {
+    tbody.replaceChildren(
+      el("tr", {}, el("td", { colspan: columnCount(), class: "empty", text: `Could not load leases: ${error.message}` }))
+    );
+  }
+}
+
+// --- Boot ---------------------------------------------------------------
+
+async function boot() {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById("execution_date").value = today;
+  document.getElementById("term_start").value = today;
+
+  // Month and year selects rather than <input type="month">, which Firefox
+  // and Safari do not support.
+  const monthSelect = document.getElementById("term_end_month_name");
+  MONTH_NAMES.forEach((name, index) => {
+    monthSelect.append(
+      el("option", { value: String(index + 1).padStart(2, "0"), text: name })
+    );
+  });
+  const thisYear = new Date().getFullYear();
+  const yearSelect = document.getElementById("term_end_year");
+  for (let year = thisYear; year <= thisYear + 10; year += 1) {
+    yearSelect.append(el("option", { value: String(year), text: String(year) }));
+  }
+  // Default to a one-year term, the lease's own renewal assumption.
+  const defaultEnd = new Date();
+  defaultEnd.setMonth(defaultEnd.getMonth() - 1);
+  monthSelect.value = String(defaultEnd.getMonth() + 1).padStart(2, "0");
+  yearSelect.value = String(thisYear + 1);
+
+  document.getElementById("tenants").append(tenantRow(0));
+  renumberTenants();
+
+  document.getElementById("add-tenant").addEventListener("click", () => {
+    const count = document.querySelectorAll("#tenants .tenant").length;
+    if (count >= 3) return;
+    document.getElementById("tenants").append(tenantRow(count));
+    renumberTenants();
+  });
+
+  document.getElementById("monthly_rent").addEventListener("input", updateDiscountNote);
+
+  document.getElementById("preview").addEventListener("click", async () => {
+    const form = document.getElementById("lease-form");
+    if (!form.reportValidity()) return;
+    const button = document.getElementById("preview");
+    button.disabled = true;
+    try {
+      const response = await fetch("/api/leases/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload()),
+      });
+      const payload = await response.json().catch(() => null);
+      if (response.ok) showPreview(payload);
+      else showResult(false, describeError(payload, `Preview failed (HTTP ${response.status}).`));
+    } catch (error) {
+      showResult(false, `Could not reach the server: ${error.message}`);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  try {
+    const response = await fetch("/api/config");
+    if (response.ok) {
+      const config = await response.json();
+      discountAmount = config.early_payment_discount;
+      isAdmin = Boolean(config.user && config.user.is_admin);
+      isSandbox = Boolean(config.is_sandbox);
+
+      document.getElementById("whoami").textContent = isAdmin
+        ? `${config.user.display_name} — admin`
+        : config.user.display_name;
+
+      const banner = document.getElementById("mode-banner");
+      if (isSandbox) {
+        banner.hidden = false;
+        banner.textContent =
+          "Sandbox mode — documents are free and unlimited, and are NOT legally " +
+          "binding. Switch PANDADOC_MODE to production for a real lease.";
+      }
+
+      // Admins work across landlords, so they get a column naming each one.
+      document.getElementById("landlord-heading").hidden = !isAdmin;
+
+      const select = document.getElementById("lessor_id");
+      select.replaceChildren();
+      for (const landlord of config.landlords) {
+        select.append(el("option", { value: landlord.id, text: landlord.name }));
+      }
+      // A landlord user has exactly one; leave it visible but not a decision.
+      select.disabled = config.landlords.length === 1;
+    }
+  } catch (error) {
+    /* Leave the default discount hint in place. */
+  }
+  updateDiscountNote();
+  document.getElementById("cost-note").textContent = isSandbox
+    ? "Preview costs nothing. Sandbox documents are free and not legally binding."
+    : "Preview costs nothing. Generating uses one of the 60 documents in the "
+      + "annual allowance.";
+
+  document.getElementById("lease-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    // Production allows 60 documents a year, so make this deliberate.
+    const primary = collectTenants()[0];
+    const address = document.getElementById("premises_address").value.trim();
+    const consequence = isSandbox
+      ? "Sandbox mode: this document is free and NOT legally binding."
+      : "This uses one of the 60 documents in the annual allowance.";
+    if (!window.confirm(
+      `Send the lease for ${address} to ${primary.email}?\n\n${consequence}`
+    )) return;
+
+    const button = document.getElementById("submit");
+    const statusText = document.getElementById("form-status");
+    button.disabled = true;
+    statusText.textContent = "Creating the document in PandaDoc…";
+
+    try {
+      const response = await fetch("/api/leases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload()),
+      });
+      const payload = await response.json().catch(() => null);
+      if (response.ok) {
+        showResult(true, payload);
+        event.target.reset();
+        document.getElementById("execution_date").value = today;
+        document.getElementById("term_start").value = today;
+        await loadLeases();
+      } else {
+        showResult(false, describeError(payload, `Request failed (HTTP ${response.status}).`));
+      }
+    } catch (error) {
+      showResult(false, `Could not reach the server: ${error.message}`);
+    } finally {
+      button.disabled = false;
+      statusText.textContent = "";
+    }
+  });
+
+  await loadLeases();
+}
+
+boot();
+</script>
+</body>
+</html>
