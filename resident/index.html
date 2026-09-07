@@ -23,7 +23,7 @@
 </script>
 <link rel="icon" href="../favicon.ico?v=1">
 <link rel="stylesheet" href="../shared/site.css">
-<title>Tenant Portal</title>
+<title>Resident Portal</title>
 <style>
   :root {
     --bg: #f6f5f2;
@@ -90,7 +90,7 @@
 </head>
 <body>
 <header>
-  <h1>TENANT PORTAL</h1>
+  <h1>RESIDENT PORTAL</h1>
   <p id="company-name"></p>
 </header>
 
@@ -175,7 +175,7 @@ function boot() {
       // credentials from a page's own form.
       const response = await fetch("/api/notices");
       if (response.status === 404) {
-        window.alert("That login isn't a tenant account.");
+        window.alert("That login isn't a resident account.");
         return;
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

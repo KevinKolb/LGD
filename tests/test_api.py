@@ -154,7 +154,7 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     assert response.status_code == 200
     assert "Resident Portal" in response.text
     assert 'href="applicant/"' in response.text
-    assert 'href="tenant/"' in response.text
+    assert 'href="resident/"' in response.text
     assert 'src="shared/footer.js"' in response.text
 
 
@@ -166,7 +166,7 @@ def test_applicant_page_is_public_with_no_login(client) -> None:
 
 
 def test_tenant_page_no_longer_has_the_application_form(client) -> None:
-    response = client.get("/tenant/", auth=None)
+    response = client.get("/resident/", auth=None)
     assert response.status_code == 200
     assert "Rental application" not in response.text
     assert "Your notices" in response.text

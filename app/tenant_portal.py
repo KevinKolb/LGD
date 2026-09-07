@@ -23,7 +23,7 @@ class Roommate(BaseModel):
 
 class ApplicationRequest(BaseModel):
     """A prospective tenant's rental application. Submitted with no login -
-    see the public /tenant/ page - so every field is treated as untrusted
+    see the public /applicant/ page - so every field is treated as untrusted
     input, same as any other public form."""
 
     applicant_name: str = Field(min_length=1, max_length=200)

@@ -382,8 +382,8 @@
   <section id="applications-section" hidden>
     <h2>Application review</h2>
     <p class="hint">
-      Submitted from the public tenant page -
-      <a href="/tenant/" target="_blank" rel="noopener">/tenant/</a>. Admin-only:
+      Submitted from the public applicant page -
+      <a href="../applicant/" target="_blank" rel="noopener">/applicant/</a>. Admin-only:
       the property field there is free text the applicant typed, not tied to a
       landlord account, so there's no way to route these automatically.
     </p>
@@ -409,16 +409,16 @@
   </section>
 
   <section>
-    <h2>Send a tenant a notice</h2>
+    <h2>Send a resident a notice</h2>
     <p class="hint">
-      Shows up when that tenant logs in on the tenant page. A tenant needs a
+      Shows up when that resident logs in on the resident page. A resident needs a
       login first - set one up with <code>python -m app.accounts</code> if
       they don't have one yet.
     </p>
     <form id="notice-form">
       <div class="grid two">
         <div>
-          <label for="notice_tenant">Tenant</label>
+          <label for="notice_tenant">Resident</label>
           <select id="notice_tenant" required></select>
         </div>
         <div>
@@ -450,7 +450,7 @@
         </div>
       </div>
       <label for="news_article">Article</label>
-      <textarea id="news_article" required maxlength="5000" placeholder="Details for tenants and applicants."></textarea>
+      <textarea id="news_article" required maxlength="5000" placeholder="Details for residents and applicants."></textarea>
       <div class="actions">
         <button type="submit" id="post-news">Post news</button>
         <span class="note" id="news-status"></span>
@@ -999,7 +999,7 @@ async function boot() {
           tenantSelect.append(el("option", { value: tenant.username, text: tenant.display_name }));
         }
       } else {
-        tenantSelect.append(el("option", { value: "", text: "No tenant accounts yet" }));
+        tenantSelect.append(el("option", { value: "", text: "No resident accounts yet" }));
         tenantSelect.disabled = true;
         document.getElementById("send-notice").disabled = true;
       }
