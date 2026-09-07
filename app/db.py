@@ -120,6 +120,7 @@ APPLICATION_COLUMNS = [
     "roommates_json", "created_at",
 ]
 NOTICE_COLUMNS = ["id", "tenant_username", "message", "created_by", "created_at"]
+NEWS_COLUMNS = ["id", "landlord_id", "headline", "article", "created_by", "created_at"]
 
 # Same columns, Postgres syntax (SERIAL/AUTOINCREMENT differences don't apply
 # here - document_id is always a real PandaDoc id, never generated).
