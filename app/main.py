@@ -23,10 +23,20 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel, Field
 
-from app import archive_storage, db
-from app.auth import check_credentials, hash_password
-from app.config import Landlord, User, get_settings, preload_accounts_from_postgres
+from app import accounts, archive_storage, db
+from app.accounts import MIN_PASSWORD_LENGTH
+from app.auth import check_credentials, hash_password, verify_password
+from app.config import (
+    ConfigError,
+    Landlord,
+    User,
+    VALID_MODES,
+    get_settings,
+    preload_accounts_from_postgres,
+    set_mode_override,
+)
 from app.lease import LeaseRequest
 from app.pandadoc import (
     COMPLETED_STATUS,
@@ -204,6 +214,77 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
         "early_payment_discount": str(settings.early_payment_discount),
         "pandadoc_sends_email": settings.pandadoc_sends_email,
     }
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=200)
+
+
+@app.post("/api/account/password")
+async def api_change_password(
+    payload: ChangePasswordRequest,
+    user: User = Depends(current_user),
+) -> dict[str, str]:
+    """Let a logged-in user change their own password.
+
+    Re-checks the current password even though `current_user` already
+    proved it correct for this request - defense in depth, and it means a
+    stray autofilled/stale form can't silently change a password to
+    something the user didn't intend.
+    """
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    new_hash = hash_password(payload.new_password)
+    changed = await accounts.set_password_hash(user.username, new_hash)
+    if not changed:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    # The new hash now needs to reach whatever Settings.load() actually
+    # reads - the Postgres cache if that's the backend, and the @lru_cache
+    # on get_settings() either way. See app/accounts.py's set_password_hash
+    # docstring: it only writes the durable store, this is that refresh.
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if database_url:
+        await preload_accounts_from_postgres(database_url)
+    get_settings.cache_clear()
+    return {"detail": "Password updated."}
+
+
+class SetModeRequest(BaseModel):
+    mode: str
+
+
+@app.post("/api/admin/mode")
+async def api_set_mode(
+    payload: SetModeRequest,
+    user: User = Depends(current_user),
+) -> dict[str, Any]:
+    """Admin-only sandbox/production toggle.
+
+    Deliberately not persisted anywhere - see set_mode_override's docstring
+    in app/config.py. A restart always falls back to the deployment's own
+    PANDADOC_MODE (sandbox, unless set otherwise), never stays stuck in
+    production because someone forgot to switch back.
+    """
+    if not user.is_admin:
+        raise HTTPException(status_code=404, detail="No such page.")
+    if payload.mode not in VALID_MODES:
+        raise HTTPException(
+            status_code=400, detail=f"mode must be one of {sorted(VALID_MODES)}."
+        )
+    set_mode_override(payload.mode)
+    get_settings.cache_clear()
+    try:
+        settings = get_settings()
+    except ConfigError as exc:
+        # e.g. switching to production with no PANDADOC_API_KEY configured -
+        # revert the override rather than leaving the app unable to boot.
+        set_mode_override(None)
+        get_settings.cache_clear()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"mode": settings.mode, "is_sandbox": settings.is_sandbox}
 
 
 @app.get("/api/admin/info")

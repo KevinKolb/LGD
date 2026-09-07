@@ -263,13 +263,35 @@ def _reset_accounts_cache_for_tests() -> None:
     _accounts_cache = None
 
 
+# An admin-set runtime override, from the dashboard's sandbox/live toggle -
+# takes precedence over PANDADOC_MODE when set. Deliberately in-memory only,
+# not persisted anywhere: a restart forgetting a "production" override and
+# falling back to the safe env-var default (sandbox, unless the deployment's
+# own PANDADOC_MODE says otherwise) is a feature, not a bug.
+_mode_override: str | None = None
+
+
+def set_mode_override(mode: str | None) -> None:
+    """Set (or, with None, clear) the runtime mode override. Raises
+    ConfigError for anything other than a valid mode or None."""
+    global _mode_override
+    if mode is not None and mode not in VALID_MODES:
+        raise ConfigError(f"mode must be one of {sorted(VALID_MODES)} or None, got {mode!r}.")
+    _mode_override = mode
+
+
+def _reset_mode_override_for_tests() -> None:
+    global _mode_override
+    _mode_override = None
+
+
 def _resolve_pandadoc_keys() -> tuple[str, str, str]:
     """Pick the key and template for the active mode.
 
     Defaults to sandbox: spending one of the 60 production documents has to be
     a deliberate act, not the consequence of a forgotten variable.
     """
-    mode = os.environ.get("PANDADOC_MODE", MODE_SANDBOX).strip().lower()
+    mode = _mode_override or os.environ.get("PANDADOC_MODE", MODE_SANDBOX).strip().lower()
     if mode not in VALID_MODES:
         raise ConfigError(
             f"PANDADOC_MODE must be one of {sorted(VALID_MODES)}, got {mode!r}."

@@ -100,6 +100,43 @@ def save(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+async def set_password_hash(username: str, new_hash: str) -> bool:
+    """Write an already-hashed password for `username` to whichever backend
+    is active (same DATABASE_URL check as everywhere else). Returns False if
+    no such user exists.
+
+    For the web dashboard's own "change my password" feature (see
+    app/main.py) - deliberately takes a hash, not a raw password, so the
+    caller controls hashing/validation and this stays a pure storage write.
+    The caller is also responsible for refreshing any cached Settings/
+    accounts afterward; this function only writes the durable store.
+    """
+    dsn = os.environ.get("DATABASE_URL", "").strip()
+    if dsn:
+        import asyncpg
+
+        connection = await asyncpg.connect(dsn, statement_cache_size=0)
+        try:
+            result = await connection.execute(
+                "UPDATE users SET password_hash = $1 WHERE username = $2",
+                new_hash, username,
+            )
+        finally:
+            await connection.close()
+        return result != "UPDATE 0"
+
+    path = Path(os.environ.get("LGD_ACCOUNTS_FILE", str(DEFAULT_PATH)))
+    if not path.is_file():
+        return False
+    data = json.loads(path.read_text(encoding="utf-8"))
+    for user in data.get("users", []):
+        if user["username"] == username:
+            user["password_hash"] = new_hash
+            save(path, data)
+            return True
+    return False
+
+
 def cmd_init(path: Path, force: bool) -> int:
     if path.is_file() and not force:
         print(f"{path} already exists. Pass --force to overwrite it.", file=sys.stderr)

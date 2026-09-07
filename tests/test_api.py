@@ -169,6 +169,78 @@ def test_admin_info_reports_local_backends_by_default(client) -> None:
     assert "local disk" in body["backends"]["archive"]
 
 
+# ---------------------------------------------------------------------------
+# Change own password
+# ---------------------------------------------------------------------------
+
+def test_change_password_requires_authentication(client) -> None:
+    response = client.post(
+        "/api/account/password",
+        json={"current_password": "whatever", "new_password": "a new long password"},
+        auth=None,
+    )
+    assert response.status_code == 401
+
+
+def test_change_password_rejects_the_wrong_current_password(client) -> None:
+    response = client.post(
+        "/api/account/password",
+        json={"current_password": "not-it", "new_password": "a new long password"},
+        auth=STEVE,
+    )
+    assert response.status_code == 400
+    assert client.get("/api/config", auth=STEVE).status_code == 200
+
+
+def test_change_password_rejects_a_too_short_new_password(client) -> None:
+    response = client.post(
+        "/api/account/password",
+        json={"current_password": PASSWORDS["steve"], "new_password": "short"},
+        auth=STEVE,
+    )
+    assert response.status_code == 422
+
+
+def test_change_password_succeeds_and_takes_effect_immediately(client) -> None:
+    new_password = "a brand new long enough password"
+    response = client.post(
+        "/api/account/password",
+        json={"current_password": PASSWORDS["steve"], "new_password": new_password},
+        auth=STEVE,
+    )
+    assert response.status_code == 200
+
+    assert client.get("/api/config", auth=STEVE).status_code == 401
+    assert client.get("/api/config", auth=("steve", new_password)).status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Admin sandbox/live toggle
+# ---------------------------------------------------------------------------
+
+def test_mode_toggle_is_refused_to_a_landlord_user(client) -> None:
+    for credentials in (STEVE, GAY):
+        response = client.post("/api/admin/mode", json={"mode": "sandbox"}, auth=credentials)
+        assert response.status_code == 404
+
+
+def test_mode_toggle_requires_a_valid_mode(client) -> None:
+    response = client.post("/api/admin/mode", json={"mode": "nonsense"}, auth=ADMIN)
+    assert response.status_code == 400
+
+
+def test_mode_toggle_switches_the_active_mode(client) -> None:
+    response = client.post("/api/admin/mode", json={"mode": "sandbox"}, auth=ADMIN)
+    assert response.status_code == 200
+    assert response.json() == {"mode": "sandbox", "is_sandbox": True}
+    assert client.get("/api/config", auth=ADMIN).json()["mode"] == "sandbox"
+
+    response = client.post("/api/admin/mode", json={"mode": "production"}, auth=ADMIN)
+    assert response.status_code == 200
+    assert response.json() == {"mode": "production", "is_sandbox": False}
+    assert client.get("/api/config", auth=ADMIN).json()["mode"] == "production"
+
+
 def test_landlord_cannot_create_a_lease_for_the_other_landlord(
     client, fake_pandadoc
 ) -> None:

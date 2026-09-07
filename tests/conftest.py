@@ -156,9 +156,10 @@ def make_client(tmp_path, monkeypatch, fake_pandadoc, archive_dir):
 
     yield build
 
-    from app.config import get_settings
+    from app.config import _reset_mode_override_for_tests, get_settings
 
     get_settings.cache_clear()
+    _reset_mode_override_for_tests()
 
 
 @pytest.fixture
