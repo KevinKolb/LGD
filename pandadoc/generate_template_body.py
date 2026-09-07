@@ -241,7 +241,7 @@ def extract_body(source_text: str) -> str:
         if not stripped:
             continue
         if stripped.startswith("# "):
-            continue  # the "# LGD Residential Lease" title
+            continue  # the "# Residential Lease" title
         if stripped == "---":
             continue  # scan-page-boundary divider, meaningless to PandaDoc
         if re.match(r"^## PAGE \d+$", stripped):

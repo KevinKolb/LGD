@@ -22,6 +22,7 @@ from __future__ import annotations
 import html
 import re
 from pathlib import Path
+from typing import Iterator
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE = REPO_ROOT / "originals" / "lease.md"
@@ -100,8 +101,15 @@ HTML_HEAD = """<!doctype html>
   }
   .blank.long { min-width: 5.5in; }
   .blank.medium { min-width: 3in; }
+  .blank.word { min-width: 1.3in; }
   .blank.short { min-width: 1.4em; }
   .blank.tiny { min-width: 0.9em; }
+  p.preamble {
+    /* Three name/address blanks packed into one short sentence stretch
+       justified text into odd gaps; left-aligned, uneven line lengths
+       read as normal rather than "wrong". */
+    text-align: left;
+  }
   .signature-block {
     page-break-inside: avoid;
     page-break-before: avoid;
@@ -148,6 +156,13 @@ HTML_FOOTER = """
   support this CSS feature as of early 2026 - if you print from Firefox, that
   footer will simply be missing rather than wrong.
 </div>
+<script>
+  // Opening this page (from the dashboard's "Print blank lease" button) is
+  // the whole point of the page, so bring up the browser's print dialog
+  // automatically rather than making the landlord find Ctrl+P themselves.
+  // The small delay lets layout settle first so the print preview is right.
+  window.addEventListener("load", () => setTimeout(() => window.print(), 150));
+</script>
 </body>
 </html>
 """
@@ -238,34 +253,56 @@ def render_blank(width: str = "short") -> str:
     return f'<span class="blank {width}"></span>'
 
 
-def markup_blanks(paragraph: str) -> str:
-    """Turn one paragraph of lease.md text into paragraph-inner HTML:
-    spread out the occupants blanks, escape everything, restore the bold
-    section labels, then turn each run of underscores into a styled blank
-    sized by its surrounding context (checked by a keyword in the nearby
-    text, not by position - see `choose_width`). Falls back to a plain
-    'short' blank for any run none of those keywords match, rather than
-    failing the whole build over what's purely cosmetic sizing.
+# Width for each real blank, in the exact order they appear in the document
+# (Occupants' blanks are excluded - they're handled separately by
+# `spread_occupants_blanks`, always full-width, since each gets its own line
+# regardless). Matched by position, not by guessing at nearby keywords: an
+# earlier version sized these by sniffing for "Lessor"/"Lessee" in a ~40
+# character window around each blank, which reliably picked up the *next*
+# sentence's mention of Lessee/Lessor and mis-sized §1 TERM's end-month and
+# end-year blanks as "long" instead of a size that fits a month name or a
+# 2-digit year. Position is unambiguous where keyword-sniffing wasn't.
+BLANK_WIDTHS_IN_ORDER = [
+    "medium",  # Lessor.Name
+    "medium",  # Lessee.Names
+    "medium",  # Premises.Address
+    "tiny",    # Term.StartDay
+    "word",    # Term.StartMonth
+    "tiny",    # Term.StartYear
+    "word",    # Term.EndMonth
+    "tiny",    # Term.EndYear
+    "word",    # Rent.Monthly
+    "word",    # Rent.Discounted
+    "word",    # Deposit.Amount
+    "medium",  # Utilities.Excluded
+    "word",    # Execution.City
+    "tiny",    # Execution.Day
+    "word",    # Execution.Month
+    "tiny",    # Execution.Year
+]
+
+
+def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
+    """Turn one paragraph of lease.md text into paragraph-inner HTML: spread
+    out the occupants blanks, escape everything, restore the bold section
+    labels, then turn each remaining run of underscores into a styled blank
+    sized from `widths` - the next entry of `BLANK_WIDTHS_IN_ORDER`, shared
+    and advanced across every paragraph in the document so position stays
+    correct even though blanks are processed one paragraph at a time.
     """
     spread = spread_occupants_blanks(paragraph)
     escaped = html.escape(spread)
     escaped = convert_bold(escaped)
 
     def choose_width(match: re.Match) -> str:
-        start, end = match.span()
-        # 40 chars is enough to reach "Lessor" from the far side of
-        # "(hereinafter referred to as " (29 chars) - the very first blank
-        # in the document, where the landlord's own name goes, sits right
-        # before that phrase rather than after it.
-        context = escaped[max(0, start - 40) : min(len(escaped), end + 40)]
-        for needle, width in [
-            ("Lessor", "long"), ("Lessee", "long"), ("premises known as", "long"),
-            ("day of", "tiny"), ("dollars", "medium"), ("except", "medium"),
-            ("duplicate at", "medium"),
-        ]:
-            if needle in context:
-                return render_blank(width)
-        return render_blank("short")
+        width = next(widths, None)
+        if width is None:
+            raise SystemExit(
+                "Found more fill-in blanks than BLANK_WIDTHS_IN_ORDER expects "
+                f"(16) - a blank was added to originals/lease.md without "
+                "adding a matching entry here."
+            )
+        return render_blank(width)
 
     marked = BLANK.sub(choose_width, escaped)
     marked = marked.replace(LINE_BREAK_SENTINEL, "<br>")
@@ -328,8 +365,13 @@ def spread_occupants_blanks(paragraph: str) -> str:
     return OCCUPANTS_BLANKS.sub(expand, paragraph)
 
 
-def render_paragraph_tag(block: str, marked_html: str) -> str:
-    attrs = ' class="section"' if STARTS_NEW_SECTION.match(block) else ""
+def render_paragraph_tag(block: str, marked_html: str, *, is_preamble: bool) -> str:
+    if is_preamble:
+        attrs = ' class="preamble"'
+    elif STARTS_NEW_SECTION.match(block):
+        attrs = ' class="section"'
+    else:
+        attrs = ""
     return f"<p{attrs}>{marked_html}</p>"
 
 
@@ -338,9 +380,18 @@ def generate(source_text: str) -> str:
     body_blocks = extract_body_blocks(body_source)
     labels = parse_signature_labels(signature_source)
 
+    widths = iter(BLANK_WIDTHS_IN_ORDER)
     paragraphs = [
-        render_paragraph_tag(block, markup_blanks(block)) for block in body_blocks
+        render_paragraph_tag(block, markup_blanks(block, widths), is_preamble=index == 0)
+        for index, block in enumerate(body_blocks)
     ]
+    leftover = list(widths)
+    if leftover:
+        raise SystemExit(
+            f"{len(leftover)} width(s) in BLANK_WIDTHS_IN_ORDER were never "
+            "used - fewer blanks were found in originals/lease.md than "
+            "expected. Has a blank been removed?"
+        )
     signature_html = render_signature_lines(labels)
 
     return (

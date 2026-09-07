@@ -59,7 +59,7 @@ this app never sends a key to the client.
    [`originals/lease.md`](../originals/lease.md) — it's a generated file, never
    hand-edited, so this is always safe and fast to re-run.
 2. **Templates → New template → Start from scratch.**
-3. Name it something like `LGD Residential Lease`.
+3. Name it something like `Residential Lease` — not "LGD" specifically, since the landlord is chosen per-lease at generation time, not baked into the template.
 4. Paste the body from `lease_template_body.md`. Its own header lists the current
    token table; its footer has a print-layout checklist (page size, margins,
    fonts, page breaks, per-page initials) to work through once the wording is in —

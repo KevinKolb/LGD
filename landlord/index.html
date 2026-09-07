@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LGD Lease Maker</title>
+<title>Landlord Dashboard</title>
 <style>
   :root {
     --bg: #f6f5f2;
@@ -36,7 +36,6 @@
   }
   header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
   header p { margin: 4px 0 0; opacity: .8; font-size: 13px; }
-  #whoami { text-align: right; }
   #mode-banner {
     padding: 10px 24px;
     font-size: 13px;
@@ -121,7 +120,21 @@
     background: none; border: none; color: var(--danger);
     padding: 0; font-size: 12px; cursor: pointer; text-decoration: underline;
   }
-  .actions { display: flex; gap: 10px; align-items: center; }
+  .button-link {
+    display: inline-block;
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink) !important;
+    padding: 9px 16px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .button-link.secondary {
+    background: transparent; color: var(--accent) !important;
+  }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .note {
     font-size: 12px; color: var(--muted); margin-top: 6px;
   }
@@ -149,15 +162,26 @@
 <body>
 <header>
   <div>
-    <h1>LGD Lease Maker</h1>
-    <p>Generate a lease and send it for signature</p>
+    <h1>Landlord Dashboard</h1>
+    <p id="whoami">Welcome</p>
   </div>
-  <p id="whoami"></p>
 </header>
 
 <div id="mode-banner" hidden></div>
 
 <main>
+  <section>
+    <h2>Blank lease</h2>
+    <p class="hint">
+      The standard residential lease, blank and unsigned &mdash; to print and fill
+      in by hand, or just to look over. Doesn't touch PandaDoc.
+    </p>
+    <div class="actions">
+      <a class="button-link secondary" id="print-lease-link"
+         href="/api/blank-lease" target="_blank" rel="noopener">Print blank lease</a>
+    </div>
+  </section>
+
   <section>
     <h2>New lease</h2>
     <p class="hint">
@@ -165,8 +189,9 @@
       for signature. You get back a signing link to pass to the approved potential
       tenant.
     </p>
+    <button type="button" id="show-generator">+ Generate a new lease</button>
 
-    <form id="lease-form">
+    <form id="lease-form" hidden>
       <fieldset>
         <legend>Property</legend>
         <div class="grid two">
@@ -655,6 +680,11 @@ async function boot() {
     renumberTenants();
   });
 
+  document.getElementById("show-generator").addEventListener("click", (event) => {
+    document.getElementById("lease-form").hidden = false;
+    event.target.hidden = true;
+  });
+
   document.getElementById("monthly_rent").addEventListener("input", updateDiscountNote);
 
   document.getElementById("preview").addEventListener("click", async () => {
@@ -686,9 +716,11 @@ async function boot() {
       isAdmin = Boolean(config.user && config.user.is_admin);
       isSandbox = Boolean(config.is_sandbox);
 
+      const firstName =
+        (config.user.display_name || config.user.username || "").split(" ")[0];
       document.getElementById("whoami").textContent = isAdmin
-        ? `${config.user.display_name} — admin`
-        : config.user.display_name;
+        ? `Welcome, ${firstName} (admin)`
+        : `Welcome, ${firstName}`;
 
       const banner = document.getElementById("mode-banner");
       if (isSandbox) {

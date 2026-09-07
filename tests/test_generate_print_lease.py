@@ -88,13 +88,33 @@ def test_signature_lines_carry_no_literal_underscores(real_output):
 # Bug 3: blanks that matter must be wide enough to write in
 # ---------------------------------------------------------------------------
 
-def test_the_lessor_name_blank_is_long(real_output):
+def test_the_lessor_name_blank_is_wide_enough_to_write_a_name_in(real_output):
     """The very first blank in the document - where the landlord's own
-    name goes - was sized "short" because "Lessor" sits far enough after
-    it that the old, narrower lookahead window never saw it."""
+    name goes - must not fall back to the narrow default. It's "medium"
+    rather than "long": the opening sentence packs three blanks (Lessor,
+    Lessee, address) together, and three 5.5in "long" blanks in one short
+    sentence is what originally made it look broken under justified text."""
     opening = real_output[real_output.index("<body>") :][:400]
     first_blank = opening.index('<span class="blank')
-    assert opening[first_blank:].startswith('<span class="blank long"></span>')
+    assert opening[first_blank:].startswith('<span class="blank medium"></span>')
+
+
+def test_preamble_paragraph_is_left_aligned_not_justified(real_output):
+    """Three blanks packed into one short sentence stretch justified text
+    into odd gaps around them; left-aligned, uneven line lengths read as
+    normal instead."""
+    assert '<p class="preamble">' in real_output
+
+
+def test_a_month_name_blank_is_wider_than_a_two_digit_number_blank(real_output):
+    """Regression guard for the actual bug: the old keyword-sniffing width
+    heuristic looked far enough ahead to catch the *next* sentence's
+    "Lessee"/"Lessor" and mis-sized §1 TERM's month/year blanks as "long"
+    instead of something sized for what's actually written there."""
+    term_area = real_output[real_output.index(">TERM<") :][:400]
+    assert 'class="blank word"' in term_area  # a month name
+    assert 'class="blank tiny"' in term_area  # a day or 2-digit year
+    assert 'class="blank long"' not in term_area
 
 
 def test_occupants_blanks_are_long_and_on_their_own_lines(real_output):
@@ -118,6 +138,14 @@ def test_lgd_branding_is_not_in_the_title(real_output):
 def test_page_number_counter_is_present(real_output):
     assert "counter(page)" in real_output
     assert "counter(pages)" in real_output
+
+
+def test_page_auto_triggers_the_browser_print_dialog(real_output):
+    """Opening this page (from the dashboard's "Print blank lease" button)
+    is the whole point of it, so it must not sit there waiting for the
+    landlord to find Ctrl+P themselves."""
+    assert "window.print()" in real_output
+    assert 'addEventListener("load"' in real_output
 
 
 def test_page_size_is_letter(real_output):
@@ -162,7 +190,7 @@ def test_output_is_well_formed_enough_to_have_one_head_and_body(real_output):
 
 def test_missing_execution_sentence_raises(gen):
     with pytest.raises(SystemExit):
-        gen.generate("# LGD Residential Lease\n\nNo execution sentence at all.\n")
+        gen.generate("# Residential Lease\n\nNo execution sentence at all.\n")
 
 
 def test_generation_is_deterministic(gen):

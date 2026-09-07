@@ -88,7 +88,7 @@ def test_webhook_is_not_behind_basic_auth(client) -> None:
 def test_dashboard_serves_the_lease_maker(client) -> None:
     response = client.get("/landlord/")
     assert response.status_code == 200
-    assert "LGD Lease Maker" in response.text
+    assert "Landlord Dashboard" in response.text
     assert "Approved potential tenant" in response.text
 
 
@@ -429,3 +429,35 @@ def test_downloading_an_unknown_lease_is_a_404(client) -> None:
 def test_download_requires_authentication(client) -> None:
     client.post("/api/leases", json=LEASE_PAYLOAD)
     assert client.get("/api/leases/doc-1/document", auth=None).status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Blank lease (print/download from the dashboard)
+# ---------------------------------------------------------------------------
+
+def test_blank_lease_requires_authentication(client) -> None:
+    assert client.get("/api/blank-lease", auth=None).status_code == 401
+
+
+def test_blank_lease_serves_the_generated_print_html(client) -> None:
+    """print/lease_print.html is a real, already-generated file in this
+    repo; any signed-in user (landlord or admin) can fetch it."""
+    response = client.get("/api/blank-lease", auth=ADMIN)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "RESIDENTIAL LEASE" in response.text
+
+
+def test_blank_lease_is_available_to_a_landlord_user_too(client) -> None:
+    """Not landlord-scoped like leases are - it's the same blank template
+    for everyone, no tenant or landlord data in it."""
+    assert client.get("/api/blank-lease", auth=STEVE).status_code == 200
+
+
+def test_blank_lease_404s_clearly_if_never_generated(client, monkeypatch) -> None:
+    from app import main
+
+    monkeypatch.setattr(main, "BLANK_LEASE_PATH", main.BLANK_LEASE_PATH.parent / "nope.html")
+    response = client.get("/api/blank-lease", auth=ADMIN)
+    assert response.status_code == 404
+    assert "generate_print_lease.py" in response.json()["detail"]

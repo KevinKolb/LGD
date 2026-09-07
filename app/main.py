@@ -45,6 +45,12 @@ logging.basicConfig(
 logger = logging.getLogger("lgd")
 
 LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
+# The blank, printable lease - generated from originals/lease.md by
+# print/generate_print_lease.py. Served here rather than added to
+# LANDLORD_DIR so there's still exactly one copy of it on disk.
+BLANK_LEASE_PATH = (
+    Path(__file__).resolve().parent.parent / "print" / "lease_print.html"
+).resolve()
 BASIC = HTTPBasic(realm="LGD Lease Maker", auto_error=False)
 
 
@@ -142,6 +148,27 @@ async def landlord_files(asset: str = "", _: User = Depends(current_user)):
     if not target.is_file():
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(target, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/blank-lease", include_in_schema=False)
+async def api_blank_lease(_: User = Depends(current_user)):
+    """The blank, unsigned lease for printing or downloading.
+
+    One route serves both dashboard buttons: opening it in a new tab is the
+    "Print" button (the page has its own print CSS and an on-page Print
+    button), and the "Download" button hits the same URL with an anchor
+    `download` attribute, which makes the browser save it instead of
+    navigating - no server-side distinction needed.
+    """
+    if not BLANK_LEASE_PATH.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Blank lease not generated yet - run "
+            "print/generate_print_lease.py.",
+        )
+    return FileResponse(
+        BLANK_LEASE_PATH, media_type="text/html", headers={"Cache-Control": "no-store"}
+    )
 
 
 # ---------------------------------------------------------------------------

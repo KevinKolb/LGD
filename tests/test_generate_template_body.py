@@ -141,7 +141,7 @@ def test_output_ends_with_the_execution_sentence_before_the_footer(real_output):
 
 def test_missing_blank_raises_instead_of_silently_skipping(gen):
     broken = (
-        "# LGD Residential Lease\n\n---\n\n"
+        "# Residential Lease\n\n---\n\n"
         "hereby leases to (hereinafter referred to as Lessor)\n\n"
         # Deposit blank removed entirely - simulates someone accidentally
         # deleting a fill-in line while editing lease.md.
@@ -153,7 +153,7 @@ def test_missing_blank_raises_instead_of_silently_skipping(gen):
 
 
 def test_missing_execution_sentence_raises(gen):
-    broken = "# LGD Residential Lease\n\n---\n\nNo execution sentence here at all.\n"
+    broken = "# Residential Lease\n\n---\n\nNo execution sentence here at all.\n"
     with pytest.raises(SystemExit):
         gen.generate(broken)
 

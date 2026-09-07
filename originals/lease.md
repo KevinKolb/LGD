@@ -1,4 +1,4 @@
-# LGD Residential Lease
+# Residential Lease
 
 ---
 
