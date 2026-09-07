@@ -112,8 +112,23 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     response = client.get("/", auth=None)
     assert response.status_code == 200
     assert "/landlord/" in response.text
+    assert "/applicant/" in response.text
     assert "/tenant/" in response.text
     assert "/admin/" in response.text
+
+
+def test_applicant_page_is_public_with_no_login(client) -> None:
+    response = client.get("/applicant/", auth=None)
+    assert response.status_code == 200
+    assert "Rental application" in response.text
+    assert "Your notices" not in response.text
+
+
+def test_tenant_page_no_longer_has_the_application_form(client) -> None:
+    response = client.get("/tenant/", auth=None)
+    assert response.status_code == 200
+    assert "Rental application" not in response.text
+    assert "Your notices" in response.text
 
 
 @pytest.mark.parametrize("asset", ["..%2f.env", "..%2fapp%2fconfig.py", "nope.html"])

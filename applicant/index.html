@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // GitHub Pages can only serve static files - this app needs a real
+  // backend, so anyone landing here via GitHub Pages gets sent to the
+  // actual running instance instead. No-op on every other origin,
+  // including the real one this same file is served from.
+  if (window.location.hostname === "kevinkolb.github.io") {
+    // Project Pages serve this repo under a /LGD path prefix
+    // (kevinkolb.github.io/LGD/...) - strip it before reusing the path on
+    // Render, which serves this app at its own root with no such prefix.
+    const path = window.location.pathname.replace(/^\/LGD/, "");
+    window.location.replace(
+      "https://lgd-kzu4.onrender.com" + path + window.location.search
+    );
+  }
+</script>
+<link rel="icon" href="/favicon.ico?v=1">
+<title>Applicant Portal</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1c1a;
+    --muted: #6b6a66;
+    --line: #dcdad4;
+    --accent: #1f5d4c;
+    --accent-ink: #ffffff;
+    --danger: #9b2c2c;
+    --ok: #1f5d4c;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 18px 24px;
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 13px; }
+  main { max-width: 700px; margin: 0 auto; padding: 24px; }
+  footer {
+    max-width: 700px; margin: 0 auto; padding: 0 24px 32px;
+    display: flex; gap: 16px; font-size: 13px;
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--accent); text-decoration: underline; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  label.checkbox-row {
+    display: flex; align-items: flex-start; gap: 8px; font-weight: normal;
+    margin-bottom: 14px;
+  }
+  label.checkbox-row input { width: auto; margin: 2px 0 0; }
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  button {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: progress; }
+  .msg { font-size: 13px; margin-top: 10px; }
+  .msg.error { color: var(--danger); }
+  .msg.ok { color: var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>APPLICANT PORTAL</h1>
+  <p id="company-name"></p>
+</header>
+
+<main>
+  <section>
+    <h2>Rental application</h2>
+    <p class="hint">
+      Fill this out and the property owner will follow up by email. This
+      isn't a lease and doesn't commit you to anything.
+    </p>
+    <form id="application-form">
+      <div class="grid">
+        <div>
+          <label for="applicant_name">Full name</label>
+          <input id="applicant_name" required maxlength="200">
+        </div>
+        <div>
+          <label for="applicant_email">Email</label>
+          <input id="applicant_email" type="email" required maxlength="254">
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="applicant_phone">Phone</label>
+          <input id="applicant_phone" type="tel" required maxlength="40">
+        </div>
+        <div>
+          <label for="desired_move_in">Desired move-in date</label>
+          <input id="desired_move_in" type="date">
+        </div>
+      </div>
+      <label class="checkbox-row" for="consent_to_text">
+        <input type="checkbox" id="consent_to_text">
+        I consent to receive text messages about my application at the phone
+        number above.
+      </label>
+      <label for="property_interest">Property you're interested in</label>
+      <input id="property_interest" maxlength="300" placeholder="e.g. 1556 Camp Street, or 'not sure yet'">
+      <label for="message">
+        Anything else? (household size, income/employment, references)
+      </label>
+      <textarea id="message" maxlength="2000"></textarea>
+      <button type="submit" id="submit-application">Submit application</button>
+      <div id="application-msg"></div>
+    </form>
+  </section>
+</main>
+
+<footer>
+  <a href="/landlord/">Landlord</a>
+  <a href="/applicant/">Applicant</a>
+  <a href="/tenant/">Tenant</a>
+  <a href="/admin/">Admin</a>
+</footer>
+
+<script>
+"use strict";
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (value !== null && value !== undefined) node.setAttribute(key, value);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+function showMessage(id, text, isError) {
+  const node = document.getElementById(id);
+  node.replaceChildren();
+  if (!text) return;
+  node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
+}
+
+// Management company shown under the heading, picked by a ?company= URL
+// param rather than a login - this page is public, before anyone has an
+// account. "orange" and "lgd" are the two options; anything else (or no
+// param at all) leaves the line blank rather than guessing.
+const COMPANY_NAMES = {
+  orange: "Orange Street LLC",
+  lgd: "LGD Properties",
+};
+
+function showCompanyName() {
+  const company = new URLSearchParams(window.location.search).get("company");
+  document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
+}
+
+function boot() {
+  showCompanyName();
+
+  document.getElementById("application-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = document.getElementById("submit-application");
+    button.disabled = true;
+    showMessage("application-msg", "", false);
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicant_name: document.getElementById("applicant_name").value.trim(),
+          applicant_email: document.getElementById("applicant_email").value.trim(),
+          applicant_phone: document.getElementById("applicant_phone").value.trim(),
+          consent_to_text: document.getElementById("consent_to_text").checked,
+          desired_move_in: document.getElementById("desired_move_in").value,
+          property_interest: document.getElementById("property_interest").value.trim(),
+          message: document.getElementById("message").value.trim(),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        showMessage("application-msg", "Application submitted. Thank you!", false);
+        event.target.reset();
+      } else {
+        showMessage("application-msg", body.detail || `Failed (HTTP ${response.status}).`, true);
+      }
+    } catch (error) {
+      showMessage("application-msg", `Could not reach the server: ${error.message}`, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+boot();
+</script>
+</body>
+</html>

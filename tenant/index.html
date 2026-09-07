@@ -18,7 +18,7 @@
     );
   }
 </script>
-<link rel="icon" href="/favicon.ico">
+<link rel="icon" href="/favicon.ico?v=1">
 <title>Tenant Portal</title>
 <style>
   :root {
@@ -29,8 +29,6 @@
     --line: #dcdad4;
     --accent: #1f5d4c;
     --accent-ink: #ffffff;
-    --danger: #9b2c2c;
-    --ok: #1f5d4c;
     --radius: 8px;
   }
   * { box-sizing: border-box; }
@@ -69,25 +67,6 @@
     color: var(--muted);
   }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
-  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  label.checkbox-row {
-    display: flex; align-items: flex-start; gap: 8px; font-weight: normal;
-    margin-bottom: 14px;
-  }
-  label.checkbox-row input { width: auto; margin: 2px 0 0; }
-  input, select, textarea {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 14px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    font: inherit;
-    background: #fff;
-    color: var(--ink);
-  }
-  textarea { min-height: 70px; resize: vertical; }
-  .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
-  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
   button {
     font: inherit;
     border-radius: 6px;
@@ -98,10 +77,6 @@
     cursor: pointer;
   }
   button:disabled { opacity: .55; cursor: progress; }
-  button.secondary { background: transparent; color: var(--accent); }
-  .msg { font-size: 13px; margin-top: 10px; }
-  .msg.error { color: var(--danger); }
-  .msg.ok { color: var(--ok); }
   .notice {
     border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px;
     margin-bottom: 10px; background: #fcfcfa;
@@ -117,67 +92,21 @@
 </header>
 
 <main>
-  <div id="public-view">
-  <section>
-    <h2>Rental application</h2>
-    <p class="hint">
-      Fill this out and the property owner will follow up by email. This
-      isn't a lease and doesn't commit you to anything.
-    </p>
-    <form id="application-form">
-      <div class="grid">
-        <div>
-          <label for="applicant_name">Full name</label>
-          <input id="applicant_name" required maxlength="200">
-        </div>
-        <div>
-          <label for="applicant_email">Email</label>
-          <input id="applicant_email" type="email" required maxlength="254">
-        </div>
-      </div>
-      <div class="grid">
-        <div>
-          <label for="applicant_phone">Phone</label>
-          <input id="applicant_phone" type="tel" required maxlength="40">
-        </div>
-        <div>
-          <label for="desired_move_in">Desired move-in date</label>
-          <input id="desired_move_in" type="date">
-        </div>
-      </div>
-      <label class="checkbox-row" for="consent_to_text">
-        <input type="checkbox" id="consent_to_text">
-        I consent to receive text messages about my application at the phone
-        number above. Message and data rates may apply.
-      </label>
-      <label for="property_interest">Property you're interested in</label>
-      <input id="property_interest" maxlength="300" placeholder="e.g. 1556 Camp Street, or 'not sure yet'">
-      <label for="message">
-        Anything else? (household size, income/employment, references)
-      </label>
-      <textarea id="message" maxlength="2000"></textarea>
-      <button type="submit" id="submit-application">Submit application</button>
-      <div id="application-msg"></div>
-    </form>
-  </section>
-
-  <section>
-    <h2>Already a tenant?</h2>
+  <section id="login-prompt">
+    <h2>Your notices</h2>
     <p class="hint">Log in to see notices from your landlord.</p>
-    <button type="button" class="secondary" id="show-notices">Log in</button>
+    <button type="button" id="show-notices">Log in</button>
   </section>
-  </div>
 
-  <div id="tenant-view" hidden>
-    <section>
-      <h2>Your notices</h2>
-      <div id="notice-list"></div>
-    </section>
-  </div>
+  <section id="notices-section" hidden>
+    <h2>Your notices</h2>
+    <div id="notice-list"></div>
+  </section>
 </main>
 
 <footer>
   <a href="/landlord/">Landlord</a>
+  <a href="/applicant/">Applicant</a>
   <a href="/tenant/">Tenant</a>
   <a href="/admin/">Admin</a>
 </footer>
@@ -194,13 +123,6 @@ function el(tag, attrs = {}, ...children) {
   }
   for (const child of children) node.append(child);
   return node;
-}
-
-function showMessage(id, text, isError) {
-  const node = document.getElementById(id);
-  node.replaceChildren();
-  if (!text) return;
-  node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
 }
 
 function renderNotices(notices) {
@@ -237,39 +159,6 @@ function showCompanyName() {
 function boot() {
   showCompanyName();
 
-  document.getElementById("application-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = document.getElementById("submit-application");
-    button.disabled = true;
-    showMessage("application-msg", "", false);
-    try {
-      const response = await fetch("/api/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicant_name: document.getElementById("applicant_name").value.trim(),
-          applicant_email: document.getElementById("applicant_email").value.trim(),
-          applicant_phone: document.getElementById("applicant_phone").value.trim(),
-          consent_to_text: document.getElementById("consent_to_text").checked,
-          desired_move_in: document.getElementById("desired_move_in").value,
-          property_interest: document.getElementById("property_interest").value.trim(),
-          message: document.getElementById("message").value.trim(),
-        }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (response.ok) {
-        showMessage("application-msg", "Application submitted. Thank you!", false);
-        event.target.reset();
-      } else {
-        showMessage("application-msg", body.detail || `Failed (HTTP ${response.status}).`, true);
-      }
-    } catch (error) {
-      showMessage("application-msg", `Could not reach the server: ${error.message}`, true);
-    } finally {
-      button.disabled = false;
-    }
-  });
-
   document.getElementById("show-notices").addEventListener("click", async (event) => {
     const button = event.target;
     button.disabled = true;
@@ -285,10 +174,8 @@ function boot() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const { notices } = await response.json();
       renderNotices(notices);
-      // A logged-in tenant only sees the notices view, not the public
-      // application form - they're already a tenant, not applying again.
-      document.getElementById("public-view").hidden = true;
-      document.getElementById("tenant-view").hidden = false;
+      document.getElementById("login-prompt").hidden = true;
+      document.getElementById("notices-section").hidden = false;
     } catch (error) {
       window.alert(`Could not log in: ${error.message}`);
     } finally {

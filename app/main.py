@@ -609,6 +609,7 @@ async def api_download_lease(
 # ---------------------------------------------------------------------------
 
 TENANT_DIR = (Path(__file__).resolve().parent.parent / "tenant").resolve()
+APPLICANT_DIR = (Path(__file__).resolve().parent.parent / "applicant").resolve()
 
 
 @app.get("/tenant/", include_in_schema=False)
@@ -618,6 +619,18 @@ async def tenant_files(asset: str = ""):
     notices section, by making an authenticated call to /api/notices."""
     return FileResponse(
         resolve_static_file(TENANT_DIR, asset), headers={"Cache-Control": "no-store"}
+    )
+
+
+@app.get("/applicant/", include_in_schema=False)
+@app.get("/applicant/{asset:path}", include_in_schema=False)
+async def applicant_files(asset: str = ""):
+    """Public static files - no login, same as /tenant/. The rental
+    application form (POST /api/applications) lives here now, separate
+    from /tenant/'s logged-in notices - nobody has a tenant login yet
+    before they've applied."""
+    return FileResponse(
+        resolve_static_file(APPLICANT_DIR, asset), headers={"Cache-Control": "no-store"}
     )
 
 
