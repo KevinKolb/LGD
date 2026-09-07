@@ -37,6 +37,7 @@
   }
 </script>
 <link rel="icon" href="/favicon.ico?v=1">
+<link rel="stylesheet" href="/shared/site.css">
 <title>Admin reference</title>
 <style>
   :root {
@@ -71,13 +72,7 @@
     flex-wrap: wrap;
   }
   header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
-  main { max-width: 900px; margin: 0 auto; padding: 24px; }
-  footer {
-    max-width: 900px; margin: 0 auto; padding: 0 24px 32px;
-    display: flex; gap: 16px; font-size: 13px;
-  }
-  footer a { color: var(--muted); text-decoration: none; }
-  footer a:hover { color: var(--accent); text-decoration: underline; }
+  main { width: 100%; max-width: 900px; margin: 0 auto; padding: 24px; }
   section {
     background: var(--panel);
     border: 1px solid var(--line);
@@ -121,13 +116,6 @@
 <main id="app">
   <p class="hint">Loading&hellip;</p>
 </main>
-
-<footer>
-  <a href="/landlord/">Landlord</a>
-  <a href="/applicant/">Applicant</a>
-  <a href="/tenant/">Tenant</a>
-  <a href="/admin/">Admin</a>
-</footer>
 
 <script>
 "use strict";
@@ -249,5 +237,6 @@ async function boot() {
 boot();
 </script>
 <script src="/landlord/account.js"></script>
+<script src="/shared/footer.js"></script>
 </body>
 </html>

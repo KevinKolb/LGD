@@ -116,6 +116,24 @@ def test_favicon_is_served_with_no_login(client) -> None:
     assert response.headers["content-type"] == "image/vnd.microsoft.icon"
 
 
+def test_shared_assets_are_served_with_no_login(client) -> None:
+    """The public pages (hub, applicant, tenant) load these, so putting
+    them behind Basic auth would leave those pages unstyled and
+    footerless."""
+    css = client.get("/shared/site.css", auth=None)
+    assert css.status_code == 200
+    assert "footer" in css.text
+
+    script = client.get("/shared/footer.js", auth=None)
+    assert script.status_code == 200
+    assert "/applicant/" in script.text
+
+
+def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None:
+    response = client.get("/shared/../accounts.json", auth=None)
+    assert response.status_code == 404
+
+
 def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     response = client.get("/", auth=None)
     assert response.status_code == 200

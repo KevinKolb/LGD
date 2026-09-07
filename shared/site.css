@@ -1,0 +1,38 @@
+/* Styles shared by every page in this app. Loaded before each page's own
+   <style> block, so a page can still override anything here.
+
+   Colors come from the CSS variables each page defines in its own :root
+   (--muted, --accent), so the footer follows whatever theme the page is
+   in, including the ?org=o orange scheme. */
+
+/* Pins the footer to the bottom of the viewport on short pages, while
+   still letting it sit below the content on long ones. A page that lays
+   its own body out differently (the root hub page centers a card) just
+   redeclares what it needs in its own stylesheet. */
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+footer {
+  margin-top: auto;
+  width: 100%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 24px 24px 32px;
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+
+footer a {
+  color: var(--muted, #6b6a66);
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: var(--accent, #1f5d4c);
+  text-decoration: underline;
+}

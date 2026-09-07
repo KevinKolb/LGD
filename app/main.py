@@ -59,6 +59,7 @@ logger = logging.getLogger("lgd")
 
 LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
+SHARED_DIR = (Path(__file__).resolve().parent.parent / "shared").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from originals/lease.md by
@@ -189,6 +190,15 @@ async def favicon():
     if not FAVICON_PATH.is_file():
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(FAVICON_PATH, media_type="image/vnd.microsoft.icon")
+
+
+@app.get("/shared/{asset:path}", include_in_schema=False)
+async def shared_files(asset: str):
+    """The stylesheet and footer every page loads. Public, because the
+    applicant, tenant, and hub pages that load it are public too."""
+    return FileResponse(
+        resolve_static_file(SHARED_DIR, asset), headers={"Cache-Control": "no-store"}
+    )
 
 
 @app.get("/landlord/", include_in_schema=False)

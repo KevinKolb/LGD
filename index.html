@@ -36,6 +36,7 @@
   }
 </script>
 <link rel="icon" href="/favicon.ico?v=1">
+<link rel="stylesheet" href="/shared/site.css">
 <title>Tenant/Landlord Portal</title>
 <style>
   :root {
@@ -104,13 +105,14 @@
     background: var(--accent);
     color: var(--accent-ink);
   }
-  footer {
-    display: flex;
-    gap: 16px;
-    font-size: 13px;
-  }
-  footer a { color: #b0b0b0; text-decoration: none; }
-  footer a:hover { color: var(--accent); text-decoration: underline; }
+  /* Layout comes from /shared/site.css. Here the card is centered by its
+     own auto margins rather than by justify-content, so that the shared
+     footer can still sit at the very bottom without stealing the free
+     space the centering depends on. */
+  body { justify-content: normal; }
+  main { margin: auto; }
+  footer { margin-top: 0; justify-content: center; }
+  footer a { color: #b0b0b0; }
 </style>
 </head>
 <body>
@@ -123,9 +125,6 @@
   </div>
 </main>
 
-<footer>
-  <a href="/landlord/">Landlord</a>
-  <a href="/admin/">Admin</a>
-</footer>
+<script src="/shared/footer.js"></script>
 </body>
 </html>
