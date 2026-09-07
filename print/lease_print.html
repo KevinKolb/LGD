@@ -77,7 +77,7 @@
   label.checkbox-line input {
     margin-right: 0.35em;
   }
-  #parking-clause.struck {
+  .checkbox-line.struck {
     text-decoration: line-through;
     color: #555;
   }
@@ -145,7 +145,7 @@
 <p class="section">18. <strong>ATTORNEY&#x27;S FEES</strong> Lessee further agrees that if an attorney is employed to protect any rights of the Lessor hereunder, Lessee will pay the fee of such attorney.  Such fee is hereby fixed at twenty-five percent (25%) of the amount claimed or a minimum of $500 whichever is greater.  Lessee further agrees to pay all court costs and sheriff&#x27;s or constable&#x27;s charges if any.</p>
 <p class="section">19. <strong>OTHER</strong> The failure of Lessor to insist upon strict performance of the terms, covenants, agreement and conditions hereby contained, or any of them, shall not constitute or be construed as a waiver or relinquishment of the Lessor&#x27;s rights thereafter to enforce any such terms, covenants, agreements and conditions, but the same shall continue in full force and effect.</p>
 <p>In the event this rental agreement is executed by more than one tenant, it is understood and agreed that each individual shall be bound by all provisions of this rental agreement, and each shall be responsible for payment in full of the entire amount of any money due under this rental agreement, including, but not limited to, all interest, attorney fees, and other fees and charges of whatever nature and kind in the same manner as if each individual were the only person executing this rental agreement.  It is understood that each tenant who executes this rental agreement is to be jointly and solidarily liable for all of the obligations contained in this rental agreement.</p>
-<p class="section">20. <strong>PARKING</strong> <label class="checkbox-line"><input type="checkbox" id="parking-not-available">Parking not available at this address.</label><span id="parking-clause">  Parking spaces are limited to the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited to tenant&#x27;s automobiles listed on application and in operating condition.</span></p>
+<p class="section">20. <strong>PARKING</strong> <label class="checkbox-line" id="parking-label-not-available"><input type="radio" name="parking" id="parking-not-available">Parking not available at this address.</label>  <label class="checkbox-line" id="parking-label-limited"><input type="radio" name="parking" id="parking-limited">Parking spaces are limited to the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited to tenant&#x27;s automobiles listed on application and in operating condition.</label></p>
 <p>Executed in duplicate at <span class="blank word"></span>, Louisiana this <span class="blank tiny"></span> day of <span class="blank word"></span>20<span class="blank tiny"></span>.</p>
 <div class="signature-block">
 <div class="sig-line">Lessor/Agent</div>
@@ -170,12 +170,17 @@
   // The small delay lets layout settle first so the print preview is right.
   window.addEventListener("load", () => setTimeout(() => window.print(), 150));
 
-  // Check the box first (cancel the print dialog above if it beat you to
-  // it, then print again with Ctrl+P/Cmd+P) to cross out the whole PARKING
-  // section for a property with none to offer.
-  document.getElementById("parking-not-available").addEventListener("change", function () {
-    document.getElementById("parking-clause").classList.toggle("struck", this.checked);
-  });
+  // Pick one of the two PARKING radio buttons first (cancel the print
+  // dialog above if it beat you to it, then print again with Ctrl+P/
+  // Cmd+P) to cross out whichever option doesn't apply.
+  function updateParkingStrikes() {
+    var notAvailable = document.getElementById("parking-not-available");
+    var limited = document.getElementById("parking-limited");
+    document.getElementById("parking-label-not-available").classList.toggle("struck", limited.checked);
+    document.getElementById("parking-label-limited").classList.toggle("struck", notAvailable.checked);
+  }
+  document.getElementById("parking-not-available").addEventListener("change", updateParkingStrikes);
+  document.getElementById("parking-limited").addEventListener("change", updateParkingStrikes);
 </script>
 </body>
 </html>

@@ -260,7 +260,7 @@ manner as if each individual were the only person executing this rental agreemen
 understood that each tenant who executes this rental agreement is to be jointly and
 solidarily liable for all of the obligations contained in this rental agreement.
 
-20. **PARKING** [ ] Parking not available at this address.  Parking spaces are limited to
+20. **PARKING** ( ) Parking not available at this address.  ( ) Parking spaces are limited to
 the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited
 to tenant's automobiles listed on application and in operating condition.
 

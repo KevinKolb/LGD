@@ -28,32 +28,33 @@
     #account-popup {
       position: absolute; top: 100%; right: 0; margin-top: 8px;
       width: 300px; max-width: calc(100vw - 32px);
-      background: #fff; color: #1c1c1a; border: 1px solid #dcdad4;
+      background: var(--panel, #fff); color: var(--ink, #1c1c1a);
+      border: 1px solid var(--line, #dcdad4);
       border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
       padding: 16px; z-index: 1000; font-size: 13px; line-height: 1.5;
     }
     #account-popup h3 {
       margin: 0 0 10px; font-size: 12px; text-transform: uppercase;
-      letter-spacing: .05em; color: #6b6a66;
+      letter-spacing: .05em; color: var(--muted, #6b6a66);
     }
     #account-popup .who { margin: 0 0 14px; font-size: 14px; }
     #account-popup section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #ecebe7; }
     #account-popup section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     #account-popup label { display: block; font-weight: 600; margin-bottom: 3px; }
     #account-popup input, #account-popup select {
-      width: 100%; padding: 6px 8px; margin-bottom: 8px; border: 1px solid #dcdad4;
+      width: 100%; padding: 6px 8px; margin-bottom: 8px; border: 1px solid var(--line, #dcdad4);
       border-radius: 5px; font: inherit; box-sizing: border-box;
     }
     #account-popup button {
-      font: inherit; padding: 7px 12px; border-radius: 5px; border: 1px solid #1f5d4c;
-      background: #1f5d4c; color: #fff; cursor: pointer; font-size: 13px;
+      font: inherit; padding: 7px 12px; border-radius: 5px; border: 1px solid var(--accent, #1f5d4c);
+      background: var(--accent, #1f5d4c); color: var(--accent-ink, #fff); cursor: pointer; font-size: 13px;
       text-transform: uppercase; letter-spacing: .03em;
     }
-    #account-popup button.secondary { background: transparent; color: #1f5d4c; }
-    #account-popup .note { color: #6b6a66; font-size: 11px; margin: 4px 0 0; }
+    #account-popup button.secondary { background: transparent; color: var(--accent, #1f5d4c); }
+    #account-popup .note { color: var(--muted, #6b6a66); font-size: 11px; margin: 4px 0 0; }
     #account-popup .msg { font-size: 12px; margin: 6px 0 0; }
-    #account-popup .msg.error { color: #9b2c2c; }
-    #account-popup .msg.ok { color: #1f5d4c; }
+    #account-popup .msg.error { color: var(--danger, #9b2c2c); }
+    #account-popup .msg.ok { color: var(--accent, #1f5d4c); }
   `;
 
   function el(tag, attrs = {}, ...children) {

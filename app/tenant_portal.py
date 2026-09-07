@@ -1,5 +1,6 @@
-"""Request models for the tenant-facing page: public rental applications, and
-notices a landlord/admin sends to a specific tenant.
+"""Request models for the tenant-facing page: public rental applications,
+notices a landlord/admin sends to a specific tenant, and news a landlord/
+admin posts.
 
 Kept separate from app/lease.py, which is about the PandaDoc lease itself -
 these two features don't touch PandaDoc at all.
@@ -44,3 +45,11 @@ class NoticeRequest(BaseModel):
 
     tenant_username: str = Field(min_length=1, max_length=100)
     message: str = Field(min_length=1, max_length=2000)
+
+
+class NewsRequest(BaseModel):
+    """A news post a landlord/admin publishes for one landlord."""
+
+    landlord_id: str = Field(min_length=1, max_length=100)
+    headline: str = Field(min_length=1, max_length=200)
+    article: str = Field(min_length=1, max_length=5000)

@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS users (
     display_name   TEXT NOT NULL,
     role           TEXT NOT NULL,
     landlord_id    TEXT REFERENCES landlords(id),
-    password_hash  TEXT NOT NULL DEFAULT ''
+    password_hash  TEXT NOT NULL DEFAULT '',
+    email          TEXT
 );
 """
 
@@ -71,6 +72,7 @@ STARTER: dict[str, Any] = {
             "display_name": "Kevin Kolb",
             "role": ROLE_ADMIN,
             "password_hash": "",
+            "email": "replace-me@example.com",
         },
         {
             "username": "pam",
@@ -78,6 +80,7 @@ STARTER: dict[str, Any] = {
             "role": ROLE_LANDLORD,
             "landlord_id": "lgd",
             "password_hash": "",
+            "email": "replace-me@example.com",
         },
         {
             "username": "gay",
@@ -85,6 +88,7 @@ STARTER: dict[str, Any] = {
             "role": ROLE_LANDLORD,
             "landlord_id": "robertson",
             "password_hash": "",
+            "email": "replace-me@example.com",
         },
     ],
 }
@@ -166,7 +170,8 @@ def cmd_list(path: Path) -> int:
             landlord = landlords.get(user.get("landlord_id"), {})
             scope = landlord.get("company", user.get("landlord_id", "?"))
         state = "password set" if user.get("password_hash") else "NO PASSWORD"
-        print(f"  {user['username']:<12} {user.get('role', ''):<9} {scope:<26} {state}")
+        email = user.get("email") or "no email"
+        print(f"  {user['username']:<12} {user.get('role', ''):<9} {scope:<26} {state:<14} {email}")
     print()
     return 0
 
@@ -224,10 +229,10 @@ async def _pg_init(dsn: str, force: bool) -> int:
             for user in STARTER["users"]:
                 await connection.execute(
                     "INSERT INTO users "
-                    "(username, display_name, role, landlord_id, password_hash) "
-                    "VALUES ($1, $2, $3, $4, '')",
+                    "(username, display_name, role, landlord_id, password_hash, email) "
+                    "VALUES ($1, $2, $3, $4, '', $5)",
                     user["username"], user["display_name"], user["role"],
-                    user.get("landlord_id"),
+                    user.get("landlord_id"), user.get("email"),
                 )
     finally:
         await connection.close()
@@ -250,8 +255,8 @@ async def _pg_list(dsn: str) -> int:
             "SELECT id, company, signer_name, email FROM landlords ORDER BY id"
         )
         user_rows = await connection.fetch(
-            "SELECT username, display_name, role, landlord_id, password_hash "
-            "FROM users ORDER BY username"
+            "SELECT username, display_name, role, landlord_id, password_hash, "
+            "email FROM users ORDER BY username"
         )
     finally:
         await connection.close()
@@ -269,7 +274,8 @@ async def _pg_list(dsn: str) -> int:
             landlord = landlords.get(row["landlord_id"])
             scope = landlord["company"] if landlord else (row["landlord_id"] or "?")
         state = "password set" if row["password_hash"] else "NO PASSWORD"
-        print(f"  {row['username']:<12} {row['role']:<9} {scope:<26} {state}")
+        email = row["email"] or "no email"
+        print(f"  {row['username']:<12} {row['role']:<9} {scope:<26} {state:<14} {email}")
     print()
     return 0
 

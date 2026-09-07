@@ -18,6 +18,24 @@
     );
   }
 </script>
+<script>
+  // Tulane green/blue by default; ?org=O (or o) swaps in an orange scheme
+  // instead, remembered via localStorage so it survives navigating here
+  // from a page that set it (this app's links between pages don't carry
+  // query strings). Set on <html> here, before <body> paints, so there's
+  // no flash of the wrong colors.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("org")) {
+      localStorage.setItem("lgd-org", params.get("org").toLowerCase());
+    }
+    if (localStorage.getItem("lgd-org") === "o") {
+      document.documentElement.classList.add("theme-orange");
+    }
+  } catch (error) {
+    /* localStorage unavailable (e.g. private browsing) - default colors. */
+  }
+</script>
 <link rel="icon" href="/favicon.ico?v=1">
 <title>Landlord Dashboard</title>
 <style>
@@ -32,6 +50,10 @@
     --danger: #9b2c2c;
     --ok: #1f5d4c;
     --radius: 8px;
+  }
+  html.theme-orange {
+    --accent: #d2601a;
+    --ok: #d2601a;
   }
   * { box-sizing: border-box; }
   body {
@@ -184,6 +206,7 @@
     display: flex; align-items: center; justify-content: center;
     z-index: 2000;
   }
+  .modal-overlay[hidden] { display: none; }
   .modal-box {
     background: var(--panel);
     border-radius: var(--radius);
@@ -336,7 +359,7 @@
           <input type="checkbox" id="parking_not_available" name="parking_not_available">
           Parking not available at this address
         </label>
-        <p class="note">Crosses out the whole PARKING clause in the generated lease.</p>
+        <p class="note">Chooses which of the two PARKING options applies in the generated lease; the other one is crossed out.</p>
       </fieldset>
 
       <div class="actions">

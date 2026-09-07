@@ -166,7 +166,7 @@ def authorize_landlord(user: User, landlord_id: str) -> Landlord:
     if not user.may_use_landlord(landlord_id):
         raise HTTPException(
             status_code=403,
-            detail="You cannot create leases for that landlord.",
+            detail="You cannot act for that landlord.",
         )
     return landlord
 

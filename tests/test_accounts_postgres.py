@@ -50,10 +50,11 @@ class FakeConnection:
             }
             return
         if text.startswith("INSERT INTO users"):
-            username, display_name, role, landlord_id = args
+            username, display_name, role, landlord_id, email = args
             self.users[username] = {
                 "username": username, "display_name": display_name,
                 "role": role, "landlord_id": landlord_id, "password_hash": "",
+                "email": email,
             }
             return
         if text.startswith("UPDATE users SET password_hash"):

@@ -42,10 +42,13 @@ def two_digit_year(year: int) -> str:
 
 
 # Section 20 - PARKING. Kept here rather than as a plain sentence in the
-# generated PandaDoc template body, since the "not available" checkbox has
-# to cross the *whole* clause out when checked - the template holds a single
-# [Parking.Clause] token instead (see pandadoc/generate_template_body.py),
-# and this is the one place that decides what that token's value actually is.
+# generated PandaDoc template body, since this is two mutually exclusive
+# radio-button options (parking not available / parking available but
+# limited) and whichever one isn't chosen has to be struck through entirely
+# - the template holds a single [Parking.Clause] token instead (see
+# pandadoc/generate_template_body.py), and this is the one place that
+# decides what that token's value actually is.
+PARKING_NOT_AVAILABLE_TEXT = "Parking not available at this address."
 PARKING_CLAUSE_TEXT = (
     "Parking spaces are limited to the number of tenants and/or bedrooms, "
     "whichever is less.  Parking spaces are limited to tenant's automobiles "
@@ -156,11 +159,12 @@ class LeaseRequest(BaseModel):
         return f"Lease - {self.premises_address} - {self.tenant_block()}"
 
     def parking_clause(self) -> str:
-        """Section 20's full sentence, including the checkbox glyph - struck
-        through entirely when the property has no parking to offer."""
+        """Section 20's two radio-button options, including their glyphs -
+        whichever one doesn't apply is struck through entirely; the chosen
+        one stays plain."""
         if self.parking_not_available:
-            return f"[X] Parking not available at this address.  {strike(PARKING_CLAUSE_TEXT)}"
-        return f"[ ] Parking not available at this address.  {PARKING_CLAUSE_TEXT}"
+            return f"(X) {PARKING_NOT_AVAILABLE_TEXT}  ( ) {strike(PARKING_CLAUSE_TEXT)}"
+        return f"( ) {strike(PARKING_NOT_AVAILABLE_TEXT)}  (X) {PARKING_CLAUSE_TEXT}"
 
     def tokens(self, *, lessor_name: str, discount: Decimal) -> list[dict[str, str]]:
         """Map the form onto the tokens defined in pandadoc/TEMPLATE_SETUP.md."""

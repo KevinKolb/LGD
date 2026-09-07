@@ -108,11 +108,11 @@ def test_every_expected_token_appears_exactly_once(gen, real_output):
 
 def test_parking_section_is_last_and_fully_tokenized(real_output):
     """PARKING (§20) is a single [Parking.Clause] token, not the literal
-    checkbox marker or clause wording - the whole sentence is computed at
-    lease-generation time in app/lease.py, since checking "not available"
-    has to strike the entire clause, not fill one blank."""
+    radio-button markers or clause wording - both options are computed at
+    lease-generation time in app/lease.py, since whichever one isn't chosen
+    has to be struck through entirely, not fill one blank."""
     assert "20. **PARKING** [Parking.Clause]" in real_output
-    assert "[ ] Parking not available" not in real_output
+    assert "( ) Parking not available" not in real_output
     assert "tenant's automobiles listed on application" not in real_output
 
 

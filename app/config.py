@@ -92,6 +92,9 @@ class User:
     password_hash: str
     # None for admins, who are not tied to one landlord.
     landlord_id: str | None = None
+    # This person's own email, separate from a landlord's - optional, since
+    # existing accounts predate this field.
+    email: str | None = None
 
     @property
     def is_admin(self) -> bool:
@@ -155,6 +158,7 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
                 f"User {username!r} has no password yet. Set one with: "
                 f"python -m app.accounts set-password {username}"
             )
+        email = entry.get("email")
         users.append(
             User(
                 username=username,
@@ -162,6 +166,7 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
                 role=role,
                 password_hash=password_hash,
                 landlord_id=landlord_id,
+                email=str(email) if email else None,
             )
         )
 
@@ -237,8 +242,8 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
             "SELECT id, company, signer_name, email FROM landlords"
         )
         user_rows = await connection.fetch(
-            "SELECT username, display_name, role, landlord_id, password_hash "
-            "FROM users"
+            "SELECT username, display_name, role, landlord_id, password_hash, "
+            "email FROM users"
         )
     finally:
         await connection.close()
@@ -257,6 +262,7 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
             role=row["role"],
             password_hash=row["password_hash"] or "",
             landlord_id=row["landlord_id"],
+            email=row["email"],
         )
         for row in user_rows
     ]

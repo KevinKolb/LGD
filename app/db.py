@@ -22,6 +22,9 @@ import secrets
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
+
+CENTRAL_TIME = ZoneInfo("America/Chicago")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS leases (
@@ -94,6 +97,21 @@ CREATE TABLE IF NOT EXISTS tenants (
     city       TEXT NOT NULL DEFAULT 'New Orleans',
     state      TEXT NOT NULL DEFAULT 'LA'
 );
+
+-- News a landlord/admin posts, from the landlord dashboard. created_at is
+-- recorded in Central time (see _now_central below), unlike every other
+-- table here, which records UTC - a deliberate one-off per the user's
+-- request, not a general policy change.
+CREATE TABLE IF NOT EXISTS news (
+    id           TEXT PRIMARY KEY,
+    landlord_id  TEXT NOT NULL,
+    headline     TEXT NOT NULL,
+    article      TEXT NOT NULL,
+    created_by   TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS news_created_at ON news (created_at DESC);
+CREATE INDEX IF NOT EXISTS news_landlord ON news (landlord_id, created_at DESC);
 """
 
 APPLICATION_COLUMNS = [

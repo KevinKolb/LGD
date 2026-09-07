@@ -29,6 +29,7 @@ LANDLORD_ROW = {
 USER_ROW = {
     "username": "kevin", "display_name": "Kevin Kolb", "role": ROLE_ADMIN,
     "landlord_id": None, "password_hash": "some-hash",
+    "email": "kevin@example.com",
 }
 
 

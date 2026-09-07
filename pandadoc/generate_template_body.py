@@ -94,13 +94,14 @@ BLANK_SUBSTITUTIONS: list[tuple[str, str]] = [
         "except [Utilities.Excluded].",
     ),
     (
-        # Not a fill-in blank like the others above - the whole sentence
-        # (checkbox glyph included) is one token, computed in app/lease.py,
-        # since checking "not available" has to strike the entire clause.
-        r"\[ \] Parking not available at this address\.\s+Parking spaces are "
-        r"limited to the number of tenants and/or bedrooms, whichever is "
-        r"less\.\s+Parking spaces are limited to tenant's automobiles listed "
-        r"on application and in operating condition\.",
+        # Not a fill-in blank like the others above - both radio options
+        # (glyphs included) are one token, computed in app/lease.py, since
+        # whichever option isn't chosen has to be struck through entirely.
+        r"\( \) Parking not available at this address\.\s+"
+        r"\( \) Parking spaces are limited to the number of tenants and/or "
+        r"bedrooms, whichever is less\.\s+Parking spaces are limited to "
+        r"tenant's automobiles listed on application and in operating "
+        r"condition\.",
         "[Parking.Clause]",
     ),
     (
@@ -135,8 +136,8 @@ TOKEN_FILLS = {
     "Deposit.Amount": "§3 security deposit",
     "Occupants.List": "§4 occupants",
     "Utilities.Excluded": '§13 "except ___"',
-    "Parking.Clause": "§20 PARKING - the whole clause, checkbox glyph "
-                      "included, struck through entirely if checked",
+    "Parking.Clause": "§20 PARKING - both radio options, glyphs included; "
+                      "whichever one isn't chosen is struck through entirely",
     "Execution.City": "Execution block city",
     "Execution.Day": "Execution block day",
     "Execution.Month": "Execution block month",

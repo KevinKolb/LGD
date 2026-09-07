@@ -34,7 +34,7 @@ Confirm under PandaDoc's **Manage → Tokens** that all 18 appear:
 | `Deposit.Amount` | §3 security deposit |
 | `Occupants.List` | §4 occupants |
 | `Utilities.Excluded` | §13 "except ___" |
-| `Parking.Clause` | §20 PARKING - the whole clause, checkbox glyph included, struck through entirely if checked |
+| `Parking.Clause` | §20 PARKING - both radio options, glyphs included; whichever one isn't chosen is struck through entirely |
 | `Execution.City` | Execution block city |
 | `Execution.Day` | Execution block day |
 | `Execution.Month` | Execution block month |

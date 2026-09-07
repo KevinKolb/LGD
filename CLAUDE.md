@@ -45,13 +45,15 @@ correctly in Chrome, Edge, and Safari (18.2+), but Firefox does not support it a
 early 2026; printing from Firefox just omits that line rather than showing something
 wrong.
 
-§20 PARKING is the one section with a real, clickable checkbox instead of a
-fill-in blank: `mark_parking_checkbox` in the generator recognizes the literal
-lead-in sentence "[ ] Parking not available at this address." in
-`originals/lease.md`, and swaps it for a real `<input type="checkbox">` plus a
-`<span id="parking-clause">` wrapping the rest of the clause; JS toggles a
-`.struck` (CSS `text-decoration: line-through`) class on that span when the
-box is checked. Auto-print still fires on page load - checking the box first
+§20 PARKING is the one section with two real, mutually exclusive radio
+buttons instead of fill-in blanks: `mark_parking_radios` in the generator
+recognizes the two literal sentences "( ) Parking not available at this
+address." and "( ) Parking spaces are limited to..." in
+`originals/lease.md`, and swaps each for a real `<input type="radio"
+name="parking">` inside its own `<label class="checkbox-line">`. JS toggles
+a `.struck` (CSS `text-decoration: line-through`) class on whichever
+label's radio is *not* checked - the chosen option stays plain, the other
+is crossed out. Auto-print still fires on page load - picking one first
 means cancelling that dialog once, then printing again manually.
 
 ## Keeping the PandaDoc template body in sync
@@ -83,11 +85,11 @@ hand-maintained mapping from the generator's — keep both in mind if a blank is
 ever added or removed).
 
 §20 PARKING's `[Parking.Clause]` token is different from every other token:
-it isn't one blank's value, it's the *entire clause* (checkbox glyph
-included), because checking "parking not available" has to cross the whole
-sentence out, not just fill one word. `app/lease.py`'s `strike()` does that
-by overlaying a combining strikethrough character (U+0336) on every
-character of the clause - PandaDoc tokens are plain-text substitutions, with
+it isn't one blank's value, it's *both radio options* (glyphs included),
+because whichever one isn't chosen has to be crossed out entirely, not just
+fill one word. `app/lease.py`'s `strike()` does that by overlaying a
+combining strikethrough character (U+0336) on every character of the
+unchosen option - PandaDoc tokens are plain-text substitutions, with
 no way to send "make this struck-through" as a separate instruction, but a
 combining character is just a literal character, so it survives one.
 Confirmed to render correctly in a browser; **not yet verified against a
@@ -248,6 +250,17 @@ for the research behind any entry that cites outside sources.
   in sync" above for how the checkbox and its strikethrough behavior
   actually work in each (a real HTML checkbox + CSS for print; a single
   `[Parking.Clause]` token, computed in `app/lease.py`, for PandaDoc).
+
+- **2026-09-07 — §20 PARKING's single checkbox became two radio buttons**
+  (per the user's request). Same underlying choice as before (parking
+  available vs. not), but now presented as two mutually exclusive options -
+  "( ) Parking not available at this address." and "( ) Parking spaces are
+  limited to..." - with whichever one isn't chosen struck through, rather
+  than only ever striking the "limited" sentence when the single checkbox
+  was checked. Applied identically to `originals/lease.md`,
+  `pandadoc/lease_template_body.md`, and `print/lease_print.html` - see
+  "A blank, printable paper lease" and "Keeping the PandaDoc template body
+  in sync" above for the updated mechanics in each.
 
 Nothing is currently pending in red in `originals/lease.md` — every drafted
 change above has been reviewed and applied to both files.

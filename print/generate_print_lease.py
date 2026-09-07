@@ -120,7 +120,7 @@ HTML_HEAD = """<!doctype html>
   label.checkbox-line input {
     margin-right: 0.35em;
   }
-  #parking-clause.struck {
+  .checkbox-line.struck {
     text-decoration: line-through;
     color: #555;
   }
@@ -177,12 +177,17 @@ HTML_FOOTER = """
   // The small delay lets layout settle first so the print preview is right.
   window.addEventListener("load", () => setTimeout(() => window.print(), 150));
 
-  // Check the box first (cancel the print dialog above if it beat you to
-  // it, then print again with Ctrl+P/Cmd+P) to cross out the whole PARKING
-  // section for a property with none to offer.
-  document.getElementById("parking-not-available").addEventListener("change", function () {
-    document.getElementById("parking-clause").classList.toggle("struck", this.checked);
-  });
+  // Pick one of the two PARKING radio buttons first (cancel the print
+  // dialog above if it beat you to it, then print again with Ctrl+P/
+  // Cmd+P) to cross out whichever option doesn't apply.
+  function updateParkingStrikes() {
+    var notAvailable = document.getElementById("parking-not-available");
+    var limited = document.getElementById("parking-limited");
+    document.getElementById("parking-label-not-available").classList.toggle("struck", limited.checked);
+    document.getElementById("parking-label-limited").classList.toggle("struck", notAvailable.checked);
+  }
+  document.getElementById("parking-not-available").addEventListener("change", updateParkingStrikes);
+  document.getElementById("parking-limited").addEventListener("change", updateParkingStrikes);
 </script>
 </body>
 </html>
@@ -312,7 +317,7 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
     correct even though blanks are processed one paragraph at a time.
     """
     spread = spread_occupants_blanks(paragraph)
-    spread = mark_parking_checkbox(spread)
+    spread = mark_parking_radios(spread)
     escaped = html.escape(spread)
     escaped = convert_bold(escaped)
 
@@ -330,13 +335,23 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
     marked = marked.replace(LINE_BREAK_SENTINEL, "<br>")
     marked = marked.replace(OCCUPANTS_BLANK_SENTINEL, render_blank("long"))
     marked = marked.replace(
-        PARKING_CHECKBOX_SENTINEL,
-        '<label class="checkbox-line">'
-        '<input type="checkbox" id="parking-not-available">'
-        "Parking not available at this address.</label>",
+        PARKING_LABEL_A_START_SENTINEL,
+        '<label class="checkbox-line" id="parking-label-not-available">',
     )
-    marked = marked.replace(PARKING_CLAUSE_START_SENTINEL, '<span id="parking-clause">')
-    marked = marked.replace(PARKING_CLAUSE_END_SENTINEL, "</span>")
+    marked = marked.replace(
+        PARKING_RADIO_A_SENTINEL,
+        '<input type="radio" name="parking" id="parking-not-available">',
+    )
+    marked = marked.replace(PARKING_LABEL_A_END_SENTINEL, "</label>")
+    marked = marked.replace(
+        PARKING_LABEL_B_START_SENTINEL,
+        '<label class="checkbox-line" id="parking-label-limited">',
+    )
+    marked = marked.replace(
+        PARKING_RADIO_B_SENTINEL,
+        '<input type="radio" name="parking" id="parking-limited">',
+    )
+    marked = marked.replace(PARKING_LABEL_B_END_SENTINEL, "</label>")
     return marked
 
 
@@ -372,31 +387,51 @@ OCCUPANTS_BLANKS = re.compile(
 # step has already run.
 LINE_BREAK_SENTINEL = "\x00BR\x00"
 OCCUPANTS_BLANK_SENTINEL = "\x00OCCBLANK\x00"
-PARKING_CHECKBOX_SENTINEL = "\x00PARKINGBOX\x00"
-PARKING_CLAUSE_START_SENTINEL = "\x00PARKINGCLAUSESTART\x00"
-PARKING_CLAUSE_END_SENTINEL = "\x00PARKINGCLAUSEEND\x00"
+PARKING_LABEL_A_START_SENTINEL = "\x00PARKINGLABELASTART\x00"
+PARKING_LABEL_A_END_SENTINEL = "\x00PARKINGLABELAEND\x00"
+PARKING_RADIO_A_SENTINEL = "\x00PARKINGRADIOA\x00"
+PARKING_LABEL_B_START_SENTINEL = "\x00PARKINGLABELBSTART\x00"
+PARKING_LABEL_B_END_SENTINEL = "\x00PARKINGLABELBEND\x00"
+PARKING_RADIO_B_SENTINEL = "\x00PARKINGRADIOB\x00"
 
-# The literal lead-in sentence originals/lease.md's PARKING section starts
-# with - see mark_parking_checkbox below.
-PARKING_CHECKBOX_MARKER = "[ ] Parking not available at this address."
+# The literal two radio-marked sentences originals/lease.md's PARKING
+# section is made of - see mark_parking_radios below.
+PARKING_MARKER_A_TEXT = "Parking not available at this address."
+PARKING_MARKER_B_TEXT = (
+    "Parking spaces are limited to the number of tenants and/or bedrooms, "
+    "whichever is less.  Parking spaces are limited to tenant's automobiles "
+    "listed on application and in operating condition."
+)
 
 
-def mark_parking_checkbox(paragraph: str) -> str:
-    """PARKING (the lease's last section, by request) gets a real, clickable
-    checkbox rather than a fill-in blank: checking "not available at this
-    address" strikes through the rest of the section via JS (see
-    HTML_FOOTER's script), for a property with no parking to offer.
+def mark_parking_radios(paragraph: str) -> str:
+    """PARKING (the lease's last section, by request) gets two real,
+    mutually exclusive radio buttons rather than fill-in blanks: picking one
+    strikes through the other via JS (see HTML_FOOTER's script) - "not
+    available at this address" vs. "available but limited".
 
     Runs before HTML-escaping, like spread_occupants_blanks - sentinels
     survive escaping untouched and get swapped for real HTML afterward.
     """
-    if PARKING_CHECKBOX_MARKER not in paragraph:
+    marker_a = f"( ) {PARKING_MARKER_A_TEXT}"
+    marker_b = f"( ) {PARKING_MARKER_B_TEXT}"
+    if marker_a not in paragraph or marker_b not in paragraph:
         return paragraph
-    start = paragraph.index(PARKING_CHECKBOX_MARKER)
-    before, after = paragraph[:start], paragraph[start + len(PARKING_CHECKBOX_MARKER):]
+    start_a = paragraph.index(marker_a)
+    end_a = start_a + len(marker_a)
+    start_b = paragraph.index(marker_b, end_a)
+    end_b = start_b + len(marker_b)
+    before, between, after = (
+        paragraph[:start_a], paragraph[end_a:start_b], paragraph[end_b:],
+    )
     return (
-        f"{before}{PARKING_CHECKBOX_SENTINEL}"
-        f"{PARKING_CLAUSE_START_SENTINEL}{after}{PARKING_CLAUSE_END_SENTINEL}"
+        f"{before}"
+        f"{PARKING_LABEL_A_START_SENTINEL}{PARKING_RADIO_A_SENTINEL}"
+        f"{PARKING_MARKER_A_TEXT}{PARKING_LABEL_A_END_SENTINEL}"
+        f"{between}"
+        f"{PARKING_LABEL_B_START_SENTINEL}{PARKING_RADIO_B_SENTINEL}"
+        f"{PARKING_MARKER_B_TEXT}{PARKING_LABEL_B_END_SENTINEL}"
+        f"{after}"
     )
 
 
