@@ -452,6 +452,47 @@
       </div>
     </form>
   </section>
+
+  <section>
+    <h2>Post news</h2>
+    <p class="hint">
+      Posted date and time are recorded automatically, in Central time.
+    </p>
+    <form id="news-form">
+      <div class="grid two">
+        <div>
+          <label for="news_landlord_id">Landlord</label>
+          <select id="news_landlord_id" required></select>
+        </div>
+        <div>
+          <label for="news_headline">Headline</label>
+          <input id="news_headline" required maxlength="200" placeholder="Water shut off Tuesday">
+        </div>
+      </div>
+      <label for="news_article">Article</label>
+      <textarea id="news_article" required maxlength="5000" placeholder="Details for tenants and applicants."></textarea>
+      <div class="actions">
+        <button type="submit" id="post-news">Post news</button>
+        <span class="note" id="news-status"></span>
+      </div>
+    </form>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th id="news-landlord-heading" hidden>Landlord</th>
+            <th>Headline</th>
+            <th>Article</th>
+            <th>Posted</th>
+          </tr>
+        </thead>
+        <tbody id="news-rows">
+          <tr><td colspan="4" class="empty">Loading&hellip;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <div id="qr-modal" class="modal-overlay" hidden>
@@ -503,6 +544,7 @@ const MONTH_NAMES = [
 let discountAmount = "50";
 let isAdmin = false;
 let isSandbox = false;
+let landlordNames = {};
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -821,6 +863,35 @@ async function loadApplications() {
   }
 }
 
+async function loadNews() {
+  const tbody = document.getElementById("news-rows");
+  const columnCount = isAdmin ? 4 : 3;
+  try {
+    const response = await fetch("/api/news");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const { news } = await response.json();
+    tbody.replaceChildren();
+    if (!news.length) {
+      tbody.append(el("tr", {}, el("td", { colspan: String(columnCount), class: "empty", text: "No news posted yet." })));
+      return;
+    }
+    for (const post of news) {
+      const row = el("tr", {});
+      if (isAdmin) row.append(el("td", { text: landlordNames[post.landlord_id] || post.landlord_id }));
+      row.append(
+        el("td", { text: post.headline }),
+        el("td", { text: post.article }),
+        el("td", { text: new Date(post.created_at).toLocaleString() })
+      );
+      tbody.append(row);
+    }
+  } catch (error) {
+    tbody.replaceChildren(
+      el("tr", {}, el("td", { colspan: String(columnCount), class: "empty", text: `Could not load news: ${error.message}` }))
+    );
+  }
+}
+
 // --- Boot ---------------------------------------------------------------
 
 async function boot() {
@@ -931,6 +1002,17 @@ async function boot() {
       // A landlord user has exactly one; leave it visible but not a decision.
       select.disabled = config.landlords.length === 1;
 
+      const newsSelect = document.getElementById("news_landlord_id");
+      newsSelect.replaceChildren();
+      landlordNames = {};
+      for (const landlord of config.landlords) {
+        newsSelect.append(el("option", { value: landlord.id, text: landlord.name }));
+        landlordNames[landlord.id] = landlord.name;
+      }
+      newsSelect.disabled = config.landlords.length === 1;
+      // Admins see every landlord's news, so they get a column naming each one.
+      document.getElementById("news-landlord-heading").hidden = !isAdmin;
+
       const tenantSelect = document.getElementById("notice_tenant");
       tenantSelect.replaceChildren();
       if (config.tenants.length) {
@@ -1021,8 +1103,41 @@ async function boot() {
     }
   });
 
+  document.getElementById("news-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = document.getElementById("post-news");
+    const statusText = document.getElementById("news-status");
+    button.disabled = true;
+    statusText.textContent = "Posting…";
+    try {
+      const response = await fetch("/api/news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          landlord_id: document.getElementById("news_landlord_id").value,
+          headline: document.getElementById("news_headline").value.trim(),
+          article: document.getElementById("news_article").value.trim(),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      statusText.textContent = response.ok
+        ? "Posted."
+        : (body.detail || `Failed (HTTP ${response.status}).`);
+      if (response.ok) {
+        document.getElementById("news_headline").value = "";
+        document.getElementById("news_article").value = "";
+        await loadNews();
+      }
+    } catch (error) {
+      statusText.textContent = `Could not reach the server: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   await loadLeases();
   if (isAdmin) await loadApplications();
+  await loadNews();
 }
 
 boot();

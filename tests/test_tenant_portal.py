@@ -254,6 +254,125 @@ def test_tenant_does_not_see_another_tenants_notices(client) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Posting news (landlord/admin)
+# ---------------------------------------------------------------------------
+
+def test_post_news_requires_authentication(client) -> None:
+    response = client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "Hi", "article": "Details."},
+        auth=None,
+    )
+    assert response.status_code == 401
+
+
+def test_post_news_is_refused_to_a_tenant(client) -> None:
+    response = client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "Hi", "article": "Details."},
+        auth=TENANT1,
+    )
+    assert response.status_code == 404
+
+
+def test_a_landlord_can_post_news_for_their_own_landlord(client) -> None:
+    response = client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "Pool closed", "article": "For repairs this week."},
+        auth=STEVE,
+    )
+    assert response.status_code == 201
+
+
+def test_a_landlord_cannot_post_news_for_another_landlord(client) -> None:
+    response = client.post(
+        "/api/news",
+        json={"landlord_id": "robertson", "headline": "Hi", "article": "Details."},
+        auth=STEVE,
+    )
+    assert response.status_code == 403
+
+
+def test_admin_can_post_news_for_any_landlord(client) -> None:
+    response = client.post(
+        "/api/news",
+        json={"landlord_id": "robertson", "headline": "Hi", "article": "Details."},
+        auth=ADMIN,
+    )
+    assert response.status_code == 201
+
+
+def test_post_news_rejects_a_missing_headline(client) -> None:
+    response = client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "", "article": "Details."},
+        auth=STEVE,
+    )
+    assert response.status_code == 422
+
+
+def test_news_created_at_is_recorded_in_central_time(client) -> None:
+    """Every other created_at in this app is UTC - news is a deliberate
+    one-off, recorded in Central time (America/Chicago) instead."""
+    client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "Hi", "article": "Details."},
+        auth=STEVE,
+    )
+    body = client.get("/api/news", auth=STEVE).json()
+    created_at = body["news"][0]["created_at"]
+    # Central time is UTC-6 (CST) or UTC-5 (CDT) - never +00:00/Z like the
+    # UTC timestamps used everywhere else in this app.
+    assert created_at.endswith("-06:00") or created_at.endswith("-05:00")
+
+
+# ---------------------------------------------------------------------------
+# Reading news (landlord/admin)
+# ---------------------------------------------------------------------------
+
+def test_list_news_requires_authentication(client) -> None:
+    assert client.get("/api/news", auth=None).status_code == 401
+
+
+def test_list_news_is_refused_to_a_tenant(client) -> None:
+    assert client.get("/api/news", auth=TENANT1).status_code == 404
+
+
+def test_a_landlord_sees_only_their_own_news(client) -> None:
+    client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "LGD news", "article": "..."},
+        auth=STEVE,
+    )
+    client.post(
+        "/api/news",
+        json={"landlord_id": "robertson", "headline": "Robertson news", "article": "..."},
+        auth=GAY,
+    )
+
+    body = client.get("/api/news", auth=STEVE).json()
+
+    assert [n["headline"] for n in body["news"]] == ["LGD news"]
+
+
+def test_admin_sees_every_landlords_news(client) -> None:
+    client.post(
+        "/api/news",
+        json={"landlord_id": "lgd", "headline": "LGD news", "article": "..."},
+        auth=STEVE,
+    )
+    client.post(
+        "/api/news",
+        json={"landlord_id": "robertson", "headline": "Robertson news", "article": "..."},
+        auth=GAY,
+    )
+
+    body = client.get("/api/news", auth=ADMIN).json()
+
+    assert {n["headline"] for n in body["news"]} == {"LGD news", "Robertson news"}
+
+
+# ---------------------------------------------------------------------------
 # Tenant accounts are kept out of the landlord dashboard and its API
 # ---------------------------------------------------------------------------
 
