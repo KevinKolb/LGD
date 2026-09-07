@@ -460,6 +460,30 @@ async def _pg_list_notices(dsn: str, tenant_username: str) -> list[dict[str, Any
     return [dict(row) for row in rows]
 
 
+async def _pg_record_news(dsn: str, row: dict[str, Any]) -> None:
+    pool = await _pg_pool(dsn)
+    columns = ", ".join(NEWS_COLUMNS)
+    placeholders = ", ".join(f"${i + 1}" for i in range(len(NEWS_COLUMNS)))
+    values = [row.get(column) for column in NEWS_COLUMNS]
+    async with pool.acquire() as connection:
+        await connection.execute(
+            f"INSERT INTO news ({columns}) VALUES ({placeholders})", *values
+        )
+
+
+async def _pg_list_news(dsn: str, landlord_id: str | None) -> list[dict[str, Any]]:
+    pool = await _pg_pool(dsn)
+    async with pool.acquire() as connection:
+        if landlord_id is None:
+            rows = await connection.fetch("SELECT * FROM news ORDER BY created_at DESC")
+        else:
+            rows = await connection.fetch(
+                "SELECT * FROM news WHERE landlord_id = $1 ORDER BY created_at DESC",
+                landlord_id,
+            )
+    return [dict(row) for row in rows]
+
+
 # ---------------------------------------------------------------------------
 # Public API - dispatches to whichever backend `db_path` names
 # ---------------------------------------------------------------------------
@@ -598,3 +622,31 @@ async def list_notices(db_path: str, *, tenant_username: str) -> list[dict[str, 
     if _is_postgres(db_path):
         return await _pg_list_notices(db_path, tenant_username)
     return await asyncio.to_thread(_sqlite_list_notices, db_path, tenant_username)
+
+
+async def record_news(db_path: str, *, landlord_id: str, headline: str,
+                      article: str, created_by: str) -> str:
+    """Save a news post. Returns its generated id. created_at is Central
+    time (see _now_central), not UTC like everything else in this file."""
+    news_id = secrets.token_hex(12)
+    row = {
+        "id": news_id,
+        "landlord_id": landlord_id,
+        "headline": headline,
+        "article": article,
+        "created_by": created_by,
+        "created_at": _now_central(),
+    }
+    if _is_postgres(db_path):
+        await _pg_record_news(db_path, row)
+    else:
+        await asyncio.to_thread(_sqlite_record_news, db_path, row)
+    return news_id
+
+
+async def list_news(db_path: str, *,
+                    landlord_id: str | None = None) -> list[dict[str, Any]]:
+    """All news, or only one landlord's when `landlord_id` is given."""
+    if _is_postgres(db_path):
+        return await _pg_list_news(db_path, landlord_id)
+    return await asyncio.to_thread(_sqlite_list_news, db_path, landlord_id)

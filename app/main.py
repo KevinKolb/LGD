@@ -39,7 +39,7 @@ from app.config import (
     set_mode_override,
 )
 from app.lease import LeaseRequest
-from app.tenant_portal import ApplicationRequest, NoticeRequest
+from app.tenant_portal import ApplicationRequest, NewsRequest, NoticeRequest
 from app.pandadoc import (
     COMPLETED_STATUS,
     PandaDocClient,
@@ -697,6 +697,35 @@ async def api_list_notices(user: User = Depends(current_user)) -> dict[str, Any]
     settings = get_settings()
     notices = await db.list_notices(settings.db_path, tenant_username=user.username)
     return {"notices": notices}
+
+
+@app.post("/api/news", status_code=201)
+async def api_post_news(
+    news: NewsRequest,
+    user: User = Depends(current_user),
+) -> dict[str, str]:
+    """A landlord/admin publishes a news post, from the landlord dashboard."""
+    require_not_tenant(user)
+    authorize_landlord(user, news.landlord_id)
+    settings = get_settings()
+    await db.record_news(
+        settings.db_path,
+        landlord_id=news.landlord_id,
+        headline=news.headline,
+        article=news.article,
+        created_by=user.username,
+    )
+    return {"detail": "News posted."}
+
+
+@app.get("/api/news")
+async def api_list_news(user: User = Depends(current_user)) -> dict[str, Any]:
+    """News for this user's own landlord, or every landlord's for an admin."""
+    require_not_tenant(user)
+    settings = get_settings()
+    landlord_id = None if user.is_admin else user.landlord_id
+    news = await db.list_news(settings.db_path, landlord_id=landlord_id)
+    return {"news": news}
 
 
 # ---------------------------------------------------------------------------

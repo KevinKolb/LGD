@@ -5,6 +5,10 @@ jinja2==3.1.5
 python-multipart==0.0.20
 pydantic[email]==2.13.5
 python-dotenv==1.0.1
+# zoneinfo (app/db.py's Central-time news timestamps) needs a real IANA tz
+# database; Windows and some minimal Linux images don't ship one, so this is
+# a required dependency, not optional like asyncpg/supabase below.
+tzdata==2026.3
 # Optional: only imported when DATABASE_URL/SUPABASE_URL are configured (see
 # app/db.py, app/config.py, app/archive_storage.py). Local SQLite/
 # accounts.json/local-disk archive keep working without these, so a plain
