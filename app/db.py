@@ -146,6 +146,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
+def _now_central() -> str:
+    """Like _now(), but in Central time (America/Chicago) rather than UTC -
+    only news posts record a timestamp this way, per the user's request.
+    Still unambiguous (isoformat keeps the UTC offset, which also correctly
+    shifts between CST/CDT on its own), just expressed in Central local
+    time instead of UTC."""
+    return datetime.now(CENTRAL_TIME).isoformat(timespec="microseconds")
+
+
 def _is_postgres(db_path: str) -> bool:
     return db_path.startswith("postgres://") or db_path.startswith("postgresql://")
 
@@ -267,6 +276,29 @@ def _sqlite_list_notices(db_path: str, tenant_username: str) -> list[dict[str, A
             "ORDER BY created_at DESC",
             (tenant_username,),
         ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _sqlite_record_news(db_path: str, row: dict[str, Any]) -> None:
+    columns = ", ".join(row)
+    placeholders = ", ".join(f":{key}" for key in row)
+    with _connect(db_path) as connection:
+        connection.execute(
+            f"INSERT INTO news ({columns}) VALUES ({placeholders})", row
+        )
+
+
+def _sqlite_list_news(db_path: str, landlord_id: str | None) -> list[dict[str, Any]]:
+    with _connect(db_path) as connection:
+        if landlord_id is None:
+            rows = connection.execute(
+                "SELECT * FROM news ORDER BY created_at DESC"
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM news WHERE landlord_id = ? ORDER BY created_at DESC",
+                (landlord_id,),
+            ).fetchall()
     return [dict(row) for row in rows]
 
 
