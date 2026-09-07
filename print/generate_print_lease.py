@@ -45,6 +45,7 @@ HTML_HEAD = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Residential Lease</title>
 <style>
   @page {
@@ -88,6 +89,8 @@ HTML_HEAD = """<!doctype html>
   p {
     margin: 0 0 0.85em;
     text-align: justify;
+    /* Not supported by Firefox as of early 2026 (same gap as the page
+       counter below) - it just prints without this refinement there. */
     orphans: 3;
     widows: 3;
   }

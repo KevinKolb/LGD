@@ -3,6 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // GitHub Pages can only serve static files - this app needs a real
+  // backend, so anyone landing here via GitHub Pages gets sent to the
+  // actual running instance instead. No-op on every other origin,
+  // including the real one this same file is served from.
+  if (window.location.hostname === "kevinkolb.github.io") {
+    window.location.replace(
+      "https://lgd-kzu4.onrender.com" + window.location.pathname + window.location.search
+    );
+  }
+</script>
 <title>Apply &amp; Tenant Portal</title>
 <style>
   :root {
@@ -270,10 +281,6 @@ function boot() {
       button.disabled = false;
     }
   });
-
-  if (window.location.search.includes("autoclick")) {
-    document.getElementById("show-notices").click();
-  }
 }
 
 boot();
