@@ -220,6 +220,20 @@ def test_parking_radios_toggle_strikethrough(gen):
     ) in marked
 
 
+def test_a_parking_answer_can_be_preselected_from_the_url(real_output):
+    """The manager dashboard asks "off-street parking available?" before
+    opening this page and passes the answer as ?parking=yes|no, so the
+    lease is already set correctly by the time the print dialog opens."""
+    assert 'get("parking")' in real_output
+    assert 'parking === "yes"' in real_output
+    assert 'parking === "no"' in real_output
+    # Yes means parking exists but is limited; no means none at all.
+    yes_branch = real_output.split('parking === "yes"')[1].split("else")[0]
+    assert "parking-limited" in yes_branch
+    no_branch = real_output.split('parking === "no"')[1].split("}")[0]
+    assert "parking-not-available" in no_branch
+
+
 def test_output_is_well_formed_enough_to_have_one_head_and_body(real_output):
     assert real_output.count("<html") == 1
     assert real_output.count("<body>") == 1

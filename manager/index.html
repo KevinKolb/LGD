@@ -94,6 +94,36 @@
     background: transparent; color: var(--accent) !important;
   }
   a { color: var(--accent); }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+  }
+  /* Needed alongside the rule above: a class selector outranks the
+     browser's default [hidden] rule, so display:flex would win. */
+  .modal-overlay[hidden] { display: none; }
+  .modal-box {
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 28px 24px 24px;
+    text-align: center;
+    max-width: 340px;
+    width: calc(100% - 48px);
+  }
+  .modal-box p { margin: 0 0 18px; font-weight: 600; }
+  .modal-box .choices { display: flex; gap: 10px; justify-content: center; }
+  .modal-box button {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 9px 22px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .modal-box button.secondary { background: transparent; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -118,8 +148,48 @@
   </section>
 </main>
 
+<div id="parking-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <p>Off-street parking available?</p>
+    <div class="choices">
+      <button type="button" id="parking-yes">Yes</button>
+      <button type="button" class="secondary" id="parking-no">No</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
+
+// The paper lease has two mutually exclusive PARKING options, one of which
+// gets crossed out. Asking here means the lease opens already set the right
+// way, rather than the manager having to pick on the printout - the answer
+// rides along as ?parking=yes|no, which the lease page reads on load.
+(function () {
+  const link = document.getElementById("print-lease-link");
+  const modal = document.getElementById("parking-modal");
+
+  function openLease(answer) {
+    modal.hidden = true;
+    // Called straight from a click, so this counts as a user gesture and
+    // will not trip a popup blocker.
+    window.open(`${link.getAttribute("href")}?parking=${answer}`, "_blank", "noopener");
+  }
+
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    modal.hidden = false;
+  });
+  document.getElementById("parking-yes").addEventListener("click", () => openLease("yes"));
+  document.getElementById("parking-no").addEventListener("click", () => openLease("no"));
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.hidden = true;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) modal.hidden = true;
+  });
+})();
 
 // Greets whoever is logged in. Everything else this page used to do lives
 // in manager/working.html.

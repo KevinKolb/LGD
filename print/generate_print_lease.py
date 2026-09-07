@@ -188,6 +188,19 @@ HTML_FOOTER = """
   }
   document.getElementById("parking-not-available").addEventListener("change", updateParkingStrikes);
   document.getElementById("parking-limited").addEventListener("change", updateParkingStrikes);
+
+  // ?parking=yes / ?parking=no preselects one of the two options, so the
+  // page is already correct by the time the print dialog opens. The
+  // manager dashboard's "Print paper lease" button asks the question and
+  // appends this; opening the page without it leaves both unpicked, to be
+  // filled in by hand or clicked here.
+  var parking = new URLSearchParams(window.location.search).get("parking");
+  if (parking === "yes") {
+    document.getElementById("parking-limited").checked = true;
+  } else if (parking === "no") {
+    document.getElementById("parking-not-available").checked = true;
+  }
+  updateParkingStrikes();
 </script>
 </body>
 </html>
