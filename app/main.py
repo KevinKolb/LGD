@@ -21,7 +21,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field
 
@@ -60,6 +60,7 @@ logger = logging.getLogger("lgd")
 LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
+ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from originals/lease.md by
 # print/generate_print_lease.py. Served here rather than added to
 # LANDLORD_DIR so there's still exactly one copy of it on disk.
@@ -175,8 +176,10 @@ def authorize_landlord(user: User, landlord_id: str) -> Landlord:
 # ---------------------------------------------------------------------------
 
 @app.get("/", include_in_schema=False)
-async def root() -> RedirectResponse:
-    return RedirectResponse("/landlord/")
+async def root():
+    """A small public hub page - no login needed, just links to the three
+    areas (each of which enforces its own auth downstream)."""
+    return FileResponse(ROOT_INDEX_PATH, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/favicon.ico", include_in_schema=False)

@@ -106,6 +106,16 @@ def test_every_expected_token_appears_exactly_once(gen, real_output):
         assert real_output.count(f"[{token}]") == 1, token
 
 
+def test_parking_section_is_last_and_fully_tokenized(real_output):
+    """PARKING (§20) is a single [Parking.Clause] token, not the literal
+    checkbox marker or clause wording - the whole sentence is computed at
+    lease-generation time in app/lease.py, since checking "not available"
+    has to strike the entire clause, not fill one blank."""
+    assert "20. **PARKING** [Parking.Clause]" in real_output
+    assert "[ ] Parking not available" not in real_output
+    assert "tenant's automobiles listed on application" not in real_output
+
+
 def test_no_blank_survives_untranslated(real_output):
     import re
 

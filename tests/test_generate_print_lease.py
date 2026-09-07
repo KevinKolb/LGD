@@ -177,6 +177,37 @@ def test_footer_note_is_hidden_when_printed(real_output):
     assert ".footer-note { display: none; }" in real_output
 
 
+# ---------------------------------------------------------------------------
+# PARKING section: a real checkbox, not a fill-in blank
+# ---------------------------------------------------------------------------
+
+def test_parking_is_the_last_numbered_section(real_output):
+    import re
+
+    numbers = [int(n) for n in re.findall(r'class="section">(\d+)\.', real_output)]
+    assert numbers[-1] == 20
+    assert "20. <strong>PARKING</strong>" in real_output
+
+
+def test_parking_checkbox_is_a_real_input_not_a_blank(real_output):
+    assert '<input type="checkbox" id="parking-not-available">' in real_output
+    assert "Parking not available at this address." in real_output
+
+
+def test_parking_clause_is_wrapped_for_js_to_strike(real_output):
+    assert '<span id="parking-clause">' in real_output
+
+
+def test_parking_checkbox_toggles_strikethrough(gen):
+    marked = gen.markup_blanks(
+        "20. **PARKING** [ ] Parking not available at this address.  "
+        "Rest of the clause.",
+        iter([]),
+    )
+    assert '<input type="checkbox" id="parking-not-available">' in marked
+    assert '<span id="parking-clause">  Rest of the clause.</span>' in marked
+
+
 def test_output_is_well_formed_enough_to_have_one_head_and_body(real_output):
     assert real_output.count("<html") == 1
     assert real_output.count("<body>") == 1

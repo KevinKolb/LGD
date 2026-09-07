@@ -136,10 +136,7 @@
 
     const logoutSection = el("section", {});
     const logoutButton = el("button", { type: "button", class: "secondary", text: "Log out" });
-    logoutSection.append(
-      logoutButton,
-      el("p", { class: "note", text: "Best-effort - if it doesn't prompt you again, close this tab." })
-    );
+    logoutSection.append(logoutButton);
     popup.append(logoutSection);
     logoutButton.addEventListener("click", logout);
 

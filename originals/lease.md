@@ -115,17 +115,13 @@ facto in default, and Lessor shall have the option to demand immediate payment o
 rent for the whole unexpired term of the lease or to immediately cancel this lease and
 obtain possession of the premises in accordance with the provisions of Articles
 4701-4705 of the Louisiana Code of Civil Procedure, without the five (5) day notice
-and cure period provided in Section 10.
+and cure period provided in Section 9.
 
-7. **PARKING** Parking spaces are limited to the number of tenants and/or bedrooms,
-whichever is less.  Parking spaces are limited to tenant's automobiles listed on
-application and in operating condition.
-
-8. **SUBLEASE** Lessee is not permitted to post any "For Rent" signs, rent, sublet or grant use
+7. **SUBLEASE** Lessee is not permitted to post any "For Rent" signs, rent, sublet or grant use
 of possession of the leased premises without written consent of Lessor and then only in
 accordance with this lease.
 
-9. **DEFAULT OR ABANDONMENT** Should the Lessee fail to pay the rent or any other
+8. **DEFAULT OR ABANDONMENT** Should the Lessee fail to pay the rent or any other
 charges arising under this lease promptly as stipulated, should the premises be
 abandoned (It being agreed that an absence of Lessee from the leased premises for five
 (5) consecutive days after rentals have become delinquent shall create a conclusive
@@ -143,7 +139,7 @@ premises in accordance with the provisions of Articles 4701-4705 of the Louisian
 of Civil Procedure.  In the event of such cancellation and eviction, Lessee is obligated to
 pay any and all rent due and owing through the last day said premises are occupied.
 
-10. **OTHER VIOLATIONS AND NUISANCES** Should the Lessee at any time violate any of the
+9. **OTHER VIOLATIONS AND NUISANCES** Should the Lessee at any time violate any of the
 conditions of this lease, other than the conditions provided for in the immediately
 preceding paragraphs under the heading "Default and Abandonment" or should the
 Lessee discontinue the use of the premises for the purpose for which they are rented or
@@ -164,16 +160,16 @@ term of the lease which shall at once become due and payable or to immediately c
 this lease and obtain possession of the premises in accordance with the provisions of
 Articles 4701-4705 of the Louisiana Code of Civil Procedure.
 
-11. **WAIVER UPON TERMINATION OF THE RIGHT OF OCCUPANCY FOR ANY REASON** Lessee
+10. **WAIVER UPON TERMINATION OF THE RIGHT OF OCCUPANCY FOR ANY REASON** Lessee
 hereby expressly waives notice to vacate the premises prior to institution of eviction
 proceedings in accordance with La. CCP Articles 4701 and La. CCP 2713.
 
-12. **WARRANTY** Lessor warrants that the leased premises are in good condition.  Lessee
+11. **WARRANTY** Lessor warrants that the leased premises are in good condition.  Lessee
 accepts them in such condition and agrees to keep them in such condition during the
 term of the lease at his expense and to return them to Lessor in the same condition at
 the termination of the lease, normal wear and tear excepted.
 
-13. **OCCUPANCY** Should Lessee be unable to obtain occupancy on the date of the beginning
+12. **OCCUPANCY** Should Lessee be unable to obtain occupancy on the date of the beginning
 of the lease due to causes beyond control of Lessor, this lease shall not be affected
 thereby, but Lessee shall owe rent beginning only with the day on which he can obtain
 possession.
@@ -185,11 +181,11 @@ However, Lessee shall not be entitled to a reduction of the monthly rent or canc
 of this lease because of a temporary failure of utilities, heat, air conditioning or
 temporary closing of parking lot.
 
-14. **UTILITIES** Lessee agrees to pay all utilities furnished to the property, except __________.
+13. **UTILITIES** Lessee agrees to pay all utilities furnished to the property, except __________.
 Lessee also agrees to turn all utilities on in his/her name as of the date of occupancy, or
 to pay $10 per day per utility until such time as utilities are transferred to Lessee's name.
 
-15. **ADDITIONS OR ALTERATIONS** Lessee shall not make any additions or alterations to the
+14. **ADDITIONS OR ALTERATIONS** Lessee shall not make any additions or alterations to the
 premises without permission.  Lessor or his employees shall have the right to enter the
 premises for the purpose of making repairs necessary to the preservation of the
 property.  Any additions made to the property by the Lessee shall become the property
@@ -202,7 +198,7 @@ of Lessor at the termination of this lease unless otherwise stipulated.
 No holes shall be drilled in the walls, woodwork or floors. No painting of walls is
 permitted without written permission.  No water beds.
 
-16. **LIABILITY** The Lessor shall not be liable to Lessee, or to Lessee's employees, patrons and
+15. **LIABILITY** The Lessor shall not be liable to Lessee, or to Lessee's employees, patrons and
 visitors, or any other person for any damage to person or property caused by any act,
 omission or neglect of Lessee or any other tenant of said premises, and Lessee agrees to
 hold harmless from all claims for any such damage whether the injury occurs on or off
@@ -217,7 +213,7 @@ defects and the damage caused thereof.  Should Lessee fail to promptly so notify
 in writing, of any such defects, Lessee will become responsible for any damage resulting
 to Lessor or other parties.
 
-17. **SIGNS AND ACCESS** Lessor reserves the right to post on the premises "For Sale" or "For
+16. **SIGNS AND ACCESS** Lessor reserves the right to post on the premises "For Sale" or "For
 Rent" signs at all times.  Lessee will allow parties authorized by Lessor to visit the
 premises at reasonable hours in view of buying the entire property and in view of
 renting for forty-five (45) days prior to the expiration of this lease.
@@ -231,21 +227,21 @@ post signs as provided above.
 Reasonable, temporary seasonal or holiday decorations — including but not limited to
 string lights, wreaths, and similar seasonal items — are permitted without Lessor's
 prior written consent, provided such decorations do not damage the premises, comply
-with Section 15 (Additions or Alterations), and are removed within fourteen (14) days
+with Section 14 (Additions or Alterations), and are removed within fourteen (14) days
 after the applicable holiday or season.  Lessor may require immediate removal of any
 decoration that creates a safety hazard or nuisance.
 
-18. **PATIO/YARD** The patio/yard and alley maintenance up to the gate is the Lessee's
+17. **PATIO/YARD** The patio/yard and alley maintenance up to the gate is the Lessee's
 responsibility.  This includes, but is not limited to, keeping it clean, pet waste, and
 weed/vegetation control.  Lessor will maintain front yard and side walk.
 
-19. **ATTORNEY'S FEES** Lessee further agrees that if an attorney is employed to protect any
+18. **ATTORNEY'S FEES** Lessee further agrees that if an attorney is employed to protect any
 rights of the Lessor hereunder, Lessee will pay the fee of such attorney.  Such fee is
 hereby fixed at twenty-five percent (25%) of the amount claimed or a minimum of
 $500 whichever is greater.  Lessee further agrees to pay all court costs and sheriff's or
 constable's charges if any.
 
-20. **OTHER** The failure of Lessor to insist upon strict performance of the terms, covenants,
+19. **OTHER** The failure of Lessor to insist upon strict performance of the terms, covenants,
 agreement and conditions hereby contained, or any of them, shall not constitute or be
 construed as a waiver or relinquishment of the Lessor's rights thereafter to enforce any
 such terms, covenants, agreements and conditions, but the same shall continue in full
@@ -263,6 +259,10 @@ attorney fees, and other fees and charges of whatever nature and kind in the sam
 manner as if each individual were the only person executing this rental agreement.  It is
 understood that each tenant who executes this rental agreement is to be jointly and
 solidarily liable for all of the obligations contained in this rental agreement.
+
+20. **PARKING** [ ] Parking not available at this address.  Parking spaces are limited to
+the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited
+to tenant's automobiles listed on application and in operating condition.
 
 Executed in duplicate at _______________, Louisiana this ____ day of _________20__.
 

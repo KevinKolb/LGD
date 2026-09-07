@@ -94,6 +94,16 @@ BLANK_SUBSTITUTIONS: list[tuple[str, str]] = [
         "except [Utilities.Excluded].",
     ),
     (
+        # Not a fill-in blank like the others above - the whole sentence
+        # (checkbox glyph included) is one token, computed in app/lease.py,
+        # since checking "not available" has to strike the entire clause.
+        r"\[ \] Parking not available at this address\.\s+Parking spaces are "
+        r"limited to the number of tenants and/or bedrooms, whichever is "
+        r"less\.\s+Parking spaces are limited to tenant's automobiles listed "
+        r"on application and in operating condition\.",
+        "[Parking.Clause]",
+    ),
+    (
         rf"Executed in duplicate at {BLANK}, Louisiana this {BLANK} day of "
         rf"{BLANK}20{BLANK}\.",
         "Executed in duplicate at [Execution.City], Louisiana this "
@@ -107,6 +117,7 @@ EXPECTED_TOKENS = [
     "Term.EndMonth", "Term.EndYear",
     "Rent.Monthly", "Rent.Discounted",
     "Deposit.Amount", "Occupants.List", "Utilities.Excluded",
+    "Parking.Clause",
     "Execution.City", "Execution.Day", "Execution.Month", "Execution.Year",
 ]
 
@@ -123,7 +134,9 @@ TOKEN_FILLS = {
     "Rent.Discounted": "§2 net rental if paid on time",
     "Deposit.Amount": "§3 security deposit",
     "Occupants.List": "§4 occupants",
-    "Utilities.Excluded": '§14 "except ___"',
+    "Utilities.Excluded": '§13 "except ___"',
+    "Parking.Clause": "§20 PARKING - the whole clause, checkbox glyph "
+                      "included, struck through entirely if checked",
     "Execution.City": "Execution block city",
     "Execution.Day": "Execution block day",
     "Execution.Month": "Execution block month",

@@ -114,6 +114,16 @@ HTML_HEAD = """<!doctype html>
        read as normal rather than "wrong". */
     text-align: left;
   }
+  label.checkbox-line {
+    font-weight: normal;
+  }
+  label.checkbox-line input {
+    margin-right: 0.35em;
+  }
+  #parking-clause.struck {
+    text-decoration: line-through;
+    color: #555;
+  }
   .signature-block {
     page-break-inside: avoid;
     page-break-before: avoid;
@@ -166,6 +176,13 @@ HTML_FOOTER = """
   // automatically rather than making the landlord find Ctrl+P themselves.
   // The small delay lets layout settle first so the print preview is right.
   window.addEventListener("load", () => setTimeout(() => window.print(), 150));
+
+  // Check the box first (cancel the print dialog above if it beat you to
+  // it, then print again with Ctrl+P/Cmd+P) to cross out the whole PARKING
+  // section for a property with none to offer.
+  document.getElementById("parking-not-available").addEventListener("change", function () {
+    document.getElementById("parking-clause").classList.toggle("struck", this.checked);
+  });
 </script>
 </body>
 </html>
@@ -295,6 +312,7 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
     correct even though blanks are processed one paragraph at a time.
     """
     spread = spread_occupants_blanks(paragraph)
+    spread = mark_parking_checkbox(spread)
     escaped = html.escape(spread)
     escaped = convert_bold(escaped)
 
@@ -311,6 +329,14 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
     marked = BLANK.sub(choose_width, escaped)
     marked = marked.replace(LINE_BREAK_SENTINEL, "<br>")
     marked = marked.replace(OCCUPANTS_BLANK_SENTINEL, render_blank("long"))
+    marked = marked.replace(
+        PARKING_CHECKBOX_SENTINEL,
+        '<label class="checkbox-line">'
+        '<input type="checkbox" id="parking-not-available">'
+        "Parking not available at this address.</label>",
+    )
+    marked = marked.replace(PARKING_CLAUSE_START_SENTINEL, '<span id="parking-clause">')
+    marked = marked.replace(PARKING_CLAUSE_END_SENTINEL, "</span>")
     return marked
 
 
@@ -346,6 +372,32 @@ OCCUPANTS_BLANKS = re.compile(
 # step has already run.
 LINE_BREAK_SENTINEL = "\x00BR\x00"
 OCCUPANTS_BLANK_SENTINEL = "\x00OCCBLANK\x00"
+PARKING_CHECKBOX_SENTINEL = "\x00PARKINGBOX\x00"
+PARKING_CLAUSE_START_SENTINEL = "\x00PARKINGCLAUSESTART\x00"
+PARKING_CLAUSE_END_SENTINEL = "\x00PARKINGCLAUSEEND\x00"
+
+# The literal lead-in sentence originals/lease.md's PARKING section starts
+# with - see mark_parking_checkbox below.
+PARKING_CHECKBOX_MARKER = "[ ] Parking not available at this address."
+
+
+def mark_parking_checkbox(paragraph: str) -> str:
+    """PARKING (the lease's last section, by request) gets a real, clickable
+    checkbox rather than a fill-in blank: checking "not available at this
+    address" strikes through the rest of the section via JS (see
+    HTML_FOOTER's script), for a property with no parking to offer.
+
+    Runs before HTML-escaping, like spread_occupants_blanks - sentinels
+    survive escaping untouched and get swapped for real HTML afterward.
+    """
+    if PARKING_CHECKBOX_MARKER not in paragraph:
+        return paragraph
+    start = paragraph.index(PARKING_CHECKBOX_MARKER)
+    before, after = paragraph[:start], paragraph[start + len(PARKING_CHECKBOX_MARKER):]
+    return (
+        f"{before}{PARKING_CHECKBOX_SENTINEL}"
+        f"{PARKING_CLAUSE_START_SENTINEL}{after}{PARKING_CLAUSE_END_SENTINEL}"
+    )
 
 
 def spread_occupants_blanks(paragraph: str) -> str:

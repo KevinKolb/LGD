@@ -87,11 +87,32 @@ def test_tokens_cover_every_template_placeholder() -> None:
         "Deposit.Amount": "1,850.00",
         "Occupants.List": "Jane Doe",
         "Utilities.Excluded": "none",
+        "Parking.Clause": "[ ] Parking not available at this address.  "
+        "Parking spaces are limited to the number of tenants and/or "
+        "bedrooms, whichever is less.  Parking spaces are limited to "
+        "tenant's automobiles listed on application and in operating "
+        "condition.",
         "Execution.City": "New Orleans",
         "Execution.Day": "15th",
         "Execution.Month": "September",
         "Execution.Year": "26",
     }
+
+
+def test_parking_clause_is_normal_when_available() -> None:
+    lease = make_lease(parking_not_available=False)
+    clause = lease.parking_clause()
+    assert clause.startswith("[ ] Parking not available at this address.")
+    assert "̶" not in clause
+
+
+def test_parking_clause_is_struck_through_when_unavailable() -> None:
+    lease = make_lease(parking_not_available=True)
+    clause = lease.parking_clause()
+    assert clause.startswith("[X] Parking not available at this address.")
+    # Every character of the substantive clause carries a combining
+    # strikethrough - the checkbox glyph and label lead-in do not.
+    assert "P̶a̶r̶k̶i̶n̶g̶" in clause
 
 
 def test_multiple_tenants_join_into_the_lessee_line() -> None:

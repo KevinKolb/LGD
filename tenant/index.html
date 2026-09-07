@@ -19,7 +19,7 @@
   }
 </script>
 <link rel="icon" href="/favicon.ico">
-<title>Apply &amp; Tenant Portal</title>
+<title>Tenant Portal</title>
 <style>
   :root {
     --bg: #f6f5f2;
@@ -112,8 +112,8 @@
 </head>
 <body>
 <header>
-  <h1>Apply for a Residential Lease</h1>
-  <p>Lower Garden District &amp; nearby properties, New Orleans.</p>
+  <h1>TENANT PORTAL</h1>
+  <p id="company-name"></p>
 </header>
 
 <main>
@@ -220,7 +220,23 @@ function renderNotices(notices) {
   }
 }
 
+// Management company shown under the heading, picked by a ?company= URL
+// param rather than a login - this page is public, before anyone has an
+// account. "orange" and "lgd" are the two options; anything else (or no
+// param at all) leaves the line blank rather than guessing.
+const COMPANY_NAMES = {
+  orange: "Orange Street LLC",
+  lgd: "LGD Properties",
+};
+
+function showCompanyName() {
+  const company = new URLSearchParams(window.location.search).get("company");
+  document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
+}
+
 function boot() {
+  showCompanyName();
+
   document.getElementById("application-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = document.getElementById("submit-application");

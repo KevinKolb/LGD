@@ -82,6 +82,10 @@
     font-weight: 600; font-size: 14px;
   }
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  label.checkbox-line {
+    display: flex; align-items: center; gap: 8px; font-weight: normal;
+  }
+  label.checkbox-line input { width: auto; margin: 0; }
   input, select, textarea {
     width: 100%;
     padding: 8px 10px;
@@ -300,6 +304,15 @@
             <input type="date" id="execution_date" name="execution_date" required>
           </div>
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Parking &mdash; section 20</legend>
+        <label class="checkbox-line" for="parking_not_available">
+          <input type="checkbox" id="parking_not_available" name="parking_not_available">
+          Parking not available at this address
+        </label>
+        <p class="note">Crosses out the whole PARKING clause in the generated lease.</p>
       </fieldset>
 
       <div class="actions">
@@ -538,6 +551,7 @@ function buildPayload() {
     security_deposit: get("security_deposit"),
     occupants: get("occupants"),
     utilities_excluded: get("utilities_excluded") || "none",
+    parking_not_available: document.getElementById("parking_not_available").checked,
     execution_city: get("execution_city"),
     execution_date: get("execution_date"),
   };

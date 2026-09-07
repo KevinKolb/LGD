@@ -108,10 +108,12 @@ def test_favicon_is_served_with_no_login(client) -> None:
     assert response.headers["content-type"] == "image/vnd.microsoft.icon"
 
 
-def test_root_redirects_to_the_dashboard(client) -> None:
-    response = client.get("/", follow_redirects=False)
-    assert response.status_code in (302, 307)
-    assert response.headers["location"] == "/landlord/"
+def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
+    response = client.get("/", auth=None)
+    assert response.status_code == 200
+    assert "/landlord/" in response.text
+    assert "/tenant/" in response.text
+    assert "/admin/" in response.text
 
 
 @pytest.mark.parametrize("asset", ["..%2f.env", "..%2fapp%2fconfig.py", "nope.html"])

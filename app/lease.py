@@ -41,6 +41,35 @@ def two_digit_year(year: int) -> str:
     return f"{year % 100:02d}"
 
 
+# Section 20 - PARKING. Kept here rather than as a plain sentence in the
+# generated PandaDoc template body, since the "not available" checkbox has
+# to cross the *whole* clause out when checked - the template holds a single
+# [Parking.Clause] token instead (see pandadoc/generate_template_body.py),
+# and this is the one place that decides what that token's value actually is.
+PARKING_CLAUSE_TEXT = (
+    "Parking spaces are limited to the number of tenants and/or bedrooms, "
+    "whichever is less.  Parking spaces are limited to tenant's automobiles "
+    "listed on application and in operating condition."
+)
+
+
+def strike(text: str) -> str:
+    """Visually cross out `text` by overlaying a combining strikethrough
+    character (U+0336) on every character.
+
+    PandaDoc tokens are plain-text substitutions - there is no way to send a
+    "make this bold" or "make this struck-through" instruction through one,
+    only literal characters. A combining strikethrough character is just
+    that: a literal character, so it survives a plain-text substitution and
+    renders as a real strikethrough in any modern text renderer, the same
+    trick "strikethrough text" generators use elsewhere on the web. Not yet
+    verified against a real PandaDoc-rendered PDF (PandaDoc integration is
+    on hold - see CLAUDE.md); confirmed to render correctly in a browser.
+    """
+    strikethrough = chr(0x0336)
+    return "".join(ch + strikethrough for ch in text)
+
+
 class Tenant(BaseModel):
     """An approved potential tenant - the "Lessee" of the lease document."""
 
@@ -78,6 +107,11 @@ class LeaseRequest(BaseModel):
 
     # Section 13 - UTILITIES ("Lessee agrees to pay all utilities ... except __")
     utilities_excluded: str = Field(default="none", max_length=200)
+
+    # Section 20 - PARKING (moved to the lease's last section on request, so
+    # a property with none can have the whole clause struck through rather
+    # than reading as a claim the property has parking when it doesn't).
+    parking_not_available: bool = False
 
     # Execution block
     execution_city: str = Field(default="New Orleans", min_length=1, max_length=100)
@@ -121,6 +155,13 @@ class LeaseRequest(BaseModel):
     def document_name(self) -> str:
         return f"Lease - {self.premises_address} - {self.tenant_block()}"
 
+    def parking_clause(self) -> str:
+        """Section 20's full sentence, including the checkbox glyph - struck
+        through entirely when the property has no parking to offer."""
+        if self.parking_not_available:
+            return f"[X] Parking not available at this address.  {strike(PARKING_CLAUSE_TEXT)}"
+        return f"[ ] Parking not available at this address.  {PARKING_CLAUSE_TEXT}"
+
     def tokens(self, *, lessor_name: str, discount: Decimal) -> list[dict[str, str]]:
         """Map the form onto the tokens defined in pandadoc/TEMPLATE_SETUP.md."""
         end = self.term_end_date
@@ -138,6 +179,7 @@ class LeaseRequest(BaseModel):
             "Deposit.Amount": money(self.security_deposit),
             "Occupants.List": self.occupants,
             "Utilities.Excluded": self.utilities_excluded or "none",
+            "Parking.Clause": self.parking_clause(),
             "Execution.City": self.execution_city,
             "Execution.Day": ordinal(self.execution_date.day),
             "Execution.Month": MONTHS[self.execution_date.month - 1],

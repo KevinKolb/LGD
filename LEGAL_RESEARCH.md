@@ -13,7 +13,7 @@ relying on any entry for litigation, independently pull the primary source
 
 ---
 
-## §19 ATTORNEY'S FEES — dollar-floor increase, 2026-09-06
+## §18 ATTORNEY'S FEES — dollar-floor increase, 2026-09-06
 
 **Question:** The lease's attorney's-fees clause read "25% of the amount claimed
 or a minimum of $100, whichever is greater." Was 25% low for Louisiana, and was
@@ -73,7 +73,7 @@ figure, let alone its 2026 inflation-adjusted equivalent), so that's what change
 
 ---
 
-## §14 UTILITIES — per-day penalty increase, 2026-09-06 (approved)
+## §13 UTILITIES — per-day penalty increase, 2026-09-06 (approved)
 
 **Question:** The lease charges Lessee "$5 per day per utility" if utilities
 aren't transferred into Lessee's name by occupancy. Is $5 too low?

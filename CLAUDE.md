@@ -45,6 +45,15 @@ correctly in Chrome, Edge, and Safari (18.2+), but Firefox does not support it a
 early 2026; printing from Firefox just omits that line rather than showing something
 wrong.
 
+§20 PARKING is the one section with a real, clickable checkbox instead of a
+fill-in blank: `mark_parking_checkbox` in the generator recognizes the literal
+lead-in sentence "[ ] Parking not available at this address." in
+`originals/lease.md`, and swaps it for a real `<input type="checkbox">` plus a
+`<span id="parking-clause">` wrapping the rest of the clause; JS toggles a
+`.struck` (CSS `text-decoration: line-through`) class on that span when the
+box is checked. Auto-print still fires on page load - checking the box first
+means cancelling that dialog once, then printing again manually.
+
 ## Keeping the PandaDoc template body in sync
 
 [`pandadoc/lease_template_body.md`](pandadoc/lease_template_body.md) is a
@@ -73,6 +82,18 @@ the app via PandaDoc tokens at send time, not by editing the file directly — s
 hand-maintained mapping from the generator's — keep both in mind if a blank is
 ever added or removed).
 
+§20 PARKING's `[Parking.Clause]` token is different from every other token:
+it isn't one blank's value, it's the *entire clause* (checkbox glyph
+included), because checking "parking not available" has to cross the whole
+sentence out, not just fill one word. `app/lease.py`'s `strike()` does that
+by overlaying a combining strikethrough character (U+0336) on every
+character of the clause - PandaDoc tokens are plain-text substitutions, with
+no way to send "make this struck-through" as a separate instruction, but a
+combining character is just a literal character, so it survives one.
+Confirmed to render correctly in a browser; **not yet verified against a
+real PandaDoc-rendered PDF**, since PandaDoc integration is on hold (see
+below) - check this once a provider is actually chosen and wired up.
+
 ## Wording is a legal decision, not a typo to autocorrect
 
 The original scanned lease has several apparent OCR-era wording quirks. Never "fix"
@@ -82,18 +103,18 @@ the instrument. That's a decision for whoever has legal authority over the docum
 
 Eight were reviewed and corrected by the user on 2026-09-06, in both
 `originals/lease.md` and `pandadoc/lease_template_body.md`. Section numbers below are
-**current** (post-2026-09-06 renumbering, see the changelog after this table):
+**current** (post-2026-09-07 PARKING move, see the changelog after this table):
 
 | Section | Before | After |
 | --- | --- | --- |
 | §2 | "revoke of eviction notice" | "revocation of the eviction notice" |
 | §3 | "failure to full and faithfully perform" | "failure to fully and faithfully perform" |
-| §9 | "proceedings be commended by or against" | "proceedings be commenced by or against" |
-| §9 | "said premise are occupied" | "said premises are occupied" |
-| §13 | "shall not be effected thereby" | "shall not be affected thereby" |
-| §10 | "become due and eligible" | "become due and payable" |
-| §20 | "a waiver of relinquishment" | "a waiver or relinquishment" |
-| §20 (multi-tenant) | "jointly and solidarity liable" | "jointly and solidarily liable" |
+| §8 | "proceedings be commended by or against" | "proceedings be commenced by or against" |
+| §8 | "said premise are occupied" | "said premises are occupied" |
+| §12 | "shall not be effected thereby" | "shall not be affected thereby" |
+| §9 | "become due and eligible" | "become due and payable" |
+| §19 | "a waiver of relinquishment" | "a waiver or relinquishment" |
+| §19 (multi-tenant) | "jointly and solidarity liable" | "jointly and solidarily liable" |
 
 `originals/lease_transcript_verbatim.md` still preserves the pre-correction wording,
 untouched, as it always will.
@@ -171,8 +192,8 @@ that fixture without replacing it with something equally strict.
 ## Legal research
 
 [`LEGAL_RESEARCH.md`](LEGAL_RESEARCH.md) records the court cases and websites
-consulted while drafting or amending specific clauses (e.g. the §19 attorney's-fees
-floor, the §14 utilities-penalty amount), including which sources were actually
+consulted while drafting or amending specific clauses (e.g. the §18 attorney's-fees
+floor, the §13 utilities-penalty amount), including which sources were actually
 read in full versus only seen via a search tool's summary. Append to it, don't
 replace it, whenever a clause decision draws on outside research — it's meant to
 survive as a reference trail, including for potential litigation.
@@ -213,6 +234,20 @@ for the research behind any entry that cites outside sources.
   Lessee's restriction / Lessee's exception), matching this document's existing
   style of paragraph breaks rather than bullets or sub-numbering. Applied
   identically to `originals/lease.md` and `pandadoc/lease_template_body.md`.
+
+- **2026-09-07 — §7 PARKING moved to the lease's last section (new §20)**
+  (per the user's request). Old §7–§20 → new §7–§19 shift down by one to fill
+  the gap; PARKING becomes §20, right before the execution sentence. Internal
+  cross-references updated too: SMOKING's "Section 10" → "Section 9" (OTHER
+  VIOLATIONS AND NUISANCES), SIGNS AND ACCESS's "Section 15" → "Section 14"
+  (ADDITIONS OR ALTERATIONS). Also added a checkbox to the section: "[ ]
+  Parking not available at this address." - checking it crosses out the
+  entire clause. Applied identically to `originals/lease.md`,
+  `pandadoc/lease_template_body.md`, and `print/lease_print.html` - see
+  "A blank, printable paper lease" and "Keeping the PandaDoc template body
+  in sync" above for how the checkbox and its strikethrough behavior
+  actually work in each (a real HTML checkbox + CSS for print; a single
+  `[Parking.Clause]` token, computed in `app/lease.py`, for PandaDoc).
 
 Nothing is currently pending in red in `originals/lease.md` — every drafted
 change above has been reviewed and applied to both files.
