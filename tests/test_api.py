@@ -93,10 +93,18 @@ def test_webhook_is_not_behind_basic_auth(client) -> None:
 # Static dashboard
 # ---------------------------------------------------------------------------
 
-def test_dashboard_serves_the_lease_maker(client) -> None:
+def test_dashboard_serves_the_paper_lease(client) -> None:
     response = client.get("/landlord/")
     assert response.status_code == 200
     assert "Landlord Dashboard" in response.text
+    assert "Print paper lease" in response.text
+
+
+def test_the_lease_maker_lives_on_the_working_page(client) -> None:
+    """Everything the landlord dashboard used to hold - the lease maker
+    included - moved to /landlord/working.html."""
+    response = client.get("/landlord/working.html")
+    assert response.status_code == 200
     assert "Approved potential tenant" in response.text
 
 

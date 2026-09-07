@@ -12,6 +12,9 @@
       display: flex; border: 1px solid rgba(255,255,255,.6); border-radius: 6px;
       overflow: hidden;
     }
+    /* An id selector beats the browser default [hidden] rule, so without
+       this the toggle stays visible even while hidden is set. */
+    #mode-toggle[hidden] { display: none; }
     #mode-toggle button {
       font: inherit; font-size: 13px; padding: 6px 12px; border: none;
       background: transparent; color: inherit; cursor: pointer; opacity: .75;
