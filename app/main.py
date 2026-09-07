@@ -31,6 +31,7 @@ from app.auth import check_credentials, hash_password, verify_password
 from app.config import (
     ConfigError,
     Landlord,
+    ROLE_TENANT,
     User,
     VALID_MODES,
     get_settings,
@@ -38,6 +39,7 @@ from app.config import (
     set_mode_override,
 )
 from app.lease import LeaseRequest
+from app.tenant_portal import ApplicationRequest, NoticeRequest
 from app.pandadoc import (
     COMPLETED_STATUS,
     PandaDocClient,
@@ -56,6 +58,7 @@ logging.basicConfig(
 logger = logging.getLogger("lgd")
 
 LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
+ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
 # The blank, printable lease - generated from originals/lease.md by
 # print/generate_print_lease.py. Served here rather than added to
 # LANDLORD_DIR so there's still exactly one copy of it on disk.
@@ -132,6 +135,26 @@ def current_user(
     return user
 
 
+def require_not_tenant(user: User) -> None:
+    """Keep tenant accounts out of the landlord dashboard and its API - a
+    tenant only ever needs /api/notices and /api/account/password."""
+    if user.is_tenant:
+        raise HTTPException(status_code=404, detail="Not found")
+
+
+def resolve_static_file(base_dir: Path, asset: str) -> Path:
+    """Resolve `asset` under `base_dir`, defaulting to its index.html -
+    shared by the landlord, admin, and tenant static file routes."""
+    target = (base_dir / (asset or "index.html")).resolve()
+    if base_dir not in target.parents and target != base_dir:
+        raise HTTPException(status_code=404, detail="Not found")
+    if target.is_dir():
+        target = target / "index.html"
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return target
+
+
 def authorize_landlord(user: User, landlord_id: str) -> Landlord:
     """Resolve a lessor id, refusing one this user may not act for."""
     settings = get_settings()
@@ -157,16 +180,24 @@ async def root() -> RedirectResponse:
 
 @app.get("/landlord/", include_in_schema=False)
 @app.get("/landlord/{asset:path}", include_in_schema=False)
-async def landlord_files(asset: str = "", _: User = Depends(current_user)):
-    target = (LANDLORD_DIR / (asset or "index.html")).resolve()
-    # Reject anything resolving outside the landlord directory.
-    if LANDLORD_DIR not in target.parents and target != LANDLORD_DIR:
-        raise HTTPException(status_code=404, detail="Not found")
-    if target.is_dir():
-        target = target / "index.html"
-    if not target.is_file():
-        raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(target, headers={"Cache-Control": "no-store"})
+async def landlord_files(asset: str = "", user: User = Depends(current_user)):
+    require_not_tenant(user)
+    return FileResponse(
+        resolve_static_file(LANDLORD_DIR, asset), headers={"Cache-Control": "no-store"}
+    )
+
+
+@app.get("/admin/", include_in_schema=False)
+@app.get("/admin/{asset:path}", include_in_schema=False)
+async def admin_files(asset: str = "", user: User = Depends(current_user)):
+    # The page itself is loadable by any non-tenant login (so the footer
+    # link always works rather than 404ing for a landlord) - the actual
+    # admin data behind it (/api/admin/info) stays admin-only, and the page
+    # shows "Admins only." to anyone else. See api_admin_info below.
+    require_not_tenant(user)
+    return FileResponse(
+        resolve_static_file(ADMIN_DIR, asset), headers={"Cache-Control": "no-store"}
+    )
 
 
 @app.get("/api/blank-lease", include_in_schema=False)
@@ -196,6 +227,7 @@ async def api_blank_lease(_: User = Depends(current_user)):
 
 @app.get("/api/config")
 async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
+    require_not_tenant(user)
     settings = get_settings()
     return {
         "user": {
@@ -208,6 +240,13 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
         "landlords": [
             {"id": landlord.id, "name": landlord.company}
             for landlord in settings.landlords_for(user)
+        ],
+        # This user's own tenants, for the "send a notice" form - an admin
+        # sees every tenant, a landlord only those under their own landlord_id.
+        "tenants": [
+            {"username": u.username, "display_name": u.display_name}
+            for u in settings.users
+            if u.role == ROLE_TENANT and (user.is_admin or u.landlord_id == user.landlord_id)
         ],
         "mode": settings.mode,
         "is_sandbox": settings.is_sandbox,
@@ -345,6 +384,7 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
 @app.get("/api/leases")
 async def api_list_leases(user: User = Depends(current_user)) -> dict[str, Any]:
     """Admins see every lease; a landlord sees only their own."""
+    require_not_tenant(user)
     settings = get_settings()
     leases = await db.list_leases(
         settings.db_path,
@@ -363,6 +403,7 @@ async def api_preview_lease(
     Production has a 60-document annual allowance, so this exists to catch a
     typo before it costs one of them. It is free in either mode.
     """
+    require_not_tenant(user)
     settings = get_settings()
     lessor = authorize_landlord(user, lease.lessor_id)
     discount = Decimal(settings.early_payment_discount)
@@ -390,6 +431,7 @@ async def api_create_lease(
     user: User = Depends(current_user),
 ) -> dict[str, Any]:
     """Create the lease in PandaDoc and return a signing link to send out."""
+    require_not_tenant(user)
     settings = get_settings()
     client: PandaDocClient = request.app.state.pandadoc
 
@@ -513,6 +555,7 @@ async def api_download_lease(
     user: User = Depends(current_user),
 ):
     """Serve the executed PDF, fetching it from PandaDoc if not yet archived."""
+    require_not_tenant(user)
     settings = get_settings()
     lease = await db.get_lease(settings.db_path, document_id)
     if lease is None:
@@ -544,6 +587,104 @@ async def api_download_lease(
             "Content-Disposition": f'attachment; filename="{safe_name or document_id}.pdf"'
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Tenant portal: a public application form, plus notices for logged-in
+# tenants. Entirely separate from the PandaDoc lease flow above - see
+# tenant/index.html for the page these back.
+# ---------------------------------------------------------------------------
+
+TENANT_DIR = (Path(__file__).resolve().parent.parent / "tenant").resolve()
+
+
+@app.get("/tenant/", include_in_schema=False)
+@app.get("/tenant/{asset:path}", include_in_schema=False)
+async def tenant_files(asset: str = ""):
+    """Public static files - no login. The page's own JS is what gates the
+    notices section, by making an authenticated call to /api/notices."""
+    return FileResponse(
+        resolve_static_file(TENANT_DIR, asset), headers={"Cache-Control": "no-store"}
+    )
+
+
+@app.get("/api/properties")
+async def api_list_properties() -> dict[str, Any]:
+    """Public - names only, for the application form's dropdown. No emails,
+    no signer names; those stay behind login same as everywhere else."""
+    settings = get_settings()
+    return {
+        "properties": [
+            {"id": landlord.id, "name": landlord.company}
+            for landlord in settings.landlords
+        ]
+    }
+
+
+@app.post("/api/applications", status_code=201)
+async def api_submit_application(application: ApplicationRequest) -> dict[str, str]:
+    """A prospective tenant's rental application. Public - no login, and
+    deliberately so, since nobody has an account before they've applied."""
+    settings = get_settings()
+    if application.landlord_id and not settings.landlord_by_id(application.landlord_id):
+        raise HTTPException(status_code=400, detail="Unknown property selected.")
+    await db.record_application(
+        settings.db_path,
+        applicant_name=application.applicant_name,
+        applicant_email=application.applicant_email,
+        applicant_phone=application.applicant_phone or None,
+        landlord_id=application.landlord_id,
+        desired_move_in=application.desired_move_in or None,
+        message=application.message or None,
+    )
+    return {"detail": "Application received."}
+
+
+@app.get("/api/applications")
+async def api_list_applications(user: User = Depends(current_user)) -> dict[str, Any]:
+    """Admins see every application; a landlord only those naming their own
+    property. An application with no landlord chosen is admin-only."""
+    require_not_tenant(user)
+    settings = get_settings()
+    applications = await db.list_applications(
+        settings.db_path,
+        landlord_id=None if user.is_admin else user.landlord_id,
+    )
+    return {"applications": applications}
+
+
+@app.post("/api/notices", status_code=201)
+async def api_send_notice(
+    notice: NoticeRequest,
+    user: User = Depends(current_user),
+) -> dict[str, str]:
+    """A landlord/admin sends one tenant a free-form notice."""
+    require_not_tenant(user)
+    settings = get_settings()
+    tenant = settings.user_by_username(notice.tenant_username)
+    if tenant is None or not tenant.is_tenant:
+        raise HTTPException(status_code=400, detail="Unknown tenant.")
+    if not user.may_use_landlord(tenant.landlord_id):
+        raise HTTPException(
+            status_code=403, detail="That tenant is not one of yours."
+        )
+    await db.record_notice(
+        settings.db_path,
+        tenant_username=tenant.username,
+        message=notice.message,
+        created_by=user.username,
+    )
+    return {"detail": "Notice sent."}
+
+
+@app.get("/api/notices")
+async def api_list_notices(user: User = Depends(current_user)) -> dict[str, Any]:
+    """A tenant's own notices, newest first."""
+    if not user.is_tenant:
+        raise HTTPException(status_code=404, detail="No such page.")
+    settings = get_settings()
+    notices = await db.list_notices(settings.db_path, tenant_username=user.username)
+    return {"notices": notices}
 
 
 # ---------------------------------------------------------------------------

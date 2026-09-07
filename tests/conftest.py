@@ -6,6 +6,18 @@ from typing import Any
 
 import pytest
 
+# Importing app.config here, at module level - not inside a fixture -
+# guarantees its load_dotenv() call (which populates os.environ from a
+# developer's real .env, including DATABASE_URL/SUPABASE_*) has already run
+# by the time any fixture executes, for every test session regardless of
+# which specific tests are selected. Getting this wrong once meant that
+# running a single test in isolation (rather than the whole suite, where
+# some earlier test always imports app.config first) let the real
+# DATABASE_URL slip past the delenv below - app.config wasn't imported yet
+# when the delenv ran, so there was nothing yet to delete; import order
+# among fixtures during test *collection* is not something to rely on for
+# this, only this kind of module-level, load-first-thing import is.
+import app.config  # noqa: F401
 from app.auth import hash_password
 
 SHARED_KEY = "test-shared-key"
@@ -30,10 +42,12 @@ PASSWORDS = {
     "kevin": "admin password long enough",
     "steve": "steve password long enough",
     "gay": "gay password long enough",
+    "tenant1": "tenant one password long",
 }
 ADMIN = ("kevin", PASSWORDS["kevin"])
 STEVE = ("steve", PASSWORDS["steve"])
 GAY = ("gay", PASSWORDS["gay"])
+TENANT1 = ("tenant1", PASSWORDS["tenant1"])  # belongs to LANDLORD_LGD (steve)
 
 LANDLORD_LGD = {
     "id": "lgd",
@@ -72,6 +86,13 @@ def accounts_document() -> dict[str, Any]:
                 "role": "landlord",
                 "landlord_id": "robertson",
                 "password_hash": hash_password(PASSWORDS["gay"], iterations=1_000),
+            },
+            {
+                "username": "tenant1",
+                "display_name": "Tenant One",
+                "role": "tenant",
+                "landlord_id": "lgd",
+                "password_hash": hash_password(PASSWORDS["tenant1"], iterations=1_000),
             },
         ],
     }
@@ -131,6 +152,20 @@ def make_client(tmp_path, monkeypatch, fake_pandadoc, archive_dir):
     """Builds a TestClient, letting a test choose the PandaDoc mode."""
 
     def build(mode: str = "production"):
+        # Explicit, not just relying on the _no_live_credentials autouse
+        # fixture's ordering relative to this one: a developer's real
+        # DATABASE_URL/SUPABASE_* must be gone *before* the TestClient
+        # below is constructed and entered, since entering it runs the
+        # real app lifespan, which reads these vars immediately. Fixture
+        # setup order between two function-scoped fixtures isn't something
+        # to rely on for that - this found a real bug once already (real
+        # Postgres data ended up cached in-process during a test run).
+        for name in _LIVE_CREDENTIAL_VARS:
+            monkeypatch.delenv(name, raising=False)
+        from app.config import _reset_accounts_cache_for_tests
+
+        _reset_accounts_cache_for_tests()
+
         accounts_path = tmp_path / "accounts.json"
         accounts_path.write_text(json.dumps(accounts_document()), encoding="utf-8")
 

@@ -7,7 +7,15 @@ import json
 
 import pytest
 
-from tests.conftest import ADMIN, GAY, PASSWORDS, SHARED_KEY, STEVE, TEMPLATE_UUID
+from tests.conftest import (
+    ADMIN,
+    GAY,
+    PASSWORDS,
+    SHARED_KEY,
+    STEVE,
+    TEMPLATE_UUID,
+    TENANT1,
+)
 
 LEASE_PAYLOAD = {
     "lessor_id": "lgd",
@@ -144,6 +152,19 @@ def test_admin_info_is_refused_to_a_landlord_user(client) -> None:
         assert client.get("/api/admin/info", auth=credentials).status_code == 404
 
 
+def test_admin_page_itself_still_loads_for_a_landlord(client) -> None:
+    """The static page is reachable (so the footer link works everywhere),
+    even though its data (/api/admin/info, checked above) is admin-only -
+    the page's own JS shows "Admins only." for a landlord who lands there."""
+    response = client.get("/admin/", auth=STEVE)
+    assert response.status_code == 200
+    assert "Admin reference" in response.text
+
+
+def test_admin_page_is_refused_to_a_tenant(client) -> None:
+    assert client.get("/admin/", auth=TENANT1).status_code == 404
+
+
 def test_admin_info_requires_authentication(client) -> None:
     assert client.get("/api/admin/info", auth=None).status_code == 401
 
@@ -151,7 +172,7 @@ def test_admin_info_requires_authentication(client) -> None:
 def test_admin_info_lists_landlords_and_users(client) -> None:
     body = client.get("/api/admin/info", auth=ADMIN).json()
     assert {l["id"] for l in body["landlords"]} == {"lgd", "robertson"}
-    assert {u["username"] for u in body["users"]} == {"kevin", "steve", "gay"}
+    assert {u["username"] for u in body["users"]} == {"kevin", "steve", "gay", "tenant1"}
 
 
 def test_admin_info_never_leaks_secrets(client) -> None:

@@ -24,7 +24,12 @@ load_dotenv()
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ROLE_ADMIN = "admin"
 ROLE_LANDLORD = "landlord"
-VALID_ROLES = {ROLE_ADMIN, ROLE_LANDLORD}
+ROLE_TENANT = "tenant"
+VALID_ROLES = {ROLE_ADMIN, ROLE_LANDLORD, ROLE_TENANT}
+# Roles tied to one specific landlord, as opposed to the admin role, which
+# is not. Both need a landlord_id and are checked the same way when loading
+# accounts - see _load_accounts and _validate_accounts below.
+LANDLORD_SCOPED_ROLES = {ROLE_LANDLORD, ROLE_TENANT}
 
 MODE_SANDBOX = "sandbox"
 MODE_PRODUCTION = "production"
@@ -92,6 +97,10 @@ class User:
     def is_admin(self) -> bool:
         return self.role == ROLE_ADMIN
 
+    @property
+    def is_tenant(self) -> bool:
+        return self.role == ROLE_TENANT
+
     def may_use_landlord(self, landlord_id: str) -> bool:
         """Admins may act for any landlord; everyone else only for their own."""
         return self.is_admin or self.landlord_id == landlord_id
@@ -132,7 +141,7 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
         landlord_id = entry.get("landlord_id")
         landlord_id = str(landlord_id) if landlord_id else None
 
-        if role == ROLE_LANDLORD:
+        if role in LANDLORD_SCOPED_ROLES:
             if not landlord_id:
                 raise ConfigError(f"User {username!r} needs a landlord_id.")
             if landlord_id not in known_ids:
@@ -190,7 +199,7 @@ def _validate_accounts(
                 f"User {user.username!r} has role {user.role!r}; expected "
                 f"one of {sorted(VALID_ROLES)}."
             )
-        if user.role == ROLE_LANDLORD:
+        if user.role in LANDLORD_SCOPED_ROLES:
             if not user.landlord_id:
                 raise ConfigError(f"User {user.username!r} needs a landlord_id.")
             if user.landlord_id not in known_ids:

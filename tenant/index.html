@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apply &amp; Tenant Portal</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1c1a;
+    --muted: #6b6a66;
+    --line: #dcdad4;
+    --accent: #1f5d4c;
+    --accent-ink: #ffffff;
+    --danger: #9b2c2c;
+    --ok: #1f5d4c;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 18px 24px;
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 13px; }
+  main { max-width: 700px; margin: 0 auto; padding: 24px; }
+  footer {
+    max-width: 700px; margin: 0 auto; padding: 0 24px 32px;
+    display: flex; gap: 16px; font-size: 13px;
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--accent); text-decoration: underline; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  button {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: progress; }
+  button.secondary { background: transparent; color: var(--accent); }
+  .msg { font-size: 13px; margin-top: 10px; }
+  .msg.error { color: var(--danger); }
+  .msg.ok { color: var(--ok); }
+  .notice {
+    border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px;
+    margin-bottom: 10px; background: #fcfcfa;
+  }
+  .notice .when { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+  .empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Apply for a Residential Lease</h1>
+  <p>Lower Garden District &amp; nearby properties, New Orleans.</p>
+</header>
+
+<main>
+  <div id="public-view">
+  <section>
+    <h2>Rental application</h2>
+    <p class="hint">
+      Fill this out and the property owner will follow up by email. This
+      isn't a lease and doesn't commit you to anything.
+    </p>
+    <form id="application-form">
+      <div class="grid">
+        <div>
+          <label for="applicant_name">Full name</label>
+          <input id="applicant_name" required maxlength="200">
+        </div>
+        <div>
+          <label for="applicant_email">Email</label>
+          <input id="applicant_email" type="email" required maxlength="254">
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="applicant_phone">Phone</label>
+          <input id="applicant_phone" type="tel" maxlength="40">
+        </div>
+        <div>
+          <label for="desired_move_in">Desired move-in date</label>
+          <input id="desired_move_in" type="date">
+        </div>
+      </div>
+      <label for="landlord_id">Property you're interested in</label>
+      <select id="landlord_id">
+        <option value="">Not sure / general inquiry</option>
+      </select>
+      <label for="message">
+        Anything else? (household size, income/employment, references)
+      </label>
+      <textarea id="message" maxlength="2000"></textarea>
+      <button type="submit" id="submit-application">Submit application</button>
+      <div id="application-msg"></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Already a tenant?</h2>
+    <p class="hint">Log in to see notices from your landlord.</p>
+    <button type="button" class="secondary" id="show-notices">Log in</button>
+  </section>
+  </div>
+
+  <div id="tenant-view" hidden>
+    <section>
+      <h2>Your notices</h2>
+      <div id="notice-list"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <a href="/landlord/">Landlord</a>
+  <a href="/tenant/">Tenant</a>
+  <a href="/admin/">Admin</a>
+</footer>
+
+<script>
+"use strict";
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (value !== null && value !== undefined) node.setAttribute(key, value);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+function showMessage(id, text, isError) {
+  const node = document.getElementById(id);
+  node.replaceChildren();
+  if (!text) return;
+  node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
+}
+
+async function loadProperties() {
+  try {
+    const response = await fetch("/api/properties");
+    if (!response.ok) return;
+    const { properties } = await response.json();
+    const select = document.getElementById("landlord_id");
+    for (const property of properties) {
+      select.append(el("option", { value: property.id, text: property.name }));
+    }
+  } catch (error) {
+    /* the "not sure" option still works fine without this */
+  }
+}
+
+function renderNotices(notices) {
+  const list = document.getElementById("notice-list");
+  list.replaceChildren();
+  if (!notices.length) {
+    list.append(el("p", { class: "empty", text: "No notices yet." }));
+    return;
+  }
+  for (const notice of notices) {
+    const card = el("div", { class: "notice" });
+    card.append(
+      el("p", { text: notice.message }),
+      el("p", { class: "when", text: new Date(notice.created_at).toLocaleString() })
+    );
+    list.append(card);
+  }
+}
+
+function boot() {
+  loadProperties();
+
+  document.getElementById("application-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = document.getElementById("submit-application");
+    button.disabled = true;
+    showMessage("application-msg", "", false);
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicant_name: document.getElementById("applicant_name").value.trim(),
+          applicant_email: document.getElementById("applicant_email").value.trim(),
+          applicant_phone: document.getElementById("applicant_phone").value.trim(),
+          desired_move_in: document.getElementById("desired_move_in").value,
+          landlord_id: document.getElementById("landlord_id").value || null,
+          message: document.getElementById("message").value.trim(),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        showMessage("application-msg", "Application submitted. Thank you!", false);
+        event.target.reset();
+      } else {
+        showMessage("application-msg", body.detail || `Failed (HTTP ${response.status}).`, true);
+      }
+    } catch (error) {
+      showMessage("application-msg", `Could not reach the server: ${error.message}`, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("show-notices").addEventListener("click", async (event) => {
+    const button = event.target;
+    button.disabled = true;
+    try {
+      // Triggers the browser's native Basic Auth prompt on the first try -
+      // this page itself has no login form, since Basic Auth can't be fed
+      // credentials from a page's own form.
+      const response = await fetch("/api/notices");
+      if (response.status === 404) {
+        window.alert("That login isn't a tenant account.");
+        return;
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const { notices } = await response.json();
+      renderNotices(notices);
+      // A logged-in tenant only sees the notices view, not the public
+      // application form - they're already a tenant, not applying again.
+      document.getElementById("public-view").hidden = true;
+      document.getElementById("tenant-view").hidden = false;
+    } catch (error) {
+      window.alert(`Could not log in: ${error.message}`);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  if (window.location.search.includes("autoclick")) {
+    document.getElementById("show-notices").click();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

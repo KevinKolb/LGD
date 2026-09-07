@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
@@ -46,7 +47,37 @@ CREATE TABLE IF NOT EXISTS leases (
 );
 CREATE INDEX IF NOT EXISTS leases_created_at ON leases (created_at DESC);
 CREATE INDEX IF NOT EXISTS leases_landlord ON leases (landlord_id, created_at DESC);
+
+-- Public rental applications, submitted from the tenant page with no login.
+CREATE TABLE IF NOT EXISTS applications (
+    id               TEXT PRIMARY KEY,
+    landlord_id      TEXT,
+    applicant_name   TEXT NOT NULL,
+    applicant_email  TEXT NOT NULL,
+    applicant_phone  TEXT,
+    desired_move_in  TEXT,
+    message          TEXT,
+    created_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS applications_created_at ON applications (created_at DESC);
+
+-- Free-form messages a landlord/admin sends a specific tenant, shown when
+-- that tenant logs in on the tenant page.
+CREATE TABLE IF NOT EXISTS notices (
+    id               TEXT PRIMARY KEY,
+    tenant_username  TEXT NOT NULL,
+    message          TEXT NOT NULL,
+    created_by       TEXT NOT NULL,
+    created_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS notices_tenant ON notices (tenant_username, created_at DESC);
 """
+
+APPLICATION_COLUMNS = [
+    "id", "landlord_id", "applicant_name", "applicant_email",
+    "applicant_phone", "desired_move_in", "message", "created_at",
+]
+NOTICE_COLUMNS = ["id", "tenant_username", "message", "created_by", "created_at"]
 
 # Same columns, Postgres syntax (SERIAL/AUTOINCREMENT differences don't apply
 # here - document_id is always a real PandaDoc id, never generated).
@@ -65,7 +96,11 @@ COLUMNS = [
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # Microsecond precision, not just seconds: two rows created in quick
+    # succession (e.g. two notices sent back to back) still need a distinct,
+    # reliably orderable created_at for "ORDER BY created_at DESC" to return
+    # them in the right order.
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def _is_postgres(db_path: str) -> bool:
@@ -148,6 +183,50 @@ def _sqlite_list(db_path: str, limit: int,
         record["tenants"] = json.loads(record.pop("tenants_json"))
         result.append(record)
     return result
+
+
+def _sqlite_record_application(db_path: str, row: dict[str, Any]) -> None:
+    columns = ", ".join(row)
+    placeholders = ", ".join(f":{key}" for key in row)
+    with _connect(db_path) as connection:
+        connection.execute(
+            f"INSERT INTO applications ({columns}) VALUES ({placeholders})", row
+        )
+
+
+def _sqlite_list_applications(db_path: str,
+                              landlord_id: str | None) -> list[dict[str, Any]]:
+    with _connect(db_path) as connection:
+        if landlord_id is None:
+            rows = connection.execute(
+                "SELECT * FROM applications ORDER BY created_at DESC"
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM applications WHERE landlord_id = ? "
+                "ORDER BY created_at DESC",
+                (landlord_id,),
+            ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _sqlite_record_notice(db_path: str, row: dict[str, Any]) -> None:
+    columns = ", ".join(row)
+    placeholders = ", ".join(f":{key}" for key in row)
+    with _connect(db_path) as connection:
+        connection.execute(
+            f"INSERT INTO notices ({columns}) VALUES ({placeholders})", row
+        )
+
+
+def _sqlite_list_notices(db_path: str, tenant_username: str) -> list[dict[str, Any]]:
+    with _connect(db_path) as connection:
+        rows = connection.execute(
+            "SELECT * FROM notices WHERE tenant_username = ? "
+            "ORDER BY created_at DESC",
+            (tenant_username,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +339,56 @@ async def _pg_list(dsn: str, limit: int,
     return result
 
 
+async def _pg_record_application(dsn: str, row: dict[str, Any]) -> None:
+    pool = await _pg_pool(dsn)
+    columns = ", ".join(APPLICATION_COLUMNS)
+    placeholders = ", ".join(f"${i + 1}" for i in range(len(APPLICATION_COLUMNS)))
+    values = [row.get(column) for column in APPLICATION_COLUMNS]
+    async with pool.acquire() as connection:
+        await connection.execute(
+            f"INSERT INTO applications ({columns}) VALUES ({placeholders})", *values
+        )
+
+
+async def _pg_list_applications(dsn: str,
+                                landlord_id: str | None) -> list[dict[str, Any]]:
+    pool = await _pg_pool(dsn)
+    async with pool.acquire() as connection:
+        if landlord_id is None:
+            rows = await connection.fetch(
+                "SELECT * FROM applications ORDER BY created_at DESC"
+            )
+        else:
+            rows = await connection.fetch(
+                "SELECT * FROM applications WHERE landlord_id = $1 "
+                "ORDER BY created_at DESC",
+                landlord_id,
+            )
+    return [dict(row) for row in rows]
+
+
+async def _pg_record_notice(dsn: str, row: dict[str, Any]) -> None:
+    pool = await _pg_pool(dsn)
+    columns = ", ".join(NOTICE_COLUMNS)
+    placeholders = ", ".join(f"${i + 1}" for i in range(len(NOTICE_COLUMNS)))
+    values = [row.get(column) for column in NOTICE_COLUMNS]
+    async with pool.acquire() as connection:
+        await connection.execute(
+            f"INSERT INTO notices ({columns}) VALUES ({placeholders})", *values
+        )
+
+
+async def _pg_list_notices(dsn: str, tenant_username: str) -> list[dict[str, Any]]:
+    pool = await _pg_pool(dsn)
+    async with pool.acquire() as connection:
+        rows = await connection.fetch(
+            "SELECT * FROM notices WHERE tenant_username = $1 "
+            "ORDER BY created_at DESC",
+            tenant_username,
+        )
+    return [dict(row) for row in rows]
+
+
 # ---------------------------------------------------------------------------
 # Public API - dispatches to whichever backend `db_path` names
 # ---------------------------------------------------------------------------
@@ -334,3 +463,61 @@ async def record_archive(db_path: str, document_id: str,
     return await asyncio.to_thread(
         _sqlite_record_archive, db_path, document_id, archive_file
     )
+
+
+async def record_application(db_path: str, *, applicant_name: str,
+                              applicant_email: str,
+                              applicant_phone: str | None,
+                              landlord_id: str | None,
+                              desired_move_in: str | None,
+                              message: str | None) -> str:
+    """Save a public rental application. Returns its generated id."""
+    application_id = secrets.token_hex(12)
+    row = {
+        "id": application_id,
+        "landlord_id": landlord_id,
+        "applicant_name": applicant_name,
+        "applicant_email": applicant_email,
+        "applicant_phone": applicant_phone,
+        "desired_move_in": desired_move_in,
+        "message": message,
+        "created_at": _now(),
+    }
+    if _is_postgres(db_path):
+        await _pg_record_application(db_path, row)
+    else:
+        await asyncio.to_thread(_sqlite_record_application, db_path, row)
+    return application_id
+
+
+async def list_applications(db_path: str, *,
+                            landlord_id: str | None = None) -> list[dict[str, Any]]:
+    """All applications, or only those naming one landlord."""
+    if _is_postgres(db_path):
+        return await _pg_list_applications(db_path, landlord_id)
+    return await asyncio.to_thread(_sqlite_list_applications, db_path, landlord_id)
+
+
+async def record_notice(db_path: str, *, tenant_username: str, message: str,
+                        created_by: str) -> str:
+    """Save a notice for a tenant. Returns its generated id."""
+    notice_id = secrets.token_hex(12)
+    row = {
+        "id": notice_id,
+        "tenant_username": tenant_username,
+        "message": message,
+        "created_by": created_by,
+        "created_at": _now(),
+    }
+    if _is_postgres(db_path):
+        await _pg_record_notice(db_path, row)
+    else:
+        await asyncio.to_thread(_sqlite_record_notice, db_path, row)
+    return notice_id
+
+
+async def list_notices(db_path: str, *, tenant_username: str) -> list[dict[str, Any]]:
+    """A tenant's own notices, newest first."""
+    if _is_postgres(db_path):
+        return await _pg_list_notices(db_path, tenant_username)
+    return await asyncio.to_thread(_sqlite_list_notices, db_path, tenant_username)

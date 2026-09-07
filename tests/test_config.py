@@ -48,7 +48,9 @@ def load(tmp_path, monkeypatch):
 def test_loads_landlords_and_users(load) -> None:
     settings = load()
     assert [landlord.id for landlord in settings.landlords] == ["lgd", "robertson"]
-    assert [user.username for user in settings.users] == ["kevin", "steve", "gay"]
+    assert [user.username for user in settings.users] == [
+        "kevin", "steve", "gay", "tenant1"
+    ]
     assert settings.landlord_by_id("lgd").company == "LGD Properties"
     assert settings.landlord_by_id("lgd").signer_name == "Pat Landlord"
 
