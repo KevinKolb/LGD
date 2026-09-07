@@ -206,6 +206,61 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
     }
 
 
+@app.get("/api/admin/info")
+async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
+    """Reference info for the admin page: who exists and which backend each
+    piece of storage is using. Deliberately no secrets - not the DSN (a
+    Postgres one embeds a password), not any API key, not password hashes.
+    """
+    if not user.is_admin:
+        raise HTTPException(status_code=404, detail="No such page.")
+    settings = get_settings()
+
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    supabase_url = settings.supabase_url
+
+    return {
+        "landlords": [
+            {
+                "id": landlord.id, "company": landlord.company,
+                "signer_name": landlord.signer_name, "email": landlord.email,
+            }
+            for landlord in settings.landlords
+        ],
+        "users": [
+            {
+                "username": u.username, "display_name": u.display_name,
+                "role": u.role, "landlord_id": u.landlord_id,
+            }
+            for u in settings.users
+        ],
+        "backends": {
+            "leases": "Supabase Postgres" if database_url else "local SQLite",
+            "accounts": "Supabase Postgres" if database_url else "accounts.json",
+            "archive": (
+                f"Supabase Storage ({settings.archive_dir.split(':', 1)[1]})"
+                if settings.archive_dir.startswith("supabase:")
+                else f"local disk ({settings.archive_dir})"
+            ),
+        },
+        "pandadoc": {
+            "mode": settings.mode,
+            "template_uuid_set": settings.template_uuid
+            != "placeholder-pending-signature-provider",
+        },
+        "links": {
+            "github": "https://github.com/KevinKolb/LGD",
+            "render": "https://dashboard.render.com",
+            "supabase": (
+                f"https://supabase.com/dashboard/project/"
+                f"{supabase_url.removeprefix('https://').split('.')[0]}"
+                if supabase_url else None
+            ),
+            "pandadoc": "https://app.pandadoc.com/a/#/developers",
+        },
+    }
+
+
 @app.get("/api/leases")
 async def api_list_leases(user: User = Depends(current_user)) -> dict[str, Any]:
     """Admins see every lease; a landlord sees only their own."""

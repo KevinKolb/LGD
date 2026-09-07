@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin reference</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1c1a;
+    --muted: #6b6a66;
+    --line: #dcdad4;
+    --accent: #1f5d4c;
+    --accent-ink: #ffffff;
+    --danger: #9b2c2c;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+  header a { color: var(--accent-ink); font-size: 13px; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; }
+  dt { font-weight: 600; color: var(--muted); font-size: 13px; }
+  dd { margin: 0; }
+  .links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .links a {
+    display: inline-block; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--accent); color: var(--accent); text-decoration: none;
+  }
+  .empty { color: var(--muted); font-style: italic; }
+  a { color: var(--accent); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; background: #eceae4; color: var(--ink); white-space: nowrap;
+  }
+  .badge.warn { background: #fbe6c2; color: #6b4708; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Admin reference</h1>
+  <a href="/landlord/">&larr; Back to dashboard</a>
+</header>
+
+<main id="app">
+  <p class="hint">Loading&hellip;</p>
+</main>
+
+<script>
+"use strict";
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (value !== null && value !== undefined) node.setAttribute(key, value);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+function landlordsSection(landlords) {
+  const table = el("table");
+  table.append(
+    el("thead", {}, el("tr", {},
+      el("th", { text: "ID" }), el("th", { text: "Company" }),
+      el("th", { text: "Signer" }), el("th", { text: "Email" })))
+  );
+  const body = el("tbody");
+  for (const l of landlords) {
+    body.append(el("tr", {},
+      el("td", { text: l.id }), el("td", { text: l.company }),
+      el("td", { text: l.signer_name }), el("td", { text: l.email })));
+  }
+  table.append(body);
+  return section("Landlords", "Who a lease can be issued under.", table);
+}
+
+function usersSection(users, landlords) {
+  const byId = Object.fromEntries(landlords.map((l) => [l.id, l.company]));
+  const table = el("table");
+  table.append(
+    el("thead", {}, el("tr", {},
+      el("th", { text: "Username" }), el("th", { text: "Role" }),
+      el("th", { text: "Can act for" })))
+  );
+  const body = el("tbody");
+  for (const u of users) {
+    const scope = u.role === "admin" ? "All landlords" : (byId[u.landlord_id] || u.landlord_id || "—");
+    body.append(el("tr", {},
+      el("td", { text: u.username }), el("td", { text: u.role }),
+      el("td", { text: scope })));
+  }
+  table.append(body);
+  return section(
+    "Users",
+    "Who can log in. To add someone or change a password: python -m app.accounts set-password <username> — run against whichever backend is configured below.",
+    table
+  );
+}
+
+function backendsSection(backends) {
+  const dl = el("dl");
+  for (const [label, value] of Object.entries(backends)) {
+    dl.append(el("dt", { text: label }), el("dd", { text: value }));
+  }
+  return section("Storage backends", "Which store is active for each piece of data.", dl);
+}
+
+function pandadocSection(info) {
+  const dl = el("dl");
+  dl.append(el("dt", { text: "Mode" }));
+  const modeBadge = el("span", {
+    class: `badge ${info.mode === "sandbox" ? "warn" : ""}`.trim(),
+    text: info.mode,
+  });
+  dl.append(el("dd", {}, modeBadge));
+  dl.append(el("dt", { text: "Template configured" }));
+  dl.append(el("dd", { text: info.template_uuid_set ? "Yes" : "No — \"Generate lease\" will not work yet" }));
+  return section(
+    "E-signature (PandaDoc)",
+    "Currently on hold while a replacement provider is chosen — see CLAUDE.md.",
+    dl
+  );
+}
+
+function linksSection(links) {
+  const box = el("div", { class: "links" });
+  const labels = { github: "GitHub repo", render: "Render dashboard", supabase: "Supabase dashboard", pandadoc: "PandaDoc dashboard" };
+  for (const [key, label] of Object.entries(labels)) {
+    if (!links[key]) continue;
+    box.append(el("a", { href: links[key], target: "_blank", rel: "noopener", text: label }));
+  }
+  return section("External dashboards", "Where the actual accounts for each service live.", box);
+}
+
+function section(title, hint, ...body) {
+  const s = el("section", {});
+  s.append(el("h2", { text: title }), el("p", { class: "hint", text: hint }), ...body);
+  return s;
+}
+
+async function boot() {
+  const app = document.getElementById("app");
+  try {
+    const response = await fetch("/api/admin/info");
+    if (response.status === 404) {
+      app.replaceChildren(el("p", { class: "empty", text: "Admins only." }));
+      return;
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const info = await response.json();
+    app.replaceChildren(
+      landlordsSection(info.landlords),
+      usersSection(info.users, info.landlords),
+      backendsSection(info.backends),
+      pandadocSection(info.pandadoc),
+      linksSection(info.links)
+    );
+  } catch (error) {
+    app.replaceChildren(el("p", { class: "empty", text: `Could not load: ${error.message}` }));
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

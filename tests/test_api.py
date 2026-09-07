@@ -135,6 +135,40 @@ def test_config_never_leaks_email_addresses(client) -> None:
         assert "@" not in serialized
 
 
+# ---------------------------------------------------------------------------
+# Admin reference page
+# ---------------------------------------------------------------------------
+
+def test_admin_info_is_refused_to_a_landlord_user(client) -> None:
+    for credentials in (STEVE, GAY):
+        assert client.get("/api/admin/info", auth=credentials).status_code == 404
+
+
+def test_admin_info_requires_authentication(client) -> None:
+    assert client.get("/api/admin/info", auth=None).status_code == 401
+
+
+def test_admin_info_lists_landlords_and_users(client) -> None:
+    body = client.get("/api/admin/info", auth=ADMIN).json()
+    assert {l["id"] for l in body["landlords"]} == {"lgd", "robertson"}
+    assert {u["username"] for u in body["users"]} == {"kevin", "steve", "gay"}
+
+
+def test_admin_info_never_leaks_secrets(client) -> None:
+    serialized = json.dumps(client.get("/api/admin/info", auth=ADMIN).json())
+    assert "password_hash" not in serialized
+    assert TEMPLATE_UUID not in serialized
+    for value in (SHARED_KEY,):
+        assert value not in serialized
+
+
+def test_admin_info_reports_local_backends_by_default(client) -> None:
+    body = client.get("/api/admin/info", auth=ADMIN).json()
+    assert body["backends"]["leases"] == "local SQLite"
+    assert body["backends"]["accounts"] == "accounts.json"
+    assert "local disk" in body["backends"]["archive"]
+
+
 def test_landlord_cannot_create_a_lease_for_the_other_landlord(
     client, fake_pandadoc
 ) -> None:
