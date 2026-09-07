@@ -100,6 +100,14 @@ def test_dashboard_serves_the_lease_maker(client) -> None:
     assert "Approved potential tenant" in response.text
 
 
+def test_favicon_is_served_with_no_login(client) -> None:
+    """Browsers request this at the bare domain root before any auth
+    context exists, so it must not be behind Basic auth."""
+    response = client.get("/favicon.ico", auth=None)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/vnd.microsoft.icon"
+
+
 def test_root_redirects_to_the_dashboard(client) -> None:
     response = client.get("/", follow_redirects=False)
     assert response.status_code in (302, 307)

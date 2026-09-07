@@ -59,6 +59,7 @@ logger = logging.getLogger("lgd")
 
 LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
+FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 # The blank, printable lease - generated from originals/lease.md by
 # print/generate_print_lease.py. Served here rather than added to
 # LANDLORD_DIR so there's still exactly one copy of it on disk.
@@ -176,6 +177,15 @@ def authorize_landlord(user: User, landlord_id: str) -> Landlord:
 @app.get("/", include_in_schema=False)
 async def root() -> RedirectResponse:
     return RedirectResponse("/landlord/")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Public - browsers request this at the bare domain root regardless of
+    any <link rel="icon"> tag, before any login context exists."""
+    if not FAVICON_PATH.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(FAVICON_PATH, media_type="image/vnd.microsoft.icon")
 
 
 @app.get("/landlord/", include_in_schema=False)
