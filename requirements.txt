@@ -5,3 +5,9 @@ jinja2==3.1.5
 python-multipart==0.0.20
 pydantic[email]==2.10.5
 python-dotenv==1.0.1
+# Optional: only imported when DATABASE_URL/SUPABASE_URL are configured (see
+# app/db.py, app/config.py, app/archive_storage.py). Local SQLite/
+# accounts.json/local-disk archive keep working without these, so a plain
+# laptop setup never needs them installed.
+asyncpg==0.31.0
+supabase==2.31.0

@@ -5,6 +5,7 @@ Landlord dashboard (HTTP Basic) + JSON API + PandaDoc webhook receiver.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -23,9 +24,9 @@ from fastapi import (
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from app import db
+from app import archive_storage, db
 from app.auth import check_credentials, hash_password
-from app.config import Landlord, User, get_settings
+from app.config import Landlord, User, get_settings, preload_accounts_from_postgres
 from app.lease import LeaseRequest
 from app.pandadoc import (
     COMPLETED_STATUS,
@@ -56,6 +57,13 @@ BASIC = HTTPBasic(realm="LGD Lease Maker", auto_error=False)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    # Accounts must be preloaded from Postgres (if configured) before the
+    # first get_settings() call - Settings.load() is deliberately
+    # synchronous and only ever reads a cache, never the network itself.
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if database_url:
+        await preload_accounts_from_postgres(database_url)
+
     settings = get_settings()
     await db.init(settings.db_path)
     application.state.pandadoc = PandaDocClient(
@@ -77,6 +85,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         await application.state.pandadoc.aclose()
+        await db.close_pools()
 
 
 app = FastAPI(title="LGD Lease Maker", lifespan=lifespan)
@@ -350,14 +359,11 @@ async def archive_signed_lease(client: PandaDocClient, document_id: str) -> str 
     if pdf is None:
         return None
 
-    archive_dir = Path(settings.archive_dir)
-    archive_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{document_id}.pdf"
-    # Write then rename, so a crash mid-download cannot leave a torn PDF
-    # recorded as archived.
-    temporary = archive_dir / f".{filename}.part"
-    temporary.write_bytes(pdf)
-    temporary.replace(archive_dir / filename)
+    await archive_storage.save(
+        settings.archive_dir, filename, pdf,
+        supabase_url=settings.supabase_url, supabase_key=settings.supabase_key,
+    )
 
     await db.record_archive(settings.db_path, document_id, filename)
     logger.info("Archived executed lease %s (%d bytes)", document_id, len(pdf))
@@ -387,15 +393,20 @@ async def api_download_lease(
             detail="The signed PDF is not ready yet. Try again shortly.",
         )
 
-    path = Path(settings.archive_dir) / filename
-    if not path.is_file():
+    pdf = await archive_storage.read(
+        settings.archive_dir, filename,
+        supabase_url=settings.supabase_url, supabase_key=settings.supabase_key,
+    )
+    if pdf is None:
         raise HTTPException(status_code=404, detail="Archived file is missing.")
 
     safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", lease["document_name"]).strip("-")
-    return FileResponse(
-        path,
+    return Response(
+        content=pdf,
         media_type="application/pdf",
-        filename=f"{safe_name or document_id}.pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name or document_id}.pdf"'
+        },
     )
 
 

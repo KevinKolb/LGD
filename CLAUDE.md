@@ -100,6 +100,31 @@ untouched, as it always will.
 
 If another apparent typo turns up later, flag it and ask — don't fix it silently.
 
+## Two storage backends, one call site each
+
+`app/db.py` (leases), `app/config.py` (accounts), and `app/archive_storage.py`
+(signed PDFs) each support two backends — local files (SQLite / `accounts.json` /
+a local folder) and Supabase-hosted (Postgres / Postgres / Storage bucket) — chosen
+purely by what a config string looks like (`DATABASE_URL` set at all, a `db_path`
+starting with `postgres://`, an `archive_dir` starting with `supabase:`). This
+exists only because Render's free tier — the free, no-credit-card hosting path,
+picked for exactly that reason — wipes local disk on every restart; a plain laptop
+run or the test suite never sets any of these variables and behaves exactly as
+before this existed. See **Deploying** in `README.md` for the actual setup steps.
+
+Every caller (`app/main.py` routes, `app/accounts.py`'s CLI) passes the same
+config string through unchanged and never branches on which backend is active —
+that branching lives only inside the three modules above. Keep it that way: a new
+call site should never need to know or care which backend it's talking to.
+
+The three test files `tests/test_db_postgres.py`, `tests/test_config_postgres.py`,
+and `tests/test_archive_storage.py`'s Supabase half all mock the network client
+(`asyncpg`/`supabase`) rather than touching a real Postgres or Supabase project, the
+same way `FakePandaDoc` stands in for PandaDoc — this is what keeps the suite fast,
+free, and runnable offline. If a real integration test against a live Supabase
+project is ever wanted, it should be separate and opt-in, not part of the default
+`pytest` run.
+
 ## Legal research
 
 [`LEGAL_RESEARCH.md`](LEGAL_RESEARCH.md) records the court cases and websites

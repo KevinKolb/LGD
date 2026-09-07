@@ -1,8 +1,13 @@
-"""Configuration: PandaDoc settings from the environment, people from a file.
+"""Configuration: PandaDoc settings from the environment, people from a file
+or from Postgres.
 
 Secrets and API wiring live in `.env`. Landlords and user logins live in
-`accounts.json`, because password hashes and per-user roles do not fit
-comfortably in flat environment variables. Both files are gitignored.
+`accounts.json` by default - gitignored, same as `.env` - or in a Postgres
+`landlords`/`users` table when `DATABASE_URL` is set (see
+`preload_accounts_from_postgres`). Postgres exists for Render's free tier:
+local files there get wiped on every restart, so a login can't live on local
+disk if this is ever deployed there; a Supabase Postgres database survives
+restarts the same way a laptop's local `accounts.json` always did.
 """
 from __future__ import annotations
 
@@ -162,6 +167,100 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
     return landlords, tuple(users)
 
 
+# Populated once, by `preload_accounts_from_postgres`, during the app's async
+# startup - before anything calls `get_settings()`. `Settings.load()` stays
+# synchronous (see its docstring below) so every existing caller - tests,
+# other modules - keeps working unchanged; this is the only place accounts
+# ever get queried over the network. When left as `None`, `Settings.load()`
+# falls back to the local JSON file exactly as it always did.
+_accounts_cache: tuple[tuple["Landlord", ...], tuple["User", ...]] | None = None
+
+
+def _validate_accounts(
+    landlords: tuple["Landlord", ...], users: list["User"], *, source: str
+) -> tuple[tuple["Landlord", ...], tuple["User", ...]]:
+    """The same checks `_load_accounts` applies to the JSON file, applied
+    again here so a Postgres-backed accounts table can't skip them."""
+    if not landlords:
+        raise ConfigError(f"{source} lists no landlords.")
+    known_ids = {landlord.id for landlord in landlords}
+    for user in users:
+        if user.role not in VALID_ROLES:
+            raise ConfigError(
+                f"User {user.username!r} has role {user.role!r}; expected "
+                f"one of {sorted(VALID_ROLES)}."
+            )
+        if user.role == ROLE_LANDLORD:
+            if not user.landlord_id:
+                raise ConfigError(f"User {user.username!r} needs a landlord_id.")
+            if user.landlord_id not in known_ids:
+                raise ConfigError(
+                    f"User {user.username!r} points at unknown landlord "
+                    f"{user.landlord_id!r}."
+                )
+        if not user.password_hash:
+            raise ConfigError(
+                f"User {user.username!r} has no password yet. Set one with: "
+                f"python -m app.accounts set-password {user.username}"
+            )
+    if not users:
+        raise ConfigError(f"{source} lists no users, so nobody could log in.")
+    duplicates = {u.username for u in users if
+                  sum(1 for other in users if other.username == u.username) > 1}
+    if duplicates:
+        raise ConfigError(f"{source} has duplicate usernames: {sorted(duplicates)}")
+    return landlords, tuple(users)
+
+
+async def preload_accounts_from_postgres(dsn: str) -> None:
+    """Query Postgres once and cache the result for every later, synchronous
+    `Settings.load()` call to read. Call this during the app's async startup
+    (see `app/main.py`'s `lifespan`), before anything calls `get_settings()`.
+    """
+    global _accounts_cache
+    import asyncpg
+
+    connection = await asyncpg.connect(dsn)
+    try:
+        landlord_rows = await connection.fetch(
+            "SELECT id, company, signer_name, email FROM landlords"
+        )
+        user_rows = await connection.fetch(
+            "SELECT username, display_name, role, landlord_id, password_hash "
+            "FROM users"
+        )
+    finally:
+        await connection.close()
+
+    landlords = tuple(
+        Landlord(
+            id=row["id"], company=row["company"],
+            signer_name=row["signer_name"], email=row["email"],
+        )
+        for row in landlord_rows
+    )
+    users = [
+        User(
+            username=row["username"],
+            display_name=row["display_name"] or row["username"],
+            role=row["role"],
+            password_hash=row["password_hash"] or "",
+            landlord_id=row["landlord_id"],
+        )
+        for row in user_rows
+    ]
+    _accounts_cache = _validate_accounts(
+        landlords, users, source="The Postgres accounts tables"
+    )
+
+
+def _reset_accounts_cache_for_tests() -> None:
+    """Test-only escape hatch: clear the preloaded cache so a test can go
+    back to exercising the local-JSON-file path after a Postgres test."""
+    global _accounts_cache
+    _accounts_cache = None
+
+
 def _resolve_pandadoc_keys() -> tuple[str, str, str]:
     """Pick the key and template for the active mode.
 
@@ -195,8 +294,12 @@ class Settings:
     webhook_shared_key: str
     api_base: str
     db_path: str
-    # Where executed lease PDFs are archived once signing completes.
+    # Where executed lease PDFs are archived once signing completes: a local
+    # directory, or "supabase:<bucket-name>" (see supabase_url/supabase_key).
     archive_dir: str
+    # Only used when archive_dir names a supabase: bucket.
+    supabase_url: str
+    supabase_key: str
     # Ask PandaDoc to email the tenant directly, in addition to handing the
     # landlord a link. False keeps all outbound mail in the landlord's hands.
     pandadoc_sends_email: bool
@@ -236,11 +339,26 @@ class Settings:
 
     @classmethod
     def load(cls) -> "Settings":
-        accounts_path = Path(
-            os.environ.get("LGD_ACCOUNTS_FILE", str(REPO_ROOT / "accounts.json"))
-        )
-        landlords, users = _load_accounts(accounts_path)
+        """Deliberately synchronous, so every existing caller (routes, tests,
+        `get_settings()`) keeps working unchanged. If `DATABASE_URL` is set,
+        accounts must already be sitting in `_accounts_cache` - populated by
+        `preload_accounts_from_postgres` during the app's async startup -
+        rather than queried here; this function only ever reads that cache
+        or the local JSON file, never the network.
+        """
+        if _accounts_cache is not None:
+            landlords, users = _accounts_cache
+        else:
+            accounts_path = Path(
+                os.environ.get("LGD_ACCOUNTS_FILE", str(REPO_ROOT / "accounts.json"))
+            )
+            landlords, users = _load_accounts(accounts_path)
         mode, api_key, template_uuid = _resolve_pandadoc_keys()
+        # A Postgres DSN if configured (Render's free tier wipes local files
+        # on restart), else the local SQLite file exactly as always.
+        db_path = os.environ.get("DATABASE_URL", "").strip() or os.environ.get(
+            "LGD_DB_PATH", "leases.db"
+        )
         return cls(
             mode=mode,
             api_key=api_key,
@@ -249,10 +367,12 @@ class Settings:
             api_base=os.environ.get(
                 "PANDADOC_API_BASE", "https://api.pandadoc.com/public/v1"
             ).rstrip("/"),
-            db_path=os.environ.get("LGD_DB_PATH", "leases.db"),
+            db_path=db_path,
             archive_dir=os.environ.get(
                 "LGD_ARCHIVE_DIR", str(REPO_ROOT / "archive")
             ),
+            supabase_url=os.environ.get("SUPABASE_URL", "").strip(),
+            supabase_key=os.environ.get("SUPABASE_KEY", "").strip(),
             pandadoc_sends_email=_bool("PANDADOC_SENDS_EMAIL", False),
             session_lifetime_seconds=_int("PANDADOC_SESSION_LIFETIME", 1209600),
             early_payment_discount=_int("LGD_EARLY_PAYMENT_DISCOUNT", 50),

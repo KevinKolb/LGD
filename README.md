@@ -15,8 +15,8 @@ current and archive the executed PDF once it's signed.
 | [landlord/](landlord/) | The dashboard — a single static page behind HTTP Basic |
 | [app/](app/) | FastAPI service: JSON API, PandaDoc client, webhook receiver |
 | [tests/](tests/) | Test suite. Stubs PandaDoc, so it never spends a document |
-| `accounts.json` | Landlords and logins. Gitignored — created by `app.accounts` |
-| `archive/` | Executed lease PDFs, saved as each one is signed. Gitignored |
+| `accounts.json` | Landlords and logins (local runs). Gitignored — created by `app.accounts`. Lives in Supabase Postgres instead when `DATABASE_URL` is set — see **Deploying** below |
+| `archive/` | Executed lease PDFs (local runs), saved as each one is signed. Gitignored. Lives in Supabase Storage instead when `LGD_ARCHIVE_DIR` names a `supabase:` bucket |
 
 ## Who uses this
 
@@ -92,6 +92,67 @@ endpoint regardless.
 
 The dashboard is at <http://localhost:8000/landlord/>.
 
+## Deploying (Render + Supabase, free, no credit card)
+
+Running this on a laptop needs nothing beyond the steps above — local SQLite,
+`accounts.json`, and a local `archive/` folder are all it uses, and that's exactly
+what the test suite runs against too. Putting it on the actual internet needs
+somewhere to run `uvicorn` continuously, which a laptop doesn't do. **Render's**
+free web-service tier does that at no cost, but its local disk does not survive a
+restart — so leases, logins, and archived PDFs all move to **Supabase's** free
+Postgres database and Storage bucket instead, which do survive.
+
+Which backend runs is decided entirely by environment variables — the app code
+itself never needs to know or care:
+
+| Storage | Local (laptop, tests) | Deployed (Render) |
+| --- | --- | --- |
+| Leases | SQLite file (`LGD_DB_PATH`) | Supabase Postgres (`DATABASE_URL`) |
+| Landlords & logins | `accounts.json` | Supabase Postgres, same `DATABASE_URL` |
+| Signed PDFs | `archive/` folder (`LGD_ARCHIVE_DIR`) | Supabase Storage bucket (`LGD_ARCHIVE_DIR=supabase:<bucket>`) |
+
+### One-time setup
+
+1. **Supabase** — create a free project at supabase.com. From Project Settings ▸
+   Database, copy the connection string (use the pooler/"Transaction" connection
+   string, not the direct one) — that's `DATABASE_URL`. From Project Settings ▸
+   API, copy the Project URL (`SUPABASE_URL`) and the **service_role** key
+   (`SUPABASE_KEY`) — not the anon key; the dashboard is the only thing writing to
+   the bucket and already enforces its own login. Under Storage, create a bucket
+   (e.g. `signed-leases`) — nothing in this app creates it for you.
+
+2. **Populate accounts in Postgres**, from your own machine (Render's shell isn't
+   part of the free tier, so do this locally, pointed at Supabase):
+
+   ```bash
+   export DATABASE_URL="<the Supabase connection string>"   # PowerShell: $env:DATABASE_URL="..."
+   python -m app.accounts init
+   python -m app.accounts set-password kevin
+   python -m app.accounts set-password pam
+   python -m app.accounts set-password gay
+   ```
+
+   With `DATABASE_URL` set, every `app.accounts` command operates on the Postgres
+   `landlords`/`users` tables instead of `accounts.json` — see `app/accounts.py`.
+
+3. **Render** — create a free Web Service pointed at this GitHub repo.
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - Environment variables: everything in `.env.example` (all the `PANDADOC_*`
+     ones, the webhook shared key), plus:
+     - `DATABASE_URL` = the same Supabase connection string as above
+     - `LGD_ARCHIVE_DIR` = `supabase:signed-leases` (your bucket name)
+     - `SUPABASE_URL`, `SUPABASE_KEY` = from step 1
+
+4. Update the PandaDoc webhook's endpoint URL (see
+   [pandadoc/TEMPLATE_SETUP.md](pandadoc/TEMPLATE_SETUP.md) step 5) to point at the
+   Render URL instead of a local tunnel.
+
+Render's free tier sleeps after 15 minutes of no traffic — the first request after
+that takes a few seconds longer while it wakes up. Supabase's free database pauses
+after 7 days of no activity too, but data is retained and resumes automatically on
+the next connection. Neither requires a credit card.
+
 ## How a lease flows
 
 1. The landlord signs in, picks their Lessor (or, for the admin, any Lessor), enters
@@ -139,7 +200,9 @@ legal instrument.
 - Landlord email addresses stay server-side. The browser sends a landlord *id*; the
   server resolves the address, so a tampered request cannot redirect the Lessor copy.
 - `.env`, `accounts.json`, `archive/`, and `*.db` are gitignored. No API key or
-  password hash is ever sent to the browser.
+  password hash is ever sent to the browser. The same applies to `DATABASE_URL` and
+  `SUPABASE_KEY` when deployed (see **Deploying** below) — set only as Render
+  environment variables, never committed.
 - Static file serving resolves paths and rejects anything outside `landlord/`.
 - Executed PDFs are downloaded from PandaDoc's `download-protected` endpoint in
   production (sandbox falls back to the plain `download` endpoint, since

@@ -134,6 +134,8 @@ stay at "Sent" forever.
 2. Endpoint URL: `https://your-domain/webhooks/pandadoc`
    - **HTTPS is required.** For local testing, tunnel with something like
      `cloudflared tunnel --url http://localhost:8000` and use the URL it prints.
+     Once actually deployed (see **Deploying** in `README.md`), use the real
+     Render URL here instead of a tunnel.
 3. Select events: **`document_state_changed`** at minimum. `recipient_completed` is
    useful if you later want per-signer tracking.
 4. Copy the **shared key** shown on the webhook. It is what signs the requests:
