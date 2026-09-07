@@ -51,6 +51,10 @@ class FakeConnection:
                 user_rows: list[dict[str, Any]]) -> None:
         self._landlord_rows = landlord_rows
         self._user_rows = user_rows
+        self.executed: list[str] = []
+
+    async def execute(self, sql: str) -> None:
+        self.executed.append(" ".join(sql.split()))
 
     async def fetch(self, sql: str) -> list[dict[str, Any]]:
         if "FROM landlords" in sql:
@@ -80,6 +84,18 @@ async def test_preload_populates_the_cache(monkeypatch) -> None:
     landlords, users = config._accounts_cache
     assert [l.id for l in landlords] == ["lgd"]
     assert [u.username for u in users] == ["kevin"]
+
+
+async def test_preload_adds_the_email_column_to_an_older_users_table(monkeypatch) -> None:
+    """A deployment created before users.email existed must not be left
+    unbootable: selecting a missing column raises and startup dies, which
+    is exactly what happened once against the live Supabase project."""
+    connection = FakeConnection([LANDLORD_ROW], [USER_ROW])
+    _patch_connect(monkeypatch, connection)
+
+    await config.preload_accounts_from_postgres(DSN)
+
+    assert "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT" in connection.executed
 
 
 async def test_settings_load_reads_the_cache_instead_of_json(

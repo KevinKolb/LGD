@@ -60,6 +60,7 @@ logger = logging.getLogger("lgd")
 LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
 SHARED_DIR = (Path(__file__).resolve().parent.parent / "shared").resolve()
+PRINT_DIR = (Path(__file__).resolve().parent.parent / "print").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from originals/lease.md by
@@ -190,6 +191,19 @@ async def favicon():
     if not FAVICON_PATH.is_file():
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(FAVICON_PATH, media_type="image/vnd.microsoft.icon")
+
+
+@app.get("/print/{asset:path}", include_in_schema=False)
+async def print_files(asset: str, user: User = Depends(current_user)):
+    """The blank paper lease, at the same relative path it has on GitHub
+    Pages (../print/lease_print.html from the landlord page), so one href
+    works on both hosts. /api/blank-lease still serves the same file."""
+    require_not_tenant(user)
+    return FileResponse(
+        resolve_static_file(PRINT_DIR, asset),
+        media_type="text/html",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/shared/{asset:path}", include_in_schema=False)

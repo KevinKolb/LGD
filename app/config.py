@@ -238,6 +238,15 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
     # for Supabase's transaction-mode connection pooler.
     connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
+        # users.email was added after the first deployment, so a live table
+        # can predate it. `accounts init` (which is what creates these
+        # tables) is not re-run against an existing deployment, and the
+        # SELECT below hard-fails startup on a table without the column -
+        # so bring it up to date here, idempotently, the same way
+        # app/db.py runs CREATE TABLE IF NOT EXISTS on every pool.
+        await connection.execute(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT"
+        )
         landlord_rows = await connection.fetch(
             "SELECT id, company, signer_name, email FROM landlords"
         )

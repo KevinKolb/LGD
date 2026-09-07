@@ -126,12 +126,24 @@ def test_shared_assets_are_served_with_no_login(client) -> None:
 
     script = client.get("/shared/footer.js", auth=None)
     assert script.status_code == 200
-    assert "/applicant/" in script.text
+    assert "applicant/" in script.text
 
 
 def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None:
     response = client.get("/shared/../accounts.json", auth=None)
     assert response.status_code == 404
+
+
+def test_print_route_serves_the_blank_lease(client) -> None:
+    """The landlord page links to ../print/lease_print.html so that one
+    href works both here and on GitHub Pages, which has no /api/."""
+    response = client.get("/print/lease_print.html")
+    assert response.status_code == 200
+    assert "PARKING" in response.text
+
+
+def test_print_route_requires_a_login(client) -> None:
+    assert client.get("/print/lease_print.html", auth=None).status_code == 401
 
 
 def test_root_serves_a_public_hub_page_with_no_login(client) -> None:

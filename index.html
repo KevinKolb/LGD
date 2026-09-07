@@ -4,19 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
-  // GitHub Pages can only serve static files - this app needs a real
-  // backend, so anyone landing here via GitHub Pages gets sent to the
-  // actual running instance instead. No-op on every other origin,
-  // including the real one this same file is served from.
-  if (window.location.hostname === "kevinkolb.github.io") {
-    const path = window.location.pathname.replace(/^\/LGD/, "");
-    window.location.replace(
-      "https://lgd-kzu4.onrender.com" + path + window.location.search
-    );
-  }
-
-</script>
-<script>
   // Tulane green/blue by default; ?org=O (or o) swaps in an orange scheme
   // instead, remembered via localStorage so it survives navigating to a
   // page that doesn't have the query string on its own link (every /landlord/,
@@ -35,8 +22,8 @@
     /* localStorage unavailable (e.g. private browsing) - default colors. */
   }
 </script>
-<link rel="icon" href="/favicon.ico?v=1">
-<link rel="stylesheet" href="/shared/site.css">
+<link rel="icon" href="favicon.ico?v=1">
+<link rel="stylesheet" href="shared/site.css">
 <title>Tenant/Landlord Portal</title>
 <style>
   :root {
@@ -120,11 +107,11 @@
   <h1>Tenant/Landlord Portal</h1>
   <p class="hint">Choose your role.</p>
   <div class="links">
-    <a href="/applicant/">Applicant</a>
-    <a href="/tenant/">Tenant</a>
+    <a href="applicant/">Applicant</a>
+    <a href="tenant/">Tenant</a>
   </div>
 </main>
 
-<script src="/shared/footer.js"></script>
+<script src="shared/footer.js"></script>
 </body>
 </html>
