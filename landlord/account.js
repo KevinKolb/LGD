@@ -188,7 +188,7 @@
 
     const modeToggle = el("div", { id: "mode-toggle", hidden: "hidden" });
     modeToggle.append(
-      el("button", { type: "button", "data-mode": "sandbox", text: "Sandbox" }),
+      el("button", { type: "button", "data-mode": "sandbox", title: "For testing purposes.", text: "Sandbox" }),
       el("button", { type: "button", "data-mode": "production", text: "Live" })
     );
 
