@@ -4,21 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
-  // GitHub Pages can only serve static files - this app needs a real
-  // backend, so anyone landing here via GitHub Pages gets sent to the
-  // actual running instance instead. No-op on every other origin,
-  // including the real one this same file is served from.
-  if (window.location.hostname === "kevinkolb.github.io") {
-    // Project Pages serve this repo under a /LGD path prefix
-    // (kevinkolb.github.io/LGD/...) - strip it before reusing the path on
-    // Render, which serves this app at its own root with no such prefix.
-    const path = window.location.pathname.replace(/^\/LGD/, "");
-    window.location.replace(
-      "https://lgd-kzu4.onrender.com" + path + window.location.search
-    );
-  }
-</script>
-<script>
   // Tulane green/blue by default; ?org=O (or o) swaps in an orange scheme
   // instead, remembered via localStorage so it survives navigating here
   // from a page that set it (this app's links between pages don't carry
@@ -36,8 +21,8 @@
     /* localStorage unavailable (e.g. private browsing) - default colors. */
   }
 </script>
-<link rel="icon" href="/favicon.ico?v=1">
-<link rel="stylesheet" href="/shared/site.css">
+<link rel="icon" href="../favicon.ico?v=1">
+<link rel="stylesheet" href="../shared/site.css">
 <title>Applicant Portal</title>
 <style>
   :root {
@@ -197,7 +182,7 @@
       <div id="application-msg"></div>
     </form>
     <p class="hint">
-      You will be sent landlord contact information when your application
+      You will be sent the property manager's contact information when your
       is submitted.
     </p>
   </section>
@@ -347,6 +332,6 @@ function boot() {
 
 boot();
 </script>
-<script src="/shared/footer.js"></script>
+<script src="../shared/footer.js"></script>
 </body>
 </html>

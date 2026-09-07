@@ -8,10 +8,11 @@
  * engine here, and six hand-kept copies of the same markup drift. */
 
 (function () {
+  // Tenant first, then applicant; admin always last.
   const LINKS = [
-    { path: "landlord/", text: "Landlord" },
-    { path: "applicant/", text: "Applicant" },
     { path: "tenant/", text: "Tenant" },
+    { path: "applicant/", text: "Applicant" },
+    { path: "landlord/", text: "Manager" },
     { path: "admin/", text: "Admin" },
   ];
 

@@ -96,7 +96,7 @@ def test_webhook_is_not_behind_basic_auth(client) -> None:
 def test_dashboard_serves_the_paper_lease(client) -> None:
     response = client.get("/landlord/")
     assert response.status_code == 200
-    assert "Landlord Dashboard" in response.text
+    assert "Manager Dashboard" in response.text
     assert "Print paper lease" in response.text
 
 
@@ -147,12 +147,15 @@ def test_print_route_requires_a_login(client) -> None:
 
 
 def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
+    """Its two role links are relative, not absolute, so that the page
+    still works when GitHub Pages serves it under a /LGD/ prefix. The
+    Manager and Admin links come from the shared footer script."""
     response = client.get("/", auth=None)
     assert response.status_code == 200
-    assert "/landlord/" in response.text
-    assert "/applicant/" in response.text
-    assert "/tenant/" in response.text
-    assert "/admin/" in response.text
+    assert "Resident Portal" in response.text
+    assert 'href="applicant/"' in response.text
+    assert 'href="tenant/"' in response.text
+    assert 'src="shared/footer.js"' in response.text
 
 
 def test_applicant_page_is_public_with_no_login(client) -> None:

@@ -24,7 +24,7 @@
 </script>
 <link rel="icon" href="favicon.ico?v=1">
 <link rel="stylesheet" href="shared/site.css">
-<title>Tenant/Landlord Portal</title>
+<title>Resident Portal</title>
 <style>
   :root {
     --bg: #f2f2f2;
@@ -100,18 +100,85 @@
   main { margin: auto; }
   footer { margin-top: 0; justify-content: center; }
   footer a { color: #b0b0b0; }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+  }
+  /* A class selector alone would lose to the browser's default [hidden]
+     rule being weaker than this one - keep both. */
+  .modal-overlay[hidden] { display: none; }
+  .modal-box {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 28px 24px 24px;
+    text-align: center;
+    max-width: 320px;
+    width: calc(100% - 48px);
+  }
+  .modal-box p { margin: 0 0 18px; }
+  .modal-box button {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    padding: 9px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
 </style>
 </head>
 <body>
 <main>
-  <h1>Tenant/Landlord Portal</h1>
+  <h1>Resident Portal</h1>
   <p class="hint">Choose your role.</p>
   <div class="links">
-    <a href="applicant/">Applicant</a>
     <a href="tenant/">Tenant</a>
+    <a href="applicant/">Applicant</a>
   </div>
 </main>
 
+<div id="soon-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <p>Coming soon.</p>
+    <button type="button" id="close-soon">Close</button>
+  </div>
+</div>
+
 <script src="shared/footer.js"></script>
+<script>
+"use strict";
+
+// Everything here is a placeholder for now except the manager area, so
+// every other link says so rather than leading somewhere half-built.
+// Delegated from document, because the footer links this also covers are
+// injected by shared/footer.js rather than written into the page.
+(function () {
+  const modal = document.getElementById("soon-modal");
+
+  function close() {
+    modal.hidden = true;
+  }
+
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("a");
+    if (!link) return;
+    // The manager area is the one part that still works.
+    if (new URL(link.href, window.location.href).pathname.endsWith("/landlord/")) return;
+    event.preventDefault();
+    modal.hidden = false;
+  });
+
+  document.getElementById("close-soon").addEventListener("click", close);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) close();
+  });
+})();
+</script>
 </body>
 </html>
