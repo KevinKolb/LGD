@@ -162,7 +162,9 @@ def cmd_set_password(path: Path, username: str) -> int:
 async def _pg_init(dsn: str, force: bool) -> int:
     import asyncpg
 
-    connection = await asyncpg.connect(dsn)
+    # statement_cache_size=0: see the matching comment in app/db.py - required
+    # for Supabase's transaction-mode connection pooler.
+    connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
         await connection.execute(ACCOUNTS_SCHEMA)
         existing = await connection.fetchval("SELECT count(*) FROM landlords")
@@ -203,7 +205,9 @@ async def _pg_init(dsn: str, force: bool) -> int:
 async def _pg_list(dsn: str) -> int:
     import asyncpg
 
-    connection = await asyncpg.connect(dsn)
+    # statement_cache_size=0: see the matching comment in app/db.py - required
+    # for Supabase's transaction-mode connection pooler.
+    connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
         landlord_rows = await connection.fetch(
             "SELECT id, company, signer_name, email FROM landlords ORDER BY id"
@@ -236,7 +240,9 @@ async def _pg_list(dsn: str) -> int:
 async def _pg_set_password(dsn: str, username: str) -> int:
     import asyncpg
 
-    connection = await asyncpg.connect(dsn)
+    # statement_cache_size=0: see the matching comment in app/db.py - required
+    # for Supabase's transaction-mode connection pooler.
+    connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
         row = await connection.fetchrow(
             "SELECT username FROM users WHERE username = $1", username

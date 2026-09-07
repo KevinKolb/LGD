@@ -65,7 +65,7 @@ class FakeConnection:
 def _patch_connect(monkeypatch, connection: FakeConnection) -> None:
     import asyncpg
 
-    async def fake_connect(dsn: str) -> FakeConnection:
+    async def fake_connect(dsn: str, *, statement_cache_size: int = 100) -> FakeConnection:
         return connection
 
     monkeypatch.setattr(asyncpg, "connect", fake_connect)

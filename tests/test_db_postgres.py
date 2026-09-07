@@ -90,7 +90,8 @@ class FakePool:
 def fake_pool(monkeypatch) -> FakePool:
     pool = FakePool()
 
-    async def fake_create_pool(dsn: str, *, min_size: int, max_size: int) -> FakePool:
+    async def fake_create_pool(dsn: str, *, min_size: int, max_size: int,
+                               statement_cache_size: int = 100) -> FakePool:
         return pool
 
     import asyncpg

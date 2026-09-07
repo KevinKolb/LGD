@@ -11,6 +11,20 @@ from app.auth import hash_password
 SHARED_KEY = "test-shared-key"
 TEMPLATE_UUID = "template-uuid-1234"
 
+# Real Render/Supabase credentials in a developer's local .env must never
+# leak into a test run - app/config.py's load_dotenv() would otherwise put
+# them in os.environ, and every test that doesn't explicitly set its own
+# fake DATABASE_URL (the *_postgres.py suites do) would silently start
+# talking to a live Postgres/Supabase project instead of local SQLite/JSON.
+# Tests stay fast, free, and offline only if this always wins.
+_LIVE_CREDENTIAL_VARS = ["DATABASE_URL", "SUPABASE_URL", "SUPABASE_KEY"]
+
+
+@pytest.fixture(autouse=True)
+def _no_live_credentials(monkeypatch):
+    for name in _LIVE_CREDENTIAL_VARS:
+        monkeypatch.delenv(name, raising=False)
+
 # Passwords are per-user so a test can prove one user cannot use another's data.
 PASSWORDS = {
     "kevin": "admin password long enough",

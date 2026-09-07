@@ -92,7 +92,7 @@ class FakeConnection:
 def fake_connection(monkeypatch) -> FakeConnection:
     connection = FakeConnection()
 
-    async def fake_connect(dsn: str) -> FakeConnection:
+    async def fake_connect(dsn: str, *, statement_cache_size: int = 100) -> FakeConnection:
         return connection
 
     import asyncpg

@@ -171,7 +171,14 @@ async def _pg_pool(dsn: str):
         if dsn not in _pools:
             import asyncpg
 
-            pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
+            # statement_cache_size=0: Supabase's connection pooler (the one
+            # that supports IPv4 - see README's Deploying section) runs in
+            # transaction mode, which does not support asyncpg's server-side
+            # prepared statement cache. Without this, queries intermittently
+            # fail with DuplicatePreparedStatementError.
+            pool = await asyncpg.create_pool(
+                dsn, min_size=1, max_size=5, statement_cache_size=0
+            )
             async with pool.acquire() as connection:
                 await connection.execute(POSTGRES_SCHEMA)
             _pools[dsn] = pool

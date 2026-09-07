@@ -220,7 +220,9 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
     global _accounts_cache
     import asyncpg
 
-    connection = await asyncpg.connect(dsn)
+    # statement_cache_size=0: see the matching comment in app/db.py - required
+    # for Supabase's transaction-mode connection pooler.
+    connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
         landlord_rows = await connection.fetch(
             "SELECT id, company, signer_name, email FROM landlords"

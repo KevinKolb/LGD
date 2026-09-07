@@ -100,6 +100,27 @@ untouched, as it always will.
 
 If another apparent typo turns up later, flag it and ask — don't fix it silently.
 
+## E-signature provider: on hold, moving off PandaDoc
+
+As of 2026-09-06, the user decided to move off PandaDoc for e-signature (cited its
+template editor as "quite the clunker") to some other provider, not yet chosen.
+Everything PandaDoc-specific is parked, not removed: `app/pandadoc.py`, the
+template/role/token setup in `pandadoc/TEMPLATE_SETUP.md` steps 3-5, and the
+`PANDADOC_TEMPLATE_UUID`/`PANDADOC_WEBHOOK_SHARED_KEY` env vars. `.env` has
+temporary placeholder values (`placeholder-pending-signature-provider`) for both,
+since `Settings.load()` requires them non-empty to boot at all — without a
+placeholder the app can't start even to serve the dashboard/login, which have
+nothing to do with signing. Replace both with real values (or replumb this app
+entirely for the new provider) before "Generate lease" can work; login, the
+dashboard, and the blank-lease print button don't depend on this at all.
+
+Everything else already built — the dashboard, accounts, lease DB, archive
+storage, the Render+Supabase dual-backend work below — is provider-agnostic and
+does not need to change when the provider does. Only `app/pandadoc.py` (the
+client), `app/main.py`'s calls into it, the webhook receiver, and the token
+mapping in `app/lease.py` are PandaDoc-specific and would need rewriting for a
+new provider's API.
+
 ## Two storage backends, one call site each
 
 `app/db.py` (leases), `app/config.py` (accounts), and `app/archive_storage.py`
@@ -124,6 +145,28 @@ same way `FakePandaDoc` stands in for PandaDoc — this is what keeps the suite 
 free, and runnable offline. If a real integration test against a live Supabase
 project is ever wanted, it should be separate and opt-in, not part of the default
 `pytest` run.
+
+**Every `asyncpg.connect()`/`create_pool()` call must pass `statement_cache_size=0`.**
+Found the hard way on 2026-09-06 once a real Supabase project was wired up: the
+Transaction pooler connection string (the one to use for `DATABASE_URL` — see
+README's Deploying section, it's the one that supports IPv4) runs in transaction
+mode, which does not support asyncpg's server-side prepared-statement cache at
+all. Without this, queries fail intermittently/permanently with
+`DuplicatePreparedStatementError`. All three call sites (`app/db.py`,
+`app/config.py`, `app/accounts.py`) already do this — keep it that way in any
+new one.
+
+**`tests/conftest.py` has an autouse fixture (`_no_live_credentials`) that
+deletes `DATABASE_URL`/`SUPABASE_URL`/`SUPABASE_KEY` from the environment before
+every test.** This is load-bearing, not optional: `app/config.py`'s
+`load_dotenv()` reads the developer's real local `.env`, and once that file has
+real Supabase credentials in it (as it does after actually deploying — see the
+`render-supabase-deployment` memory), any test that didn't explicitly override
+those three vars would silently start talking to the live Postgres/Storage
+project instead of local SQLite/JSON/disk. This actually happened once during
+setup on 2026-09-06 before the fixture was added — tests slowed way down
+(real network round trips) and started failing in confusing ways. Never remove
+that fixture without replacing it with something equally strict.
 
 ## Legal research
 
