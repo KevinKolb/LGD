@@ -215,7 +215,7 @@
     max-width: 320px;
   }
   .modal-box img { display: block; margin: 0 auto 14px; }
-  .modal-box #close-qr { display: block; margin: 0 0 14px auto; }
+  .modal-box #close-qr { display: block; margin: 4px auto 0; }
 </style>
 </head>
 <body>
@@ -497,9 +497,9 @@
 
 <div id="qr-modal" class="modal-overlay" hidden>
   <div class="modal-box">
-    <button type="button" class="secondary" id="close-qr">Close</button>
     <img id="applicant-qr" width="240" height="240" alt="QR code linking to the applicant portal">
     <p class="hint" id="applicant-qr-url"></p>
+    <button type="button" class="secondary" id="close-qr">Close</button>
   </div>
 </div>
 
