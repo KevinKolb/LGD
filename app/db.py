@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     state      TEXT NOT NULL DEFAULT 'LA'
 );
 
--- News a landlord/admin posts, from the landlord dashboard. created_at is
+-- News a landlord/admin posts, from the manager dashboard. created_at is
 -- recorded in Central time (see _now_central below), unlike every other
 -- table here, which records UTC - a deliberate one-off per the user's
 -- request, not a general policy change.

@@ -59,7 +59,7 @@ def post_webhook(client, body: bytes, signature: str | None = None):
 # Authentication
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("path", ["/landlord/", "/api/config", "/api/leases"])
+@pytest.mark.parametrize("path", ["/manager/", "/api/config", "/api/leases"])
 def test_dashboard_requires_credentials(client, path: str) -> None:
     response = client.get(path, auth=None)
     assert response.status_code == 401
@@ -94,16 +94,16 @@ def test_webhook_is_not_behind_basic_auth(client) -> None:
 # ---------------------------------------------------------------------------
 
 def test_dashboard_serves_the_paper_lease(client) -> None:
-    response = client.get("/landlord/")
+    response = client.get("/manager/")
     assert response.status_code == 200
     assert "Manager Dashboard" in response.text
     assert "Print paper lease" in response.text
 
 
 def test_the_lease_maker_lives_on_the_working_page(client) -> None:
-    """Everything the landlord dashboard used to hold - the lease maker
-    included - moved to /landlord/working.html."""
-    response = client.get("/landlord/working.html")
+    """Everything the manager dashboard used to hold - the lease maker
+    included - moved to /manager/working.html."""
+    response = client.get("/manager/working.html")
     assert response.status_code == 200
     assert "Approved potential tenant" in response.text
 
@@ -135,7 +135,7 @@ def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None
 
 
 def test_print_route_serves_the_blank_lease(client) -> None:
-    """The landlord page links to ../print/lease_print.html so that one
+    """The manager page links to ../print/lease_print.html so that one
     href works both here and on GitHub Pages, which has no /api/."""
     response = client.get("/print/lease_print.html")
     assert response.status_code == 200
@@ -174,7 +174,7 @@ def test_tenant_page_no_longer_has_the_application_form(client) -> None:
 
 @pytest.mark.parametrize("asset", ["..%2f.env", "..%2fapp%2fconfig.py", "nope.html"])
 def test_dashboard_will_not_serve_files_outside_its_directory(client, asset) -> None:
-    assert client.get(f"/landlord/{asset}").status_code == 404
+    assert client.get(f"/manager/{asset}").status_code == 404
 
 
 # ---------------------------------------------------------------------------

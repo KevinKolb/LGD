@@ -1,6 +1,6 @@
 """LGD lease automation service.
 
-Landlord dashboard (HTTP Basic) + JSON API + PandaDoc webhook receiver.
+Manager dashboard (HTTP Basic) + JSON API + PandaDoc webhook receiver.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("lgd")
 
-LANDLORD_DIR = (Path(__file__).resolve().parent.parent / "landlord").resolve()
+MANAGER_DIR = (Path(__file__).resolve().parent.parent / "manager").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
 SHARED_DIR = (Path(__file__).resolve().parent.parent / "shared").resolve()
 PRINT_DIR = (Path(__file__).resolve().parent.parent / "print").resolve()
@@ -65,7 +65,7 @@ FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve(
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from originals/lease.md by
 # print/generate_print_lease.py. Served here rather than added to
-# LANDLORD_DIR so there's still exactly one copy of it on disk.
+# MANAGER_DIR so there's still exactly one copy of it on disk.
 BLANK_LEASE_PATH = (
     Path(__file__).resolve().parent.parent / "print" / "lease_print.html"
 ).resolve()
@@ -140,7 +140,7 @@ def current_user(
 
 
 def require_not_tenant(user: User) -> None:
-    """Keep tenant accounts out of the landlord dashboard and its API - a
+    """Keep tenant accounts out of the manager dashboard and its API - a
     tenant only ever needs /api/notices and /api/account/password."""
     if user.is_tenant:
         raise HTTPException(status_code=404, detail="Not found")
@@ -148,7 +148,7 @@ def require_not_tenant(user: User) -> None:
 
 def resolve_static_file(base_dir: Path, asset: str) -> Path:
     """Resolve `asset` under `base_dir`, defaulting to its index.html -
-    shared by the landlord, admin, and tenant static file routes."""
+    shared by the manager, admin, and tenant static file routes."""
     target = (base_dir / (asset or "index.html")).resolve()
     if base_dir not in target.parents and target != base_dir:
         raise HTTPException(status_code=404, detail="Not found")
@@ -174,7 +174,7 @@ def authorize_landlord(user: User, landlord_id: str) -> Landlord:
 
 
 # ---------------------------------------------------------------------------
-# Landlord dashboard (static files, gated)
+# Manager dashboard (static files, gated)
 # ---------------------------------------------------------------------------
 
 @app.get("/", include_in_schema=False)
@@ -196,7 +196,7 @@ async def favicon():
 @app.get("/print/{asset:path}", include_in_schema=False)
 async def print_files(asset: str, user: User = Depends(current_user)):
     """The blank paper lease, at the same relative path it has on GitHub
-    Pages (../print/lease_print.html from the landlord page), so one href
+    Pages (../print/lease_print.html from the manager page), so one href
     works on both hosts. /api/blank-lease still serves the same file."""
     require_not_tenant(user)
     return FileResponse(
@@ -215,12 +215,12 @@ async def shared_files(asset: str):
     )
 
 
-@app.get("/landlord/", include_in_schema=False)
-@app.get("/landlord/{asset:path}", include_in_schema=False)
-async def landlord_files(asset: str = "", user: User = Depends(current_user)):
+@app.get("/manager/", include_in_schema=False)
+@app.get("/manager/{asset:path}", include_in_schema=False)
+async def manager_files(asset: str = "", user: User = Depends(current_user)):
     require_not_tenant(user)
     return FileResponse(
-        resolve_static_file(LANDLORD_DIR, asset), headers={"Cache-Control": "no-store"}
+        resolve_static_file(MANAGER_DIR, asset), headers={"Cache-Control": "no-store"}
     )
 
 
@@ -728,7 +728,7 @@ async def api_post_news(
     news: NewsRequest,
     user: User = Depends(current_user),
 ) -> dict[str, str]:
-    """A landlord/admin publishes a news post, from the landlord dashboard."""
+    """A landlord/admin publishes a news post, from the manager dashboard."""
     require_not_tenant(user)
     authorize_landlord(user, news.landlord_id)
     settings = get_settings()

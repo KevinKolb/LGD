@@ -1,8 +1,8 @@
 "use strict";
 /* Shared account bar: a directly-visible sandbox/live toggle (admin only)
  * plus an account popup (who's logged in, log out, change password).
- * Included on every /landlord/ page via
- * <script src="/landlord/account.js"></script> so all of them stay in
+ * Included on every /manager/ page via
+ * <script src="account.js"></script> so all of them stay in
  * sync automatically rather than copy-pasting this into each page. */
 
 (function () {

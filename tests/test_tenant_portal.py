@@ -373,11 +373,11 @@ def test_admin_sees_every_landlords_news(client) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tenant accounts are kept out of the landlord dashboard and its API
+# Tenant accounts are kept out of the manager dashboard and its API
 # ---------------------------------------------------------------------------
 
 def test_tenant_cannot_reach_the_landlord_dashboard(client) -> None:
-    assert client.get("/landlord/", auth=TENANT1).status_code == 404
+    assert client.get("/manager/", auth=TENANT1).status_code == 404
 
 
 def test_tenant_cannot_call_api_config(client) -> None:

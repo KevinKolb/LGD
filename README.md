@@ -12,7 +12,7 @@ current and archive the executed PDF once it's signed.
 | [originals/lease.md](originals/lease.md) | The **live** lease text. Edit this one. |
 | [originals/lease_transcript_verbatim.md](originals/lease_transcript_verbatim.md) | The original scan, transcribed verbatim. **Do not edit.** |
 | [pandadoc/](pandadoc/) | One-time PandaDoc setup and the template body to paste in |
-| [landlord/](landlord/) | The dashboard — a single static page behind HTTP Basic |
+| [manager/](manager/) | The dashboard — a single static page behind HTTP Basic |
 | [app/](app/) | FastAPI service: JSON API, PandaDoc client, webhook receiver |
 | [tests/](tests/) | Test suite. Stubs PandaDoc, so it never spends a document |
 | `accounts.json` | Landlords and logins (local runs). Gitignored — created by `app.accounts`. Lives in Supabase Postgres instead when `DATABASE_URL` is set — see **Deploying** below |
@@ -90,7 +90,7 @@ endpoint regardless.
 .venv/Scripts/python.exe -m uvicorn app.main:app --reload
 ```
 
-The dashboard is at <http://localhost:8000/landlord/>.
+The dashboard is at <http://localhost:8000/manager/>.
 
 ## Deploying (Render + Supabase, free, no credit card)
 
@@ -203,7 +203,7 @@ legal instrument.
   password hash is ever sent to the browser. The same applies to `DATABASE_URL` and
   `SUPABASE_KEY` when deployed (see **Deploying** below) — set only as Render
   environment variables, never committed.
-- Static file serving resolves paths and rejects anything outside `landlord/`.
+- Static file serving resolves paths and rejects anything outside `manager/`.
 - Executed PDFs are downloaded from PandaDoc's `download-protected` endpoint in
   production (sandbox falls back to the plain `download` endpoint, since
   `download-protected` requires a production key and 401s on a sandbox one).
