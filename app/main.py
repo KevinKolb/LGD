@@ -618,32 +618,18 @@ async def tenant_files(asset: str = ""):
     )
 
 
-@app.get("/api/properties")
-async def api_list_properties() -> dict[str, Any]:
-    """Public - names only, for the application form's dropdown. No emails,
-    no signer names; those stay behind login same as everywhere else."""
-    settings = get_settings()
-    return {
-        "properties": [
-            {"id": landlord.id, "name": landlord.company}
-            for landlord in settings.landlords
-        ]
-    }
-
-
 @app.post("/api/applications", status_code=201)
 async def api_submit_application(application: ApplicationRequest) -> dict[str, str]:
     """A prospective tenant's rental application. Public - no login, and
     deliberately so, since nobody has an account before they've applied."""
     settings = get_settings()
-    if application.landlord_id and not settings.landlord_by_id(application.landlord_id):
-        raise HTTPException(status_code=400, detail="Unknown property selected.")
     await db.record_application(
         settings.db_path,
         applicant_name=application.applicant_name,
         applicant_email=application.applicant_email,
-        applicant_phone=application.applicant_phone or None,
-        landlord_id=application.landlord_id,
+        applicant_phone=application.applicant_phone,
+        consent_to_text=application.consent_to_text,
+        property_interest=application.property_interest or None,
         desired_move_in=application.desired_move_in or None,
         message=application.message or None,
     )
@@ -652,14 +638,13 @@ async def api_submit_application(application: ApplicationRequest) -> dict[str, s
 
 @app.get("/api/applications")
 async def api_list_applications(user: User = Depends(current_user)) -> dict[str, Any]:
-    """Admins see every application; a landlord only those naming their own
-    property. An application with no landlord chosen is admin-only."""
-    require_not_tenant(user)
+    """Admin-only: property_interest is free text the applicant typed, not
+    a landlord id, so there's no way to scope an application to one
+    landlord server-side. Admin reads it and routes manually."""
+    if not user.is_admin:
+        raise HTTPException(status_code=404, detail="No such page.")
     settings = get_settings()
-    applications = await db.list_applications(
-        settings.db_path,
-        landlord_id=None if user.is_admin else user.landlord_id,
-    )
+    applications = await db.list_applications(settings.db_path)
     return {"applications": applications}
 
 

@@ -351,23 +351,29 @@
     </div>
   </section>
 
-  <section>
+  <section id="applications-section" hidden>
     <h2>Rental applications</h2>
-    <p class="hint">Submitted from the public tenant page - <a href="/tenant/" target="_blank" rel="noopener">/tenant/</a>.</p>
+    <p class="hint">
+      Submitted from the public tenant page -
+      <a href="/tenant/" target="_blank" rel="noopener">/tenant/</a>. Admin-only:
+      the property field there is free text the applicant typed, not tied to a
+      landlord account, so there's no way to route these automatically.
+    </p>
     <div class="scroll">
       <table>
         <thead>
           <tr>
             <th>Name</th>
             <th>Contact</th>
-            <th>Property</th>
+            <th>Property interested in</th>
             <th>Move-in</th>
+            <th>Texting OK?</th>
             <th>Notes</th>
             <th>Received</th>
           </tr>
         </thead>
         <tbody id="application-rows">
-          <tr><td colspan="6" class="empty">Loading&hellip;</td></tr>
+          <tr><td colspan="7" class="empty">Loading&hellip;</td></tr>
         </tbody>
       </table>
     </div>
@@ -731,23 +737,24 @@ async function loadApplications() {
     const { applications } = await response.json();
     tbody.replaceChildren();
     if (!applications.length) {
-      tbody.append(el("tr", {}, el("td", { colspan: "6", class: "empty", text: "No applications yet." })));
+      tbody.append(el("tr", {}, el("td", { colspan: "7", class: "empty", text: "No applications yet." })));
       return;
     }
     for (const application of applications) {
       tbody.append(el("tr", {},
         el("td", { text: application.applicant_name }),
         el("td", {}, el("a", { href: `mailto:${application.applicant_email}`, text: application.applicant_email }),
-          application.applicant_phone ? el("div", { class: "note", text: application.applicant_phone }) : ""),
-        el("td", { text: application.landlord_id || "—" }),
+          el("div", { class: "note", text: application.applicant_phone })),
+        el("td", { text: application.property_interest || "—" }),
         el("td", { text: application.desired_move_in || "—" }),
+        el("td", { text: application.consent_to_text ? "Yes" : "No" }),
         el("td", { text: application.message || "—" }),
         el("td", { text: new Date(application.created_at).toLocaleDateString() })
       ));
     }
   } catch (error) {
     tbody.replaceChildren(
-      el("tr", {}, el("td", { colspan: "6", class: "empty", text: `Could not load applications: ${error.message}` }))
+      el("tr", {}, el("td", { colspan: "7", class: "empty", text: `Could not load applications: ${error.message}` }))
     );
   }
 }
@@ -841,6 +848,8 @@ async function boot() {
 
       // Admins work across landlords, so they get a column naming each one.
       document.getElementById("landlord-heading").hidden = !isAdmin;
+      // Applications are admin-only - see api_list_applications in app/main.py.
+      document.getElementById("applications-section").hidden = !isAdmin;
 
       const select = document.getElementById("lessor_id");
       select.replaceChildren();
@@ -941,7 +950,7 @@ async function boot() {
   });
 
   await loadLeases();
-  await loadApplications();
+  if (isAdmin) await loadApplications();
 }
 
 boot();

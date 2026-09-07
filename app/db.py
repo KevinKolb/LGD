@@ -49,15 +49,18 @@ CREATE INDEX IF NOT EXISTS leases_created_at ON leases (created_at DESC);
 CREATE INDEX IF NOT EXISTS leases_landlord ON leases (landlord_id, created_at DESC);
 
 -- Public rental applications, submitted from the tenant page with no login.
+-- property_interest is free text, not a landlord id - see ApplicationRequest
+-- in app/tenant_portal.py - so these are never landlord-scoped, admin-only.
 CREATE TABLE IF NOT EXISTS applications (
-    id               TEXT PRIMARY KEY,
-    landlord_id      TEXT,
-    applicant_name   TEXT NOT NULL,
-    applicant_email  TEXT NOT NULL,
-    applicant_phone  TEXT,
-    desired_move_in  TEXT,
-    message          TEXT,
-    created_at       TEXT NOT NULL
+    id                  TEXT PRIMARY KEY,
+    property_interest   TEXT,
+    applicant_name      TEXT NOT NULL,
+    applicant_email     TEXT NOT NULL,
+    applicant_phone     TEXT NOT NULL,
+    consent_to_text     INTEGER NOT NULL DEFAULT 0,
+    desired_move_in     TEXT,
+    message             TEXT,
+    created_at          TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS applications_created_at ON applications (created_at DESC);
 
@@ -74,8 +77,9 @@ CREATE INDEX IF NOT EXISTS notices_tenant ON notices (tenant_username, created_a
 """
 
 APPLICATION_COLUMNS = [
-    "id", "landlord_id", "applicant_name", "applicant_email",
-    "applicant_phone", "desired_move_in", "message", "created_at",
+    "id", "property_interest", "applicant_name", "applicant_email",
+    "applicant_phone", "consent_to_text", "desired_move_in", "message",
+    "created_at",
 ]
 NOTICE_COLUMNS = ["id", "tenant_username", "message", "created_by", "created_at"]
 
@@ -194,20 +198,17 @@ def _sqlite_record_application(db_path: str, row: dict[str, Any]) -> None:
         )
 
 
-def _sqlite_list_applications(db_path: str,
-                              landlord_id: str | None) -> list[dict[str, Any]]:
+def _sqlite_list_applications(db_path: str) -> list[dict[str, Any]]:
     with _connect(db_path) as connection:
-        if landlord_id is None:
-            rows = connection.execute(
-                "SELECT * FROM applications ORDER BY created_at DESC"
-            ).fetchall()
-        else:
-            rows = connection.execute(
-                "SELECT * FROM applications WHERE landlord_id = ? "
-                "ORDER BY created_at DESC",
-                (landlord_id,),
-            ).fetchall()
-    return [dict(row) for row in rows]
+        rows = connection.execute(
+            "SELECT * FROM applications ORDER BY created_at DESC"
+        ).fetchall()
+    result = []
+    for row in rows:
+        record = dict(row)
+        record["consent_to_text"] = bool(record["consent_to_text"])
+        result.append(record)
+    return result
 
 
 def _sqlite_record_notice(db_path: str, row: dict[str, Any]) -> None:
@@ -350,21 +351,18 @@ async def _pg_record_application(dsn: str, row: dict[str, Any]) -> None:
         )
 
 
-async def _pg_list_applications(dsn: str,
-                                landlord_id: str | None) -> list[dict[str, Any]]:
+async def _pg_list_applications(dsn: str) -> list[dict[str, Any]]:
     pool = await _pg_pool(dsn)
     async with pool.acquire() as connection:
-        if landlord_id is None:
-            rows = await connection.fetch(
-                "SELECT * FROM applications ORDER BY created_at DESC"
-            )
-        else:
-            rows = await connection.fetch(
-                "SELECT * FROM applications WHERE landlord_id = $1 "
-                "ORDER BY created_at DESC",
-                landlord_id,
-            )
-    return [dict(row) for row in rows]
+        rows = await connection.fetch(
+            "SELECT * FROM applications ORDER BY created_at DESC"
+        )
+    result = []
+    for row in rows:
+        record = dict(row)
+        record["consent_to_text"] = bool(record["consent_to_text"])
+        result.append(record)
+    return result
 
 
 async def _pg_record_notice(dsn: str, row: dict[str, Any]) -> None:
@@ -466,19 +464,23 @@ async def record_archive(db_path: str, document_id: str,
 
 
 async def record_application(db_path: str, *, applicant_name: str,
-                              applicant_email: str,
-                              applicant_phone: str | None,
-                              landlord_id: str | None,
+                              applicant_email: str, applicant_phone: str,
+                              consent_to_text: bool,
+                              property_interest: str | None,
                               desired_move_in: str | None,
                               message: str | None) -> str:
     """Save a public rental application. Returns its generated id."""
     application_id = secrets.token_hex(12)
     row = {
         "id": application_id,
-        "landlord_id": landlord_id,
+        "property_interest": property_interest,
         "applicant_name": applicant_name,
         "applicant_email": applicant_email,
         "applicant_phone": applicant_phone,
+        # Plain 0/1, not a Python bool: asyncpg binds parameters by the
+        # target column's declared type, and the column is INTEGER (kept
+        # the same on both backends, like every other schema piece here).
+        "consent_to_text": int(consent_to_text),
         "desired_move_in": desired_move_in,
         "message": message,
         "created_at": _now(),
@@ -490,12 +492,12 @@ async def record_application(db_path: str, *, applicant_name: str,
     return application_id
 
 
-async def list_applications(db_path: str, *,
-                            landlord_id: str | None = None) -> list[dict[str, Any]]:
-    """All applications, or only those naming one landlord."""
+async def list_applications(db_path: str) -> list[dict[str, Any]]:
+    """Every application - admin-only at the API layer (app/main.py), since
+    property_interest is free text, not a landlord id to scope by."""
     if _is_postgres(db_path):
-        return await _pg_list_applications(db_path, landlord_id)
-    return await asyncio.to_thread(_sqlite_list_applications, db_path, landlord_id)
+        return await _pg_list_applications(db_path)
+    return await asyncio.to_thread(_sqlite_list_applications, db_path)
 
 
 async def record_notice(db_path: str, *, tenant_username: str, message: str,

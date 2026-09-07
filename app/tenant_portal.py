@@ -16,8 +16,13 @@ class ApplicationRequest(BaseModel):
 
     applicant_name: str = Field(min_length=1, max_length=200)
     applicant_email: EmailStr
-    applicant_phone: str = Field(default="", max_length=40)
-    landlord_id: str | None = None
+    applicant_phone: str = Field(min_length=1, max_length=40)
+    consent_to_text: bool = False
+    # Free text, not a known landlord id - the applicant describes whatever
+    # property they're interested in in their own words. This means an
+    # application can no longer be scoped to one landlord server-side; see
+    # api_list_applications in app/main.py, which is admin-only because of it.
+    property_interest: str = Field(default="", max_length=300)
     desired_move_in: str = Field(default="", max_length=100)
     message: str = Field(default="", max_length=2000)
 

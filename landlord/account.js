@@ -1,11 +1,22 @@
 "use strict";
-/* Shared account widget: who's logged in, log out, change password, and
- * (admin only) the sandbox/live toggle. Included on every /landlord/ page
- * via <script src="/landlord/account.js"></script> so all of them stay in
+/* Shared account bar: a directly-visible sandbox/live toggle (admin only)
+ * plus an account popup (who's logged in, log out, change password).
+ * Included on every /landlord/ page via
+ * <script src="/landlord/account.js"></script> so all of them stay in
  * sync automatically rather than copy-pasting this into each page. */
 
 (function () {
   const STYLE = `
+    #account-bar { display: flex; align-items: center; gap: 10px; }
+    #mode-toggle {
+      display: flex; border: 1px solid rgba(255,255,255,.6); border-radius: 6px;
+      overflow: hidden;
+    }
+    #mode-toggle button {
+      font: inherit; font-size: 13px; padding: 6px 12px; border: none;
+      background: transparent; color: inherit; cursor: pointer; opacity: .75;
+    }
+    #mode-toggle button.active { background: rgba(255,255,255,.28); opacity: 1; font-weight: 600; }
     #account-widget { position: relative; }
     #account-toggle {
       font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
@@ -40,9 +51,6 @@
     #account-popup .msg { font-size: 12px; margin: 6px 0 0; }
     #account-popup .msg.error { color: #9b2c2c; }
     #account-popup .msg.ok { color: #1f5d4c; }
-    #account-popup .mode-row { display: flex; gap: 8px; }
-    #account-popup .mode-row button { flex: 1; }
-    #account-popup .mode-row button.active { outline: 2px solid #1f5d4c; outline-offset: 1px; }
   `;
 
   function el(tag, attrs = {}, ...children) {
@@ -126,52 +134,6 @@
       }
     });
 
-    if (config.user.is_admin) {
-      const modeSection = el("section", {});
-      modeSection.append(
-        el("h3", { text: "PandaDoc mode" }),
-        el("p", { class: "note", text: "Resets to the deployment default on restart - never stays stuck in production." })
-      );
-      const row = el("div", { class: "mode-row" });
-      const sandboxButton = el("button", {
-        type: "button", class: config.is_sandbox ? "active" : "",
-        text: "Sandbox",
-      });
-      const liveButton = el("button", {
-        type: "button", class: `secondary ${config.is_sandbox ? "" : "active"}`.trim(),
-        text: "Live (production)",
-      });
-      row.append(sandboxButton, liveButton);
-      modeSection.append(row);
-      popup.append(modeSection);
-
-      const setMode = async (mode) => {
-        if (mode === "production") {
-          if (!window.confirm(
-            "Switch to production mode? Every lease generated from now on " +
-            "spends one of the 60 real documents in the annual allowance."
-          )) return;
-        }
-        try {
-          const response = await fetch("/api/admin/mode", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode }),
-          });
-          const body = await response.json().catch(() => ({}));
-          if (response.ok) {
-            window.location.reload();
-          } else {
-            showMessage(modeSection, body.detail || `Failed (HTTP ${response.status}).`, true);
-          }
-        } catch (error) {
-          showMessage(modeSection, `Could not reach the server: ${error.message}`, true);
-        }
-      };
-      sandboxButton.addEventListener("click", () => setMode("sandbox"));
-      liveButton.addEventListener("click", () => setMode("production"));
-    }
-
     const logoutSection = el("section", {});
     const logoutButton = el("button", { type: "button", class: "secondary", text: "Log out" });
     logoutSection.append(
@@ -184,25 +146,72 @@
     return popup;
   }
 
+  function setUpModeToggle(modeToggle, config) {
+    const sandboxButton = modeToggle.querySelector('[data-mode="sandbox"]');
+    const liveButton = modeToggle.querySelector('[data-mode="production"]');
+
+    function markActive(isSandbox) {
+      sandboxButton.classList.toggle("active", isSandbox);
+      liveButton.classList.toggle("active", !isSandbox);
+    }
+    markActive(config.is_sandbox);
+
+    async function setMode(mode) {
+      if (mode === "production" && !window.confirm(
+        "Switch to production mode? Every lease generated from now on " +
+        "spends one of the 60 real documents in the annual allowance."
+      )) return;
+      try {
+        const response = await fetch("/api/admin/mode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode }),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (response.ok) window.location.reload();
+        else window.alert(body.detail || `Failed (HTTP ${response.status}).`);
+      } catch (error) {
+        window.alert(`Could not reach the server: ${error.message}`);
+      }
+    }
+    sandboxButton.addEventListener("click", () => setMode("sandbox"));
+    liveButton.addEventListener("click", () => setMode("production"));
+    modeToggle.hidden = false;
+  }
+
   async function boot() {
     const style = document.createElement("style");
     style.textContent = STYLE;
     document.head.append(style);
 
+    const bar = el("div", { id: "account-bar" });
+
+    const modeToggle = el("div", { id: "mode-toggle", hidden: "hidden" });
+    modeToggle.append(
+      el("button", { type: "button", "data-mode": "sandbox", text: "Sandbox" }),
+      el("button", { type: "button", "data-mode": "production", text: "Live" })
+    );
+
     const widget = el("div", { id: "account-widget" });
     const toggle = el("button", { type: "button", id: "account-toggle", text: "Account" });
     widget.append(toggle);
 
+    bar.append(modeToggle, widget);
+
     const header = document.querySelector("header");
-    if (header) header.append(widget);
-    else document.body.prepend(widget);
+    if (header) header.append(bar);
+    else document.body.prepend(bar);
 
     let config = null;
     try {
       const response = await fetch("/api/config");
       if (response.ok) config = await response.json();
     } catch (error) {
-      /* toggle stays present but inert if config can't load */
+      /* bar stays present but inert if config can't load */
+    }
+
+    if (config && config.user.is_admin) {
+      setUpModeToggle(modeToggle, config);
     }
 
     toggle.addEventListener("click", () => {

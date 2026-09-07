@@ -7,25 +7,11 @@ APPLICATION_PAYLOAD = {
     "applicant_name": "Jordan Applicant",
     "applicant_email": "jordan@example.com",
     "applicant_phone": "555-0100",
-    "landlord_id": "lgd",
+    "consent_to_text": True,
+    "property_interest": "1556 Camp Street",
     "desired_move_in": "2026-11-01",
     "message": "Household of two, steady income.",
 }
-
-
-# ---------------------------------------------------------------------------
-# Public properties list
-# ---------------------------------------------------------------------------
-
-def test_properties_is_public(client) -> None:
-    response = client.get("/api/properties", auth=None)
-    assert response.status_code == 200
-
-
-def test_properties_lists_names_only_no_emails(client) -> None:
-    body = client.get("/api/properties", auth=None).json()
-    assert {p["id"] for p in body["properties"]} == {"lgd", "robertson"}
-    assert "@" not in str(body)
 
 
 # ---------------------------------------------------------------------------
@@ -49,20 +35,38 @@ def test_submit_application_rejects_an_invalid_email(client) -> None:
     assert response.status_code == 422
 
 
-def test_submit_application_rejects_an_unknown_property(client) -> None:
-    payload = {**APPLICATION_PAYLOAD, "landlord_id": "no-such-property"}
+def test_submit_application_requires_a_phone_number(client) -> None:
+    payload = {**APPLICATION_PAYLOAD, "applicant_phone": ""}
     response = client.post("/api/applications", json=payload, auth=None)
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
-def test_submit_application_allows_no_property_chosen(client) -> None:
-    payload = {**APPLICATION_PAYLOAD, "landlord_id": None}
+def test_submit_application_consent_to_text_defaults_to_false(client) -> None:
+    payload = {k: v for k, v in APPLICATION_PAYLOAD.items() if k != "consent_to_text"}
+    response = client.post("/api/applications", json=payload, auth=None)
+    assert response.status_code == 201
+
+    body = client.get("/api/applications", auth=ADMIN).json()
+    assert body["applications"][0]["consent_to_text"] is False
+
+
+def test_submit_application_allows_no_property_typed(client) -> None:
+    payload = {**APPLICATION_PAYLOAD, "property_interest": ""}
+    response = client.post("/api/applications", json=payload, auth=None)
+    assert response.status_code == 201
+
+
+def test_submit_application_property_interest_is_free_text(client) -> None:
+    """Not validated against known landlords - it's whatever the applicant
+    typed, e.g. an address that isn't in accounts.json at all."""
+    payload = {**APPLICATION_PAYLOAD, "property_interest": "some address I saw on Zillow"}
     response = client.post("/api/applications", json=payload, auth=None)
     assert response.status_code == 201
 
 
 # ---------------------------------------------------------------------------
-# Reviewing applications (admin/landlord)
+# Reviewing applications (admin-only - property_interest is free text, not a
+# landlord id, so there's no way to scope an application to one landlord)
 # ---------------------------------------------------------------------------
 
 def test_list_applications_requires_authentication(client) -> None:
@@ -74,26 +78,21 @@ def test_list_applications_is_refused_to_a_tenant(client) -> None:
     assert client.get("/api/applications", auth=TENANT1).status_code == 404
 
 
+def test_list_applications_is_refused_to_a_landlord(client) -> None:
+    for credentials in (STEVE, GAY):
+        assert client.get("/api/applications", auth=credentials).status_code == 404
+
+
 def test_admin_sees_every_application(client) -> None:
     client.post("/api/applications", json=APPLICATION_PAYLOAD, auth=None)
-    robertson_payload = {**APPLICATION_PAYLOAD, "landlord_id": "robertson"}
-    client.post("/api/applications", json=robertson_payload, auth=None)
+    other_payload = {**APPLICATION_PAYLOAD, "property_interest": "a different address"}
+    client.post("/api/applications", json=other_payload, auth=None)
 
     body = client.get("/api/applications", auth=ADMIN).json()
 
     assert len(body["applications"]) == 2
-
-
-def test_a_landlord_sees_only_applications_naming_their_own_property(client) -> None:
-    client.post("/api/applications", json=APPLICATION_PAYLOAD, auth=None)  # lgd
-    robertson_payload = {**APPLICATION_PAYLOAD, "landlord_id": "robertson"}
-    client.post("/api/applications", json=robertson_payload, auth=None)
-
-    steve_body = client.get("/api/applications", auth=STEVE).json()
-    gay_body = client.get("/api/applications", auth=GAY).json()
-
-    assert [a["landlord_id"] for a in steve_body["applications"]] == ["lgd"]
-    assert [a["landlord_id"] for a in gay_body["applications"]] == ["robertson"]
+    assert body["applications"][0]["applicant_phone"] == "555-0100"
+    assert body["applications"][0]["consent_to_text"] is True
 
 
 # ---------------------------------------------------------------------------

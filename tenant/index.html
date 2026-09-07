@@ -70,6 +70,11 @@
   }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  label.checkbox-row {
+    display: flex; align-items: flex-start; gap: 8px; font-weight: normal;
+    margin-bottom: 14px;
+  }
+  label.checkbox-row input { width: auto; margin: 2px 0 0; }
   input, select, textarea {
     width: 100%;
     padding: 8px 10px;
@@ -133,17 +138,20 @@
       <div class="grid">
         <div>
           <label for="applicant_phone">Phone</label>
-          <input id="applicant_phone" type="tel" maxlength="40">
+          <input id="applicant_phone" type="tel" required maxlength="40">
         </div>
         <div>
           <label for="desired_move_in">Desired move-in date</label>
           <input id="desired_move_in" type="date">
         </div>
       </div>
-      <label for="landlord_id">Property you're interested in</label>
-      <select id="landlord_id">
-        <option value="">Not sure / general inquiry</option>
-      </select>
+      <label class="checkbox-row" for="consent_to_text">
+        <input type="checkbox" id="consent_to_text">
+        I consent to receive text messages about my application at the phone
+        number above. Message and data rates may apply.
+      </label>
+      <label for="property_interest">Property you're interested in</label>
+      <input id="property_interest" maxlength="300" placeholder="e.g. 1556 Camp Street, or 'not sure yet'">
       <label for="message">
         Anything else? (household size, income/employment, references)
       </label>
@@ -195,20 +203,6 @@ function showMessage(id, text, isError) {
   node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
 }
 
-async function loadProperties() {
-  try {
-    const response = await fetch("/api/properties");
-    if (!response.ok) return;
-    const { properties } = await response.json();
-    const select = document.getElementById("landlord_id");
-    for (const property of properties) {
-      select.append(el("option", { value: property.id, text: property.name }));
-    }
-  } catch (error) {
-    /* the "not sure" option still works fine without this */
-  }
-}
-
 function renderNotices(notices) {
   const list = document.getElementById("notice-list");
   list.replaceChildren();
@@ -227,8 +221,6 @@ function renderNotices(notices) {
 }
 
 function boot() {
-  loadProperties();
-
   document.getElementById("application-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = document.getElementById("submit-application");
@@ -242,8 +234,9 @@ function boot() {
           applicant_name: document.getElementById("applicant_name").value.trim(),
           applicant_email: document.getElementById("applicant_email").value.trim(),
           applicant_phone: document.getElementById("applicant_phone").value.trim(),
+          consent_to_text: document.getElementById("consent_to_text").checked,
           desired_move_in: document.getElementById("desired_move_in").value,
-          landlord_id: document.getElementById("landlord_id").value || null,
+          property_interest: document.getElementById("property_interest").value.trim(),
           message: document.getElementById("message").value.trim(),
         }),
       });
