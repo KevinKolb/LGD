@@ -124,17 +124,65 @@
     letter-spacing: .03em;
   }
   .modal-box button.secondary { background: transparent; color: var(--accent); }
+  /* Several rules here set display on elements the gate hides (header is
+     flex), and any of them outranks the browser's default [hidden] rule.
+     One override covers the lot. */
+  [hidden] { display: none !important; }
+  .gate {
+    max-width: 340px;
+    width: calc(100% - 48px);
+    margin: 12vh auto 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 24px 24px;
+    text-align: center;
+  }
+  .gate h1 { margin: 0 0 6px; font-size: 18px; color: var(--accent); }
+  .gate label {
+    display: block; margin: 0 0 12px;
+    color: var(--muted); font-size: 13px; font-weight: normal;
+  }
+  .gate input {
+    width: 100%;
+    padding: 9px 10px;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+  }
+  .gate button {
+    font: inherit;
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 9px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .gate .msg { margin: 10px 0 0; color: var(--danger); font-size: 13px; }
 </style>
 </head>
 <body>
-<header>
+<form class="gate" id="gate">
+  <h1>Manager Dashboard</h1>
+  <label for="gate-password">Enter the manager password.</label>
+  <input type="password" id="gate-password" autocomplete="current-password" required>
+  <button type="submit">Continue</button>
+  <p class="msg" id="gate-msg" hidden>That password is not right.</p>
+</form>
+
+<header hidden>
   <div>
     <h1>Manager Dashboard</h1>
     <p id="whoami">Welcome</p>
   </div>
 </header>
 
-<main>
+<main hidden>
   <section>
     <h2>Paper lease</h2>
     <p class="hint">
@@ -160,6 +208,73 @@
 
 <script>
 "use strict";
+
+// --- Password gate -------------------------------------------------------
+//
+// A DETERRENT, NOT SECURITY. On GitHub Pages these files are static and
+// public, so this only stops someone who types the URL - not anyone who
+// views source, turns off JavaScript, or reads the repo, which is public.
+// The one real gate is the backend's HTTP Basic auth on /manager/, which
+// admits only manager and admin logins; when this page is served from
+// there, /api/config succeeds and the gate opens on its own.
+//
+// The password is stored as a SHA-256 hash so it is not sitting in the
+// source in plain text. That is not much protection either - a short or
+// guessable phrase falls to an offline dictionary attack in seconds - so
+// use a throwaway word here, never one reused anywhere else. To change it:
+//   python -c "import hashlib;print(hashlib.sha256(b'NEW-PHRASE').hexdigest())"
+const GATE_HASH = "c218b300c73bd6e04f9579cb20ac4e0256c444aecc42b57e5ec679398f0c5dd7";
+const GATE_KEY = "lgd-manager-unlocked";
+
+function unlock() {
+  document.getElementById("gate").hidden = true;
+  document.querySelector("header").hidden = false;
+  document.querySelector("main").hidden = false;
+}
+
+async function sha256Hex(text) {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+(function () {
+  // Session-scoped, so closing the browser re-locks.
+  try {
+    if (sessionStorage.getItem(GATE_KEY) === "1") unlock();
+  } catch (error) {
+    /* sessionStorage unavailable - just ask for the password. */
+  }
+
+  document.getElementById("gate").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = document.getElementById("gate-password");
+    const message = document.getElementById("gate-msg");
+    let entered;
+    try {
+      entered = await sha256Hex(input.value);
+    } catch (error) {
+      // crypto.subtle needs a secure context (https or localhost).
+      message.textContent = "This page must be opened over https to unlock.";
+      message.hidden = false;
+      return;
+    }
+    if (entered !== GATE_HASH) {
+      message.textContent = "That password is not right.";
+      message.hidden = false;
+      input.select();
+      return;
+    }
+    try {
+      sessionStorage.setItem(GATE_KEY, "1");
+    } catch (error) {
+      /* Not remembering it is fine; the page still unlocks now. */
+    }
+    unlock();
+  });
+})();
 
 // The paper lease has two mutually exclusive PARKING options, one of which
 // gets crossed out. Asking here means the lease opens already set the right
@@ -191,13 +306,17 @@
   });
 })();
 
-// Greets whoever is logged in. Everything else this page used to do lives
-// in manager/working.html.
+// Greets whoever is logged in, and opens the gate above without asking for
+// the password again: reaching /api/config at all means the backend already
+// checked a real manager or admin login. On GitHub Pages there is no
+// backend, this fails, and the password gate stands. Everything else this
+// page used to do lives in manager/working.html.
 (async function () {
   try {
     const response = await fetch("/api/config");
     if (!response.ok) return;
     const config = await response.json();
+    unlock();
     const firstName =
       (config.user.display_name || config.user.username || "").split(" ")[0];
     document.getElementById("whoami").textContent = config.user.is_admin
