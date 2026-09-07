@@ -648,6 +648,7 @@ async def api_submit_application(application: ApplicationRequest) -> dict[str, s
         property_interest=application.property_interest or None,
         desired_move_in=application.desired_move_in or None,
         message=application.message or None,
+        roommates=[r.model_dump() for r in application.roommates],
     )
     return {"detail": "Application received."}
 

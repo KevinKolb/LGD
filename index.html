@@ -14,6 +14,14 @@
       "https://lgd-kzu4.onrender.com" + path + window.location.search
     );
   }
+
+  // Tulane green/blue by default; ?org=O (or o) swaps in an orange scheme
+  // instead. Set on <html> here, before <body> paints, so there's no flash
+  // of the wrong colors.
+  const org = new URLSearchParams(window.location.search).get("org");
+  if (org && org.toLowerCase() === "o") {
+    document.documentElement.classList.add("theme-orange");
+  }
 </script>
 <link rel="icon" href="/favicon.ico?v=1">
 <title>Tenant/Landlord Portal</title>
@@ -24,8 +32,13 @@
     --ink: #1a1a1a;
     --muted: #6b6b6b;
     --line: #d9d9d9;
-    --accent: #1a1a1a;
+    --accent: #285c4d;
+    --accent2: #71c5e8;
     --accent-ink: #ffffff;
+  }
+  html.theme-orange {
+    --accent: #d2601a;
+    --accent2: #f4a261;
   }
   * { box-sizing: border-box; }
   body {
@@ -43,6 +56,7 @@
   main {
     background: var(--panel);
     border: 1px solid var(--line);
+    border-top: 5px solid var(--accent2);
     border-radius: 8px;
     padding: 40px;
     max-width: 420px;
@@ -53,6 +67,7 @@
     margin: 0 0 6px;
     font-size: 20px;
     letter-spacing: 0.02em;
+    color: var(--accent);
   }
   p.hint {
     margin: 0 0 28px;
@@ -98,8 +113,6 @@
 
 <footer>
   <a href="/landlord/">Landlord</a>
-  <a href="/applicant/">Applicant</a>
-  <a href="/tenant/">Tenant</a>
   <a href="/admin/">Admin</a>
 </footer>
 </body>

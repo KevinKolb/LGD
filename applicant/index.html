@@ -69,6 +69,7 @@
     color: var(--muted);
   }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  .hint.roommate-hint { margin-top: 8px; }
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
   label.checkbox-row {
     display: flex; align-items: flex-start; gap: 8px; font-weight: normal;
@@ -88,6 +89,18 @@
   textarea { min-height: 70px; resize: vertical; }
   .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .roommate {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: #fcfcfa;
+  }
+  .roommate .row-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .roommate .row-head strong { font-size: 13px; }
   button {
     font: inherit;
     border-radius: 6px;
@@ -96,8 +109,15 @@
     color: var(--accent-ink);
     padding: 9px 16px;
     cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: .03em;
   }
   button:disabled { opacity: .55; cursor: progress; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button.link {
+    background: none; border: none; color: var(--danger);
+    padding: 0; font-size: 12px; cursor: pointer; text-decoration: underline;
+  }
   .msg { font-size: 13px; margin-top: 10px; }
   .msg.error { color: var(--danger); }
   .msg.ok { color: var(--ok); }
@@ -144,6 +164,14 @@
       </label>
       <label for="property_interest">Property you're interested in</label>
       <input id="property_interest" maxlength="300" placeholder="123 Canal Street">
+
+      <label>Additional roommates</label>
+      <div id="roommates"></div>
+      <button type="button" class="secondary" id="add-roommate">Add roommate</button>
+      <p class="hint roommate-hint">
+        Their full name and email - up to 10.
+      </p>
+
       <label for="message">
         Anything else? (household size, income/employment, references)
       </label>
@@ -186,6 +214,56 @@ function showMessage(id, text, isError) {
   node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
 }
 
+// --- Additional roommates -------------------------------------------------
+// Just name + email for now - a household-size hint for whoever reviews the
+// application. Sending each roommate their own linked application is a
+// later project, not built yet.
+
+const MAX_ROOMMATES = 10;
+
+function field(labelText, type, name) {
+  const box = el("div");
+  const id = `${name}-${Math.random().toString(36).slice(2, 8)}`;
+  box.append(
+    el("label", { for: id, text: labelText }),
+    el("input", { id, type, "data-name": name, required: "required" })
+  );
+  return box;
+}
+
+function roommateRow(index) {
+  const wrap = el("div", { class: "roommate" });
+  const head = el("div", { class: "row-head" });
+  head.append(
+    el("strong", { text: `Roommate ${index + 1}` }),
+    el("button", { type: "button", class: "link", text: "Remove" })
+  );
+  const grid = el("div", { class: "grid" });
+  grid.append(field("Full name", "text", "name"), field("Email", "email", "email"));
+  wrap.append(head, grid);
+
+  head.querySelector("button").addEventListener("click", () => {
+    wrap.remove();
+    renumberRoommates();
+  });
+  return wrap;
+}
+
+function renumberRoommates() {
+  const rows = document.querySelectorAll("#roommates .roommate");
+  rows.forEach((row, index) => {
+    row.querySelector(".row-head strong").textContent = `Roommate ${index + 1}`;
+  });
+  document.getElementById("add-roommate").disabled = rows.length >= MAX_ROOMMATES;
+}
+
+function collectRoommates() {
+  return Array.from(document.querySelectorAll("#roommates .roommate")).map((row) => ({
+    name: row.querySelector('[data-name="name"]').value.trim(),
+    email: row.querySelector('[data-name="email"]').value.trim(),
+  }));
+}
+
 // Management company shown under the heading, picked by a ?company= URL
 // param rather than a login - this page is public, before anyone has an
 // account. "orange" and "lgd" are the two options; anything else (or no
@@ -212,6 +290,13 @@ function boot() {
   showCompanyName();
   document.getElementById("desired_move_in").value = firstOfNextMonth();
 
+  document.getElementById("add-roommate").addEventListener("click", () => {
+    const count = document.querySelectorAll("#roommates .roommate").length;
+    if (count >= MAX_ROOMMATES) return;
+    document.getElementById("roommates").append(roommateRow(count));
+    renumberRoommates();
+  });
+
   document.getElementById("application-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = document.getElementById("submit-application");
@@ -229,12 +314,16 @@ function boot() {
           desired_move_in: document.getElementById("desired_move_in").value,
           property_interest: document.getElementById("property_interest").value.trim(),
           message: document.getElementById("message").value.trim(),
+          roommates: collectRoommates(),
         }),
       });
       const body = await response.json().catch(() => ({}));
       if (response.ok) {
         showMessage("application-msg", "Application submitted. Thank you!", false);
         event.target.reset();
+        document.getElementById("roommates").replaceChildren();
+        document.getElementById("desired_move_in").value = firstOfNextMonth();
+        document.getElementById("add-roommate").disabled = false;
       } else {
         showMessage("application-msg", body.detail || `Failed (HTTP ${response.status}).`, true);
       }

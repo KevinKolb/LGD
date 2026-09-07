@@ -64,6 +64,50 @@ def test_submit_application_property_interest_is_free_text(client) -> None:
     assert response.status_code == 201
 
 
+def test_submit_application_defaults_to_no_roommates(client) -> None:
+    response = client.post("/api/applications", json=APPLICATION_PAYLOAD, auth=None)
+    assert response.status_code == 201
+
+    body = client.get("/api/applications", auth=ADMIN).json()
+    assert body["applications"][0]["roommates"] == []
+
+
+def test_submit_application_accepts_roommates(client) -> None:
+    payload = {
+        **APPLICATION_PAYLOAD,
+        "roommates": [
+            {"name": "Sam Roommate", "email": "sam@example.com"},
+            {"name": "Alex Roommate", "email": "alex@example.com"},
+        ],
+    }
+    response = client.post("/api/applications", json=payload, auth=None)
+    assert response.status_code == 201
+
+    body = client.get("/api/applications", auth=ADMIN).json()
+    assert body["applications"][0]["roommates"] == payload["roommates"]
+
+
+def test_submit_application_rejects_a_roommate_with_a_bad_email(client) -> None:
+    payload = {
+        **APPLICATION_PAYLOAD,
+        "roommates": [{"name": "Sam Roommate", "email": "not-an-email"}],
+    }
+    response = client.post("/api/applications", json=payload, auth=None)
+    assert response.status_code == 422
+
+
+def test_submit_application_rejects_more_than_ten_roommates(client) -> None:
+    payload = {
+        **APPLICATION_PAYLOAD,
+        "roommates": [
+            {"name": f"Roommate {i}", "email": f"roommate{i}@example.com"}
+            for i in range(11)
+        ],
+    }
+    response = client.post("/api/applications", json=payload, auth=None)
+    assert response.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Reviewing applications (admin-only - property_interest is free text, not a
 # landlord id, so there's no way to scope an application to one landlord)

@@ -15,6 +15,7 @@
     #mode-toggle button {
       font: inherit; font-size: 13px; padding: 6px 12px; border: none;
       background: transparent; color: inherit; cursor: pointer; opacity: .75;
+      text-transform: uppercase; letter-spacing: .03em;
     }
     #mode-toggle button.active { background: rgba(255,255,255,.28); opacity: 1; font-weight: 600; }
     #account-widget { position: relative; }
@@ -22,6 +23,7 @@
       font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
       border: 1px solid rgba(255,255,255,.6); background: transparent;
       color: inherit; cursor: pointer;
+      text-transform: uppercase; letter-spacing: .03em;
     }
     #account-popup {
       position: absolute; top: 100%; right: 0; margin-top: 8px;
@@ -45,6 +47,7 @@
     #account-popup button {
       font: inherit; padding: 7px 12px; border-radius: 5px; border: 1px solid #1f5d4c;
       background: #1f5d4c; color: #fff; cursor: pointer; font-size: 13px;
+      text-transform: uppercase; letter-spacing: .03em;
     }
     #account-popup button.secondary { background: transparent; color: #1f5d4c; }
     #account-popup .note { color: #6b6a66; font-size: 11px; margin: 4px 0 0; }
@@ -207,12 +210,22 @@
       /* bar stays present but inert if config can't load */
     }
 
-    if (config && config.user.is_admin) {
+    // Sandbox/live is a whole-app setting - only decide it from the admin
+    // dashboard, not from a landlord's own page even when that landlord is
+    // also an admin.
+    if (config && config.user.is_admin && window.location.pathname.startsWith("/admin/")) {
       setUpModeToggle(modeToggle, config);
     }
 
+    toggle.textContent = config ? "Logout" : "Login";
+
     toggle.addEventListener("click", () => {
-      if (!config) return;
+      if (!config) {
+        // No real login form - HTTP Basic re-prompts on the next request
+        // once the browser has forgotten the credentials (see logout()).
+        window.location.reload();
+        return;
+      }
       const existing = document.getElementById("account-popup");
       if (existing) {
         existing.remove();

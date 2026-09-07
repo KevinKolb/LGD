@@ -60,6 +60,10 @@ CREATE TABLE IF NOT EXISTS applications (
     consent_to_text     INTEGER NOT NULL DEFAULT 0,
     desired_move_in     TEXT,
     message             TEXT,
+    -- Name/email pairs for anyone applying alongside the primary applicant.
+    -- Just a household-size hint for now, not yet a separate application
+    -- of their own - see app/tenant_portal.py's Roommate docstring.
+    roommates_json      TEXT NOT NULL DEFAULT '[]',
     created_at          TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS applications_created_at ON applications (created_at DESC);
@@ -74,12 +78,28 @@ CREATE TABLE IF NOT EXISTS notices (
     created_at       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS notices_tenant ON notices (tenant_username, created_at DESC);
+
+-- Which landlord owns which property address.
+CREATE TABLE IF NOT EXISTS properties (
+    address   TEXT PRIMARY KEY,
+    landlord  TEXT NOT NULL
+);
+
+-- Tenant address book (name + mailing address), independent of the
+-- tenants_json list embedded in each lease.
+CREATE TABLE IF NOT EXISTS tenants (
+    full_name  TEXT NOT NULL,
+    address    TEXT NOT NULL,
+    apt        TEXT,
+    city       TEXT NOT NULL DEFAULT 'New Orleans',
+    state      TEXT NOT NULL DEFAULT 'LA'
+);
 """
 
 APPLICATION_COLUMNS = [
     "id", "property_interest", "applicant_name", "applicant_email",
     "applicant_phone", "consent_to_text", "desired_move_in", "message",
-    "created_at",
+    "roommates_json", "created_at",
 ]
 NOTICE_COLUMNS = ["id", "tenant_username", "message", "created_by", "created_at"]
 
@@ -207,6 +227,7 @@ def _sqlite_list_applications(db_path: str) -> list[dict[str, Any]]:
     for row in rows:
         record = dict(row)
         record["consent_to_text"] = bool(record["consent_to_text"])
+        record["roommates"] = json.loads(record.pop("roommates_json"))
         result.append(record)
     return result
 
@@ -361,6 +382,7 @@ async def _pg_list_applications(dsn: str) -> list[dict[str, Any]]:
     for row in rows:
         record = dict(row)
         record["consent_to_text"] = bool(record["consent_to_text"])
+        record["roommates"] = json.loads(record.pop("roommates_json"))
         result.append(record)
     return result
 
@@ -468,7 +490,8 @@ async def record_application(db_path: str, *, applicant_name: str,
                               consent_to_text: bool,
                               property_interest: str | None,
                               desired_move_in: str | None,
-                              message: str | None) -> str:
+                              message: str | None,
+                              roommates: list[dict[str, str]]) -> str:
     """Save a public rental application. Returns its generated id."""
     application_id = secrets.token_hex(12)
     row = {
@@ -483,6 +506,7 @@ async def record_application(db_path: str, *, applicant_name: str,
         "consent_to_text": int(consent_to_text),
         "desired_move_in": desired_move_in,
         "message": message,
+        "roommates_json": json.dumps(roommates),
         "created_at": _now(),
     }
     if _is_postgres(db_path):
