@@ -9,8 +9,12 @@
   // actual running instance instead. No-op on every other origin,
   // including the real one this same file is served from.
   if (window.location.hostname === "kevinkolb.github.io") {
+    // Project Pages serve this repo under a /LGD path prefix
+    // (kevinkolb.github.io/LGD/...) - strip it before reusing the path on
+    // Render, which serves this app at its own root with no such prefix.
+    const path = window.location.pathname.replace(/^\/LGD/, "");
     window.location.replace(
-      "https://lgd-kzu4.onrender.com" + window.location.pathname + window.location.search
+      "https://lgd-kzu4.onrender.com" + path + window.location.search
     );
   }
 </script>
