@@ -113,8 +113,8 @@
   <section>
     <h2>Rental application</h2>
     <p class="hint">
-      Fill this out and the property owner will follow up by email. This
-      isn't a lease and doesn't commit you to anything.
+      Fill this out and the property owner will follow up. This isn't a
+      lease and doesn't commit you to anything.
     </p>
     <form id="application-form">
       <div class="grid">
@@ -151,6 +151,10 @@
       <button type="submit" id="submit-application">Submit application</button>
       <div id="application-msg"></div>
     </form>
+    <p class="hint">
+      You will be sent landlord contact information when your application
+      is submitted.
+    </p>
   </section>
 </main>
 
@@ -196,8 +200,17 @@ function showCompanyName() {
   document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
 }
 
+function firstOfNextMonth() {
+  const today = new Date();
+  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const yyyy = nextMonth.getFullYear();
+  const mm = String(nextMonth.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}-01`;
+}
+
 function boot() {
   showCompanyName();
+  document.getElementById("desired_move_in").value = firstOfNextMonth();
 
   document.getElementById("application-form").addEventListener("submit", async (event) => {
     event.preventDefault();
