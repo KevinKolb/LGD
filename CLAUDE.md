@@ -4,6 +4,26 @@ Project-level context for working in this repo. See [README.md](README.md) for t
 full picture (setup, architecture, security). This file covers process notes that
 are kept out of the human-facing document files on purpose.
 
+## Versions: 1.0 is one company on purpose
+
+**1.0 is Lower Garden District Properties LLC. 2.0 is this same site sold to
+other property management companies.** The version line at the bottom of the
+home page tracks it; "we are at version 1 because we can print a lease" is how
+the bar was set.
+
+So hardcoding LGD's name, address or phone into a page is *fine* for now — but
+say so when doing it, because every instance is a 2.0 migration. As of
+2026-09-08 those are: the printed lease's heading and the hub page heading, the
+resident page's contact block, the applicant page's company map, and
+"New Orleans" as a default in the `properties` table and throughout the lease
+text itself.
+
+The multi-company scaffolding that already exists should **not** be torn out to
+simplify 1.0: `accounts.json` (and its Postgres equivalent) already hold a
+`landlords` table with two companies, every record table carries a
+`landlord_id`, and the API already scopes a manager to their own company
+server-side. That is the spine 2.0 grows from.
+
 ## The lease text lives in two files
 
 - [`originals/lease_transcript_verbatim.md`](originals/lease_transcript_verbatim.md)
