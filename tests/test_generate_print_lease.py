@@ -141,11 +141,12 @@ def test_the_company_name_heads_the_lease(real_output):
 
 def test_the_browser_tab_title_carries_no_landlord_name(real_output):
     """Only the printed page is LGD's - the <title> is what a browser shows
-    and what a saved PDF gets named by default, and stays generic."""
-    head = real_output[: real_output.index("<body>")]
-    assert "<title>Residential Lease</title>" in head
-    assert "LGD" not in head
-    assert "Lower Garden District" not in head
+    and what a saved PDF gets named by default, and stays generic. Checked
+    on the tag alone, not the whole <head>: the company name legitimately
+    appears there too, inside the @page margin boxes."""
+    title = real_output[real_output.index("<title>") : real_output.index("</title>")]
+    assert title == "<title>Residential Lease"
+    assert "LGD" not in title
 
 
 def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output):
@@ -156,8 +157,10 @@ def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output)
     page_rule = real_output.split("@page {")[1].split("html, body")[0]
     assert "@top-center" in page_rule
     assert "@bottom-center" in page_rule
-    counter = 'content: "Page " counter(page) " of " counter(pages);'
-    assert page_rule.count(counter) == 2
+    assert page_rule.count("counter(page)") == 2
+    assert page_rule.count("counter(pages)") == 2
+    # The company name leads both, so a loose page is identifiable.
+    assert page_rule.count("Lower Garden District Properties LLC — Page ") == 2
 
 
 def test_printing_paginates_the_same_on_a_phone_as_on_a_desktop(real_output):
