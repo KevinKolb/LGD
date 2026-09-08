@@ -136,9 +136,16 @@ def test_lgd_branding_is_not_in_the_title(real_output):
     assert "RESIDENTIAL LEASE" in real_output
 
 
-def test_page_number_counter_is_present(real_output):
-    assert "counter(page)" in real_output
-    assert "counter(pages)" in real_output
+def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output):
+    """"Page N of M" in both @page margin boxes. Chrome and Edge do render
+    these - verified by printing the same document with and without the
+    boxes and diffing the PDFs, since the text itself is not extractable
+    from a subset-font PDF."""
+    page_rule = real_output.split("@page {")[1].split("html, body")[0]
+    assert "@top-center" in page_rule
+    assert "@bottom-center" in page_rule
+    counter = 'content: "Page " counter(page) " of " counter(pages);'
+    assert page_rule.count(counter) == 2
 
 
 def test_printing_paginates_the_same_on_a_phone_as_on_a_desktop(real_output):

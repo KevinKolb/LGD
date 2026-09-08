@@ -48,7 +48,8 @@ found while building it (signature lines merging into one unreadable blob for th
 same underlying reason the PandaDoc generator's paragraph-merge bug happened, and a
 context-window that wasn't wide enough to correctly size the Lessor-name blank).
 
-Page numbers ("Page X of Y") use a CSS `@page` margin-box counter — this renders
+Page numbers ("Page X of Y") appear at both the top and the bottom of every
+page, via `@top-center` and `@bottom-center` CSS `@page` margin boxes — this renders
 correctly in Chrome, Edge, and Safari (18.2+), but Firefox does not support it as of
 early 2026; printing from Firefox just omits that line rather than showing something
 wrong.

@@ -9,6 +9,12 @@
   @page {
     size: letter;
     margin: 0.85in;
+    @top-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Georgia, "Times New Roman", Times, serif;
+      font-size: 9pt;
+      color: #444;
+    }
     @bottom-center {
       content: "Page " counter(page) " of " counter(pages);
       font-family: Georgia, "Times New Roman", Times, serif;
@@ -181,10 +187,11 @@
   <code>print/generate_print_lease.py</code> for printing and hand-filling on
   paper. It will not appear on a printed copy (hidden in print styles).
   Regenerate after editing <code>documents/lease.md</code>. The "Page X of Y"
-  footer is a CSS page-number counter: it renders correctly when printed from
-  Chrome, Edge, or Safari (18.2+), but not from Firefox, which does not yet
-  support this CSS feature as of early 2026 - if you print from Firefox, that
-  footer will simply be missing rather than wrong.
+  line at the top and bottom of each page is a CSS page-number counter: it
+  renders correctly when printed from Chrome, Edge, or Safari (18.2+), but not
+  from Firefox, which does not yet support this CSS feature as of early 2026 -
+  if you print from Firefox, those lines will simply be missing rather than
+  wrong.
 </div>
 <script>
   // Opening this page (from the dashboard's "Print blank lease" button) is

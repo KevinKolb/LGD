@@ -101,6 +101,18 @@ them to the matching role. See the table at the end of
 Mark `Lessee2` and `Lessee3` fields **not required**, or a one-tenant lease will never
 reach completed status.
 
+### 3d. Page numbers
+
+The printed lease shows **"Page X of Y" at the top and the bottom of every
+page**. In `print/lease_print.html` that comes from CSS `@page` margin boxes,
+but a PandaDoc document is not rendered by a browser and takes no CSS from the
+template body — so this one has to be switched on by hand, in PandaDoc's own
+header/footer settings for the template, to match. Set both a header and a
+footer, each centered, in the "Page X of Y" format.
+
+Nothing in this repo can verify that step, so it is easy to lose: if the
+template is ever rebuilt from scratch, set it again.
+
 ## 4. Get the template UUID
 
 Open the template. The URL looks like:
