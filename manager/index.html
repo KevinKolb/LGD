@@ -85,9 +85,12 @@
   .step-head h2 { margin: 0; }
   .step {
     flex: 0 0 auto;
-    width: 30px;
+    /* min-width rather than width, and a pill radius: "1" stays a circle,
+       "3a" widens instead of squashing. */
+    min-width: 30px;
     height: 30px;
-    border-radius: 50%;
+    padding: 0 9px;
+    border-radius: 999px;
     background: var(--accent);
     color: var(--accent-ink);
     display: flex;
@@ -221,13 +224,13 @@
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">3</span>
+      <span class="step" aria-hidden="true">3a</span>
       <h2>Legal research</h2>
     </div>
     <p class="hint">
-      The sources checked behind each lease clause &mdash; what was read, how
-      thoroughly, and what was decided. Appended to as clauses change, so an
-      attorney reviewing one later has a trail back to the primary source.
+      The trail behind each lease clause &mdash; which sources were actually
+      read, how thoroughly, and what was decided. Appended to as clauses change,
+      so an attorney reviewing one later can get back to the primary source.
     </p>
     <div class="actions">
       <!-- GitHub's rendered view rather than the file next to this page:
@@ -236,6 +239,22 @@
       <a class="button-link secondary" id="legal-research-link"
          href="https://github.com/KevinKolb/LGD/blob/main/manager/LEGAL_RESEARCH.md"
          target="_blank" rel="noopener">Read the research log</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">3b</span>
+      <h2>Legal review</h2>
+    </div>
+    <p class="hint">
+      The findings: what Louisiana and Orleans Parish require that this lease
+      does not yet cover, and a section-by-section pass over what it does.
+      Not checked by an attorney.
+    </p>
+    <div class="actions">
+      <a class="button-link secondary" id="legal-review-link"
+         href="legal_review.html" target="_blank" rel="noopener">Read the review</a>
     </div>
   </section>
 </main>
