@@ -1,3 +1,13 @@
+# Everything this project needs, runtime and tests in one file.
+#
+# There was a separate requirements-dev.txt until 2026-09-08. It held exactly
+# two packages, and the split had stopped earning its keep: httpx was never
+# test-only (supabase depends on it, so it is installed in any case), which
+# left pytest as the only thing the separation actually kept out of a
+# production install - and there is no server deployment to keep it out of
+# right now, since the live site is static GitHub Pages talking to Supabase.
+# If this app is ever hosted again and the ~5MB matters, split it back out.
+
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic[email]==2.13.5
@@ -12,3 +22,9 @@ tzdata==2026.3
 # plain laptop setup never needs them installed.
 asyncpg==0.31.0
 supabase==2.31.0
+
+# Tests.
+pytest==8.3.4
+# Starlette's TestClient is built on httpx. Pinned here rather than left to
+# supabase's own range, so the version the tests run against is stated.
+httpx==0.28.1

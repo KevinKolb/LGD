@@ -13,6 +13,7 @@ E-signature is not part of this. The lease is printed and signed on paper.
 | --- | --- |
 | [documents/lease.md](documents/lease.md) | The **live** lease text. Edit this one. |
 | [documents/application.md](documents/application.md) | The live rental application text. |
+| [documents/lease_history.md](documents/lease_history.md) | What has changed in the lease, and when. A record — append, don't edit. |
 | [documents/originals/](documents/originals/) | Frozen source material: the original scans and their verbatim transcripts. **Do not edit.** |
 | [documents/print/](documents/print/) | `generate_print_lease.py` and the printable `lease_print.html` it produces |
 | [index.html](index.html) | The public hub page — pick a role |
@@ -45,8 +46,8 @@ see `normalize_role` in [`app/config.py`](app/config.py).
 
 ```bash
 python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements-dev.txt   # Windows
-# source .venv/bin/activate && pip install -r requirements-dev.txt  # macOS/Linux
+.venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
+# source .venv/bin/activate && pip install -r requirements.txt  # macOS/Linux
 ```
 
 ### 2. Set up managers and logins
@@ -258,6 +259,7 @@ the printable lease with `python documents/print/generate_print_lease.py`.
 The verbatim transcript preserves several original OCR-era wording quirks
 ("commended" for commenced, "solidarity" for solidarily, and others) that were
 reviewed and deliberately corrected in `documents/lease.md` on 2026-09-06 — see
-`CLAUDE.md` for the full before/after list. Any further correction to the lease's
+[`documents/lease_history.md`](documents/lease_history.md) for the full
+before/after list, and for every change to the lease's terms since. Any further correction to the lease's
 wording is a legal decision, not a find-and-replace: it belongs in
 `documents/lease.md`, made deliberately, never silently.
