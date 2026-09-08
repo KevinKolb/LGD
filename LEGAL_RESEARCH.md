@@ -123,3 +123,114 @@ single utility's estimated real daily cost while staying a defensible,
 non-punitive figure tied to actual cost data rather than an arbitrary
 escalation. **Status: approved and finalized** — applied to both
 `documents/lease.md` and `pandadoc/lease_template_body.md`.
+
+---
+
+## Application §10.1 BINDING ARBITRATION — review, 2026-09-07
+
+**Question:** Is the arbitration clause carried over from the old paper
+application accurate, correctly cited, and in the right document?
+
+**Conclusion reached:** The citation is correct. The clause was on the weakest
+possible footing where it sat — in the *application* rather than the lease — and
+its own recited consideration did not exist at the moment the applicant signed.
+**Status: rewritten in place on 2026-09-07, by decision to keep it on the
+application rather than move it to the lease.** What changed: the parties are now
+Applicant and Owner rather than Lessee and Lessor; the consideration recited is
+the Owner's actual review of the application and holding of the apartment, not a
+leasing that has not happened; the scope is disputes arising out of the
+application and its handling, including a denial and the holding deposit; a
+conspicuous plain-language waiver notice was added at the top; the duplicated
+"as the case may be" clause was cut; and the statute is now named correctly as
+the Louisiana Binding Arbitration Law. The arbitrator-selection mechanics,
+timelines, service by certified mail, and the survival provision are unchanged
+from the original.
+
+**Still true after the rewrite, and worth an attorney's eye:** it binds a denied
+applicant to arbitrate a claim about the denial itself, which remains the
+scenario most likely to be challenged. `documents/lease.md` still has no
+arbitration clause, so a dispute arising *under the lease* is not covered by
+anything.
+
+**Searches run:**
+- WebSearch: "Louisiana Revised Statutes 9:4201 arbitration law validity of
+  arbitration agreements"
+- WebSearch: "pre-dispute binding arbitration clause rental application Fair
+  Housing Act discrimination claims enforceability"
+- WebSearch: "arbitration clause in rental application before lease signed
+  consideration enforceable applicant not tenant"
+- WebFetch: `https://www.mintz.com/insights-center/viewpoints/2206/2024-09-04-arbitration-clauses-and-class-action-waivers-residential`
+
+**Sources relied on:**
+
+1. **La. R.S. 9:4201, "Validity of arbitration agreements"** (Justia / FindLaw
+   reproductions of the statute).
+   <https://law.justia.com/codes/louisiana/revised-statutes/title-9/rs-9-4201/>
+   **Verification: medium** — read via search-tool summary of the statute text,
+   not opened on legis.la.gov directly.
+   Confirms the citation in the application is accurate: 9:4201 is the opening
+   section of the Louisiana Binding Arbitration Law (9:4201–4217), and provides
+   that a written agreement to arbitrate a future controversy "shall be valid,
+   irrevocable, and enforceable, save upon such grounds as exist at law or in
+   equity for the revocation of any contract." Enacted Acts 1997, No. 1451, §2.
+   Note the statute's own name is the Louisiana **Binding** Arbitration Law; the
+   application calls it the "Louisiana Arbitration Law."
+
+2. **Mintz, "Arbitration Clauses and Class Action Waivers in Residential
+   Leases: Are They Enforceable?" (2024-09-04).**
+   <https://www.mintz.com/insights-center/viewpoints/2206/2024-09-04-arbitration-clauses-and-class-action-waivers-residential>
+   **Verification: medium** — fetched, but the page returned only a partial
+   summary; key passages were not quoted back in full.
+   Arbitration provisions in otherwise valid contracts are generally enforceable
+   under the FAA, which preempts contrary state law (*AT&T Mobility v.
+   Concepcion*, 2011). Standalone class-action waivers (outside an arbitration
+   clause) are the part that varies by state. **Contains no discussion of Fair
+   Housing Act claims or of clauses signed at the application stage.**
+
+3. **General practitioner commentary surfaced by search** (National Law Review,
+   Multifamily Executive, and California tenant-side firm posts).
+   **Verification: low** — search-summary only, not fetched.
+   Two recurring points worth keeping: (a) an arbitration provision "should be
+   clear, set off, and distinguishable from the rest of the lease and should
+   explain its purpose, making clear that by signing, residents are agreeing to
+   give up their right to bring a lawsuit in court"; (b) courts decline to
+   enforce clauses that reserve litigation for the landlord while forcing the
+   tenant into arbitration. California Civil Code §1953 voids lease provisions
+   waiving a tenant's procedural litigation rights — cited only as evidence that
+   state-level limits exist; **no equivalent Louisiana provision was searched
+   for or found, and its absence here should not be read as confirmation that
+   none exists.**
+
+**Reasoning applied — problems found, in order of seriousness:**
+
+1. **Wrong document.** The clause opens "For and in partial consideration of
+   the leasing of said premises to Lessee, Lessee agrees…" but it sits on the
+   *application*. The signer is an applicant, not a Lessee, and the leasing it
+   recites as consideration has not happened and may never happen. The clause is
+   numbered "10.1", which does not correspond to anything in this application —
+   strong evidence it was pasted in from some other lease document.
+   `documents/lease.md`, where it would actually belong, **has no arbitration
+   clause at all** (its sections run 1–20, none of them arbitration).
+
+2. **Worst case is the likeliest case.** The claim most likely to arise at the
+   application stage is a Fair Housing Act claim about the *denial* of the
+   application — and this clause purports to push exactly that into arbitration
+   while resting on consideration ("the leasing of said premises") that, for a
+   denied applicant, never came into existence.
+
+3. **No plain-language waiver notice.** Per the practitioner guidance above, the
+   clause should conspicuously tell the signer they are giving up the right to
+   sue in court. It is currently an unbroken ~400-word block with no such
+   statement and no separate signature or initial line acknowledging the waiver.
+
+4. **Drafting defects** (independent of enforceability): the duplicated and
+   truncated clause "as the case may be, arising out of any representatives of
+   Lessee, as the case may be, arising out of any and all claims"; and the
+   surplus "arising out of any breach… of the Fair Housing Act" framing, which
+   describes the *claims covered* rather than any obligation of either party.
+
+**Not researched, and deliberately left open:** whether Louisiana has a
+provision analogous to California Civil Code §1953; whether HUD or DOJ take an
+enforcement position on pre-dispute arbitration of FHA claims; and whether
+Louisiana courts have addressed an arbitration clause signed at the rental
+application stage. Any of the three could change the analysis.
