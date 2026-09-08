@@ -114,8 +114,16 @@
   body { justify-content: normal; }
   .site-title { margin: auto auto 0; }
   main { margin: 0 auto auto; }
-  footer { margin-top: 0; justify-content: center; }
+  /* The shared footer reserves room below itself for the bottom of the
+     page; here the version line sits in that space instead. */
+  footer { margin-top: 0; justify-content: center; padding-bottom: 8px; }
   footer a { color: #b0b0b0; }
+  .version {
+    margin: 0 0 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #b0b0b0;
+  }
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
     display: flex; align-items: center; justify-content: center;
@@ -168,6 +176,9 @@
 </div>
 
 <script src="shared/footer.js"></script>
+<!-- After the footer script, which appends the footer to the body when it
+     runs - so this parses in afterwards and lands underneath it. -->
+<p class="version">Version 1</p>
 <script>
 "use strict";
 

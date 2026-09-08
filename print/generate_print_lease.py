@@ -156,16 +156,19 @@ HTML_HEAD = """<!doctype html>
   @media print {
     .footer-note { display: none; }
     a { color: inherit; text-decoration: none; }
-    /* Let the page box from @page decide the column width, rather than
-       the screen sizing above. A phone lays the screen out ~390px wide,
-       and a browser that prints from that layout rather than re-flowing
-       to paper width would wrap far more lines per paragraph, adding
-       pages. Anchoring the printed width to the paper keeps the
-       pagination identical everywhere. */
+    /* Pin the printed column to the paper, in absolute units.
+       A phone lays the screen out about 390px wide, and mobile browsers
+       print from that layout instead of reflowing to paper width - which
+       is why this came out 9 pages from a phone and 6 from a desktop
+       (measured: forcing a 390px column reproduces 9 exactly).
+       "width: auto" does not fix that, because auto still resolves
+       against whatever narrow box the browser used. An absolute width
+       does not: 6.8in is Letter's 8.5in less the 0.85in @page margins on
+       each side, so the column is identical on every device. */
     body {
-      width: auto;
-      max-width: none;
-      margin: 0;
+      width: 6.8in;
+      max-width: 6.8in;
+      margin: 0 auto;
       padding: 0 0 0.25in;
     }
   }
@@ -209,18 +212,6 @@ HTML_FOOTER = """
   document.getElementById("parking-not-available").addEventListener("change", updateParkingStrikes);
   document.getElementById("parking-limited").addEventListener("change", updateParkingStrikes);
 
-  // ?parking=yes / ?parking=no preselects one of the two options, so the
-  // page is already correct by the time the print dialog opens. The
-  // manager dashboard's "Print paper lease" button asks the question and
-  // appends this; opening the page without it leaves both unpicked, to be
-  // filled in by hand or clicked here.
-  var parking = new URLSearchParams(window.location.search).get("parking");
-  if (parking === "yes") {
-    document.getElementById("parking-limited").checked = true;
-  } else if (parking === "no") {
-    document.getElementById("parking-not-available").checked = true;
-  }
-  updateParkingStrikes();
 </script>
 </body>
 </html>
