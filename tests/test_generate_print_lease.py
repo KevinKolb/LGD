@@ -128,12 +128,24 @@ def test_occupants_blanks_are_long_and_on_their_own_lines(real_output):
 # General structure
 # ---------------------------------------------------------------------------
 
-def test_lgd_branding_is_not_in_the_title(real_output):
-    """This lease is shared across landlords; no single landlord's name
-    belongs in a document title meant to be reused by all of them."""
+def test_the_company_name_heads_the_lease(real_output):
+    """This was a blank line for a while, so one form could be shared across
+    every landlord in accounts.json. Printing a name here means the form is
+    LGD's; another landlord would need their own copy."""
+    body = real_output[real_output.index("<body>") :]
+    assert "Lower Garden District Properties LLC" in body
+    assert "RESIDENTIAL LEASE" in body
+    # The name comes first, above the document type.
+    assert body.index("Lower Garden District") < body.index("RESIDENTIAL LEASE")
+
+
+def test_the_browser_tab_title_carries_no_landlord_name(real_output):
+    """Only the printed page is LGD's - the <title> is what a browser shows
+    and what a saved PDF gets named by default, and stays generic."""
     head = real_output[: real_output.index("<body>")]
+    assert "<title>Residential Lease</title>" in head
     assert "LGD" not in head
-    assert "RESIDENTIAL LEASE" in real_output
+    assert "Lower Garden District" not in head
 
 
 def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output):

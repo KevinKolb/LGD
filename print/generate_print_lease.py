@@ -33,10 +33,10 @@ SENTENCE_END = re.compile(r'[.!?:]["\')]?$')
 STARTS_NEW_SECTION = re.compile(r"^\d+\.\s*\*\*")
 BLANK = re.compile(r"_{2,}")
 
-# The title's company-specific branding becomes a blank (see .title-blank in
-# the CSS below), per the request: this lease is shared across multiple
-# landlords, so no single landlord's name belongs in a document title meant
-# to be reused by all of them.
+# The company name heads the printed lease. This was a blank line for a
+# while, so one form could be shared across every landlord in accounts.json -
+# printing a name here means this lease is LGD's, and another landlord would
+# need their own copy.
 
 HTML_HEAD = """<!doctype html>
 <html lang="en">
@@ -84,14 +84,14 @@ HTML_HEAD = """<!doctype html>
     margin: 0 auto;
     padding: 0.25in 0 1in;
   }
-  .title-blank {
-    display: block;
-    border-bottom: 1px solid #000;
-    height: 1.1em;
-    margin: 0 auto 0.15in;
-    max-width: 5.5in;
+  h1.company {
+    text-align: center;
+    font-size: 13pt;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+    margin: 0 0 0.15in;
   }
-  h1.subtitle {
+  p.subtitle {
     text-align: center;
     font-size: 15pt;
     letter-spacing: 0.06em;
@@ -181,8 +181,8 @@ HTML_HEAD = """<!doctype html>
 </style>
 </head>
 <body>
-<span class="title-blank" aria-hidden="true"></span>
-<h1 class="subtitle">RESIDENTIAL LEASE</h1>
+<h1 class="company">Lower Garden District Properties LLC</h1>
+<p class="subtitle">RESIDENTIAL LEASE</p>
 """
 
 HTML_FOOTER = """
