@@ -1,6 +1,6 @@
 "use strict";
-/* Shared account bar: a directly-visible sandbox/live toggle (admin only)
- * plus an account popup (who's logged in, log out, change password).
+/* Shared account bar: the login/logout control for every page,
+ * with an account popup (who's logged in, log out, change password).
  * Included on every /manager/ page via
  * <script src="account.js"></script> so all of them stay in
  * sync automatically rather than copy-pasting this into each page. */
@@ -8,19 +8,6 @@
 (function () {
   const STYLE = `
     #account-bar { display: flex; align-items: center; gap: 10px; }
-    #mode-toggle {
-      display: flex; border: 1px solid rgba(255,255,255,.6); border-radius: 6px;
-      overflow: hidden;
-    }
-    /* An id selector beats the browser default [hidden] rule, so without
-       this the toggle stays visible even while hidden is set. */
-    #mode-toggle[hidden] { display: none; }
-    #mode-toggle button {
-      font: inherit; font-size: 13px; padding: 6px 12px; border: none;
-      background: transparent; color: inherit; cursor: pointer; opacity: .75;
-      text-transform: uppercase; letter-spacing: .03em;
-    }
-    #mode-toggle button.active { background: rgba(255,255,255,.28); opacity: 1; font-weight: 600; }
     #account-widget { position: relative; }
     #account-toggle {
       font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
@@ -150,39 +137,6 @@
     return popup;
   }
 
-  function setUpModeToggle(modeToggle, config) {
-    const sandboxButton = modeToggle.querySelector('[data-mode="sandbox"]');
-    const liveButton = modeToggle.querySelector('[data-mode="production"]');
-
-    function markActive(isSandbox) {
-      sandboxButton.classList.toggle("active", isSandbox);
-      liveButton.classList.toggle("active", !isSandbox);
-    }
-    markActive(config.is_sandbox);
-
-    async function setMode(mode) {
-      if (mode === "production" && !window.confirm(
-        "Switch to production mode? Every lease generated from now on " +
-        "spends one of the 60 real documents in the annual allowance."
-      )) return;
-      try {
-        const response = await fetch("/api/admin/mode", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode }),
-        });
-        const body = await response.json().catch(() => ({}));
-        if (response.ok) window.location.reload();
-        else window.alert(body.detail || `Failed (HTTP ${response.status}).`);
-      } catch (error) {
-        window.alert(`Could not reach the server: ${error.message}`);
-      }
-    }
-    sandboxButton.addEventListener("click", () => setMode("sandbox"));
-    liveButton.addEventListener("click", () => setMode("production"));
-    modeToggle.hidden = false;
-  }
-
   async function boot() {
     const style = document.createElement("style");
     style.textContent = STYLE;
@@ -190,17 +144,11 @@
 
     const bar = el("div", { id: "account-bar" });
 
-    const modeToggle = el("div", { id: "mode-toggle", hidden: "hidden" });
-    modeToggle.append(
-      el("button", { type: "button", "data-mode": "sandbox", title: "For testing purposes.", text: "Sandbox" }),
-      el("button", { type: "button", "data-mode": "production", text: "Live" })
-    );
-
     const widget = el("div", { id: "account-widget" });
     const toggle = el("button", { type: "button", id: "account-toggle", text: "Account" });
     widget.append(toggle);
 
-    bar.append(modeToggle, widget);
+    bar.append(widget);
 
     const header = document.querySelector("header");
     if (header) header.append(bar);
@@ -212,13 +160,6 @@
       if (response.ok) config = await response.json();
     } catch (error) {
       /* bar stays present but inert if config can't load */
-    }
-
-    // Sandbox/live is a whole-app setting - only decide it from the admin
-    // dashboard, not from a landlord's own page even when that landlord is
-    // also an admin.
-    if (config && config.user.is_admin && window.location.pathname.startsWith("/admin/")) {
-      setUpModeToggle(modeToggle, config);
     }
 
     toggle.textContent = config ? "Logout" : "Login";

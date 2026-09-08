@@ -1,6 +1,6 @@
 """The Postgres path of `python -m app.accounts` (init/list/set-password),
 exercised against a fake asyncpg connection so the suite never needs a live
-network Postgres/Supabase instance - same reasoning as FakePandaDoc."""
+network Postgres/Supabase instance."""
 from __future__ import annotations
 
 from typing import Any

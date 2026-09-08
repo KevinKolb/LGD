@@ -1,9 +1,9 @@
-"""Configuration: PandaDoc settings from the environment, people from a file
+"""Configuration: storage paths from the environment, people from a file
 or from Postgres.
 
-Secrets and API wiring live in `.env`. Landlords and user logins live in
-`accounts.json` by default - gitignored, same as `.env` - or in a Postgres
-`landlords`/`users` table when `DATABASE_URL` is set (see
+Landlords and user logins live in `accounts.json` by default - gitignored,
+same as `.env` - or in a Postgres `landlords`/`users` table when
+`DATABASE_URL` is set (see
 `preload_accounts_from_postgres`). Postgres exists for Render's free tier:
 local files there get wiped on every restart, so a login can't live on local
 disk if this is ever deployed there; a Supabase Postgres database survives
@@ -45,40 +45,8 @@ def normalize_role(role: str) -> str:
     return LEGACY_ROLES.get(role, role)
 
 
-MODE_SANDBOX = "sandbox"
-MODE_PRODUCTION = "production"
-VALID_MODES = {MODE_SANDBOX, MODE_PRODUCTION}
-
-
 class ConfigError(RuntimeError):
     """Raised when configuration is missing or self-contradictory."""
-
-
-def _required(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise ConfigError(
-            f"{name} is not set. Copy .env.example to .env and fill it in "
-            f"(see pandadoc/TEMPLATE_SETUP.md)."
-        )
-    return value
-
-
-def _int(name: str, default: int) -> int:
-    raw = os.environ.get(name, "").strip()
-    if not raw:
-        return default
-    try:
-        return int(raw)
-    except ValueError as exc:
-        raise ConfigError(f"{name} must be an integer, got {raw!r}") from exc
-
-
-def _bool(name: str, default: bool) -> bool:
-    raw = os.environ.get(name, "").strip().lower()
-    if not raw:
-        return default
-    return raw in {"1", "true", "yes", "on"}
 
 
 @dataclass(frozen=True)
@@ -94,8 +62,6 @@ class Landlord:
     company: str
     signer_name: str
     email: str
-
-
 @dataclass(frozen=True)
 class User:
     """Someone who can log in to the dashboard."""
@@ -307,83 +273,18 @@ def _reset_accounts_cache_for_tests() -> None:
     global _accounts_cache
     _accounts_cache = None
 
-
-# An admin-set runtime override, from the dashboard's sandbox/live toggle -
-# takes precedence over PANDADOC_MODE when set. Deliberately in-memory only,
-# not persisted anywhere: a restart forgetting a "production" override and
-# falling back to the safe env-var default (sandbox, unless the deployment's
-# own PANDADOC_MODE says otherwise) is a feature, not a bug.
-_mode_override: str | None = None
-
-
-def set_mode_override(mode: str | None) -> None:
-    """Set (or, with None, clear) the runtime mode override. Raises
-    ConfigError for anything other than a valid mode or None."""
-    global _mode_override
-    if mode is not None and mode not in VALID_MODES:
-        raise ConfigError(f"mode must be one of {sorted(VALID_MODES)} or None, got {mode!r}.")
-    _mode_override = mode
-
-
-def _reset_mode_override_for_tests() -> None:
-    global _mode_override
-    _mode_override = None
-
-
-def _resolve_pandadoc_keys() -> tuple[str, str, str]:
-    """Pick the key and template for the active mode.
-
-    Defaults to sandbox: spending one of the 60 production documents has to be
-    a deliberate act, not the consequence of a forgotten variable.
-    """
-    mode = _mode_override or os.environ.get("PANDADOC_MODE", MODE_SANDBOX).strip().lower()
-    if mode not in VALID_MODES:
-        raise ConfigError(
-            f"PANDADOC_MODE must be one of {sorted(VALID_MODES)}, got {mode!r}."
-        )
-    if mode == MODE_SANDBOX:
-        api_key = _required("PANDADOC_SANDBOX_API_KEY")
-        # Sandbox lives in its own workspace, so it usually has its own
-        # template. Fall back to the production uuid if only one exists.
-        template = (
-            os.environ.get("PANDADOC_SANDBOX_TEMPLATE_UUID", "").strip()
-            or _required("PANDADOC_TEMPLATE_UUID")
-        )
-    else:
-        api_key = _required("PANDADOC_API_KEY")
-        template = _required("PANDADOC_TEMPLATE_UUID")
-    return mode, api_key, template
-
-
 @dataclass(frozen=True)
 class Settings:
-    mode: str
-    api_key: str
-    template_uuid: str
-    webhook_shared_key: str
-    api_base: str
     db_path: str
-    # Where executed lease PDFs are archived once signing completes: a local
-    # directory, or "supabase:<bucket-name>" (see supabase_url/supabase_key).
+    # A local directory, or "supabase:<bucket-name>" (see supabase_url and
+    # supabase_key). Nothing writes here yet - kept for the mail-merge
+    # output this app is heading toward.
     archive_dir: str
     # Only used when archive_dir names a supabase: bucket.
     supabase_url: str
     supabase_key: str
-    # Ask PandaDoc to email the tenant directly, in addition to handing the
-    # landlord a link. False keeps all outbound mail in the landlord's hands.
-    pandadoc_sends_email: bool
-    # Fallback embedded-session lifetime, used only when a recipient's
-    # non-expiring shared_link is unavailable.
-    session_lifetime_seconds: int
-    # Early-payment discount from lease section 2.
-    early_payment_discount: int
     landlords: tuple[Landlord, ...]
     users: tuple[User, ...]
-
-    @property
-    def is_sandbox(self) -> bool:
-        """Sandbox documents cost nothing and are not legally binding."""
-        return self.mode == MODE_SANDBOX
 
     def landlord_by_id(self, landlord_id: str) -> Landlord | None:
         for landlord in self.landlords:
@@ -422,29 +323,18 @@ class Settings:
                 os.environ.get("LGD_ACCOUNTS_FILE", str(REPO_ROOT / "accounts.json"))
             )
             landlords, users = _load_accounts(accounts_path)
-        mode, api_key, template_uuid = _resolve_pandadoc_keys()
         # A Postgres DSN if configured (Render's free tier wipes local files
         # on restart), else the local SQLite file exactly as always.
         db_path = os.environ.get("DATABASE_URL", "").strip() or os.environ.get(
             "LGD_DB_PATH", "leases.db"
         )
         return cls(
-            mode=mode,
-            api_key=api_key,
-            template_uuid=template_uuid,
-            webhook_shared_key=_required("PANDADOC_WEBHOOK_SHARED_KEY"),
-            api_base=os.environ.get(
-                "PANDADOC_API_BASE", "https://api.pandadoc.com/public/v1"
-            ).rstrip("/"),
             db_path=db_path,
             archive_dir=os.environ.get(
                 "LGD_ARCHIVE_DIR", str(REPO_ROOT / "archive")
             ),
             supabase_url=os.environ.get("SUPABASE_URL", "").strip(),
             supabase_key=os.environ.get("SUPABASE_KEY", "").strip(),
-            pandadoc_sends_email=_bool("PANDADOC_SENDS_EMAIL", False),
-            session_lifetime_seconds=_int("PANDADOC_SESSION_LIFETIME", 1209600),
-            early_payment_discount=_int("LGD_EARLY_PAYMENT_DISCOUNT", 50),
             landlords=landlords,
             users=users,
         )

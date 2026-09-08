@@ -1,5 +1,5 @@
 """The Postgres path of app/db.py, exercised against a fake asyncpg pool -
-no live network Postgres/Supabase needed, same reasoning as FakePandaDoc."""
+no live network Postgres/Supabase needed."""
 from __future__ import annotations
 
 from typing import Any
@@ -102,8 +102,6 @@ class FakePool:
 
     async def close(self) -> None:
         self.closed = True
-
-
 @pytest.fixture
 def fake_pool(monkeypatch) -> FakePool:
     pool = FakePool()
@@ -118,25 +116,6 @@ def fake_pool(monkeypatch) -> FakePool:
     db._pools.clear()
     yield pool
     db._pools.clear()
-
-
-LEASE_KWARGS = dict(
-    document_id="doc-1",
-    document_name="123 Main St - Jamie Tenant",
-    landlord_id="lgd",
-    lessor_name="LGD Properties",
-    premises_address="123 Main St",
-    tenants=[{"name": "Jamie Tenant", "email": "jamie@example.com"}],
-    tenant_email="jamie@example.com",
-    signing_url="https://app.pandadoc.com/s/abc",
-    signing_url_kind="shared_link",
-    status="document.draft",
-    monthly_rent="2400",
-    term_start="2026-10-01",
-    term_end="2027-09-30",
-    mode="sandbox",
-    created_by="kevin",
-)
 
 
 async def test_init_creates_the_pool(fake_pool) -> None:
@@ -175,59 +154,6 @@ async def test_init_drops_the_old_shaped_tables(monkeypatch) -> None:
     assert pool.dropped == [
         'DROP TABLE "properties"', 'DROP TABLE "tenants"', 'DROP TABLE "residents"',
     ]
-
-
-async def test_record_and_get_lease_round_trip(fake_pool) -> None:
-    await db.record_lease(DSN, **LEASE_KWARGS)
-
-    lease = await db.get_lease(DSN, "doc-1")
-
-    assert lease["document_id"] == "doc-1"
-    assert lease["landlord_id"] == "lgd"
-    assert lease["tenants"] == [{"name": "Jamie Tenant", "email": "jamie@example.com"}]
-    assert lease["archive_file"] is None
-
-
-async def test_get_lease_returns_none_for_an_unknown_id(fake_pool) -> None:
-    result = await db.get_lease(DSN, "no-such-doc")
-
-    assert result is None
-
-
-async def test_update_status_reports_whether_the_lease_was_known(fake_pool) -> None:
-    await db.record_lease(DSN, **LEASE_KWARGS)
-
-    known = await db.update_status(DSN, "doc-1", "document.completed")
-    unknown = await db.update_status(DSN, "no-such-doc", "document.completed")
-
-    assert known is True
-    assert unknown is False
-    lease = await db.get_lease(DSN, "doc-1")
-    assert lease["status"] == "document.completed"
-
-
-async def test_record_archive_sets_the_filename_and_completed_at(fake_pool) -> None:
-    await db.record_lease(DSN, **LEASE_KWARGS)
-
-    result = await db.record_archive(DSN, "doc-1", "doc-1.pdf")
-
-    assert result is True
-    lease = await db.get_lease(DSN, "doc-1")
-    assert lease["archive_file"] == "doc-1.pdf"
-    assert lease["completed_at"] is not None
-
-
-async def test_list_leases_filters_by_landlord(fake_pool) -> None:
-    await db.record_lease(DSN, **LEASE_KWARGS)
-    await db.record_lease(
-        DSN, **{**LEASE_KWARGS, "document_id": "doc-2", "landlord_id": "robertson"}
-    )
-
-    only_lgd = await db.list_leases(DSN, landlord_id="lgd")
-    everything = await db.list_leases(DSN)
-
-    assert [lease["document_id"] for lease in only_lgd] == ["doc-1"]
-    assert {lease["document_id"] for lease in everything} == {"doc-1", "doc-2"}
 
 
 async def test_close_pools_closes_and_forgets_every_pool(fake_pool) -> None:

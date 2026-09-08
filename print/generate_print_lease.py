@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """Generate a self-contained, print-ready HTML lease from `documents/lease.md`.
 
-Same idea as `pandadoc/generate_template_body.py`: `documents/lease.md` is the
-only file anyone edits; this script derives a *different* output from it -
-here, a blank paper lease meant to be opened in any browser and printed
-(Ctrl+P / Cmd+P), rather than pasted into PandaDoc.
+`documents/lease.md` is the only file anyone edits; this script derives the
+printable output from it - a blank paper lease meant to be opened in any
+browser and printed (Ctrl+P / Cmd+P).
 
-Unlike the PandaDoc version, blanks stay as literal blank lines (there's no
-tenant yet to fill a token with) and the signature lines stay as real
-underscore lines too - this is meant to be signed by hand on paper.
+Blanks stay as literal blank lines and the signature lines stay as real
+underscore lines: this is meant to be filled in and signed by hand.
 
 Usage:
     python print/generate_print_lease.py
@@ -28,8 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE = REPO_ROOT / "documents" / "lease.md"
 OUTPUT = REPO_ROOT / "print" / "lease_print.html"
 
-# Reused verbatim from pandadoc/generate_template_body.py's approach: a blank
-# line in lease.md is not reliably a real paragraph break (the scanned
+# A blank line in lease.md is not reliably a real paragraph break (the scanned
 # document's page cuts sometimes fall mid-sentence), so a block that doesn't
 # end in sentence-final punctuation gets merged into the next one.
 SENTENCE_END = re.compile(r'[.!?:]["\')]?$')
@@ -229,7 +226,7 @@ def flatten_paragraph(text: str) -> str:
 
 
 def extract_body_blocks(source_text: str) -> list[str]:
-    """Same merge logic as the PandaDoc generator - see its docstring."""
+    """See SENTENCE_END above for why blocks get merged."""
     blocks = re.split(r"\n\s*\n", source_text.strip())
     kept: list[str] = []
     for block in blocks:

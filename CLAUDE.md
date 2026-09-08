@@ -30,22 +30,19 @@ renumbered everything from old §6 onward up by one; the lease now runs 1–20.
 
 ## A blank, printable paper lease
 
-[`print/generate_print_lease.py`](print/generate_print_lease.py) is the third thing
-derived from `documents/lease.md` (alongside `pandadoc/lease_template_body.md`) — a
-self-contained HTML file meant to be opened in any browser and printed
-(Ctrl+P / Cmd+P) as a blank paper lease, before any PandaDoc setup exists at all.
-Regenerate with:
+[`print/generate_print_lease.py`](print/generate_print_lease.py) derives a
+self-contained HTML file from `documents/lease.md`, meant to be opened in any
+browser and printed (Ctrl+P / Cmd+P) as a blank paper lease. Regenerate with:
 
     python print/generate_print_lease.py
 
-Unlike the PandaDoc generator, blanks stay as literal fill-in lines (there's no
-tenant yet to put a token value in) and the four signature lines stay as real
-underscore lines too, since this is meant to be signed by hand. The document title's
+Blanks stay as literal fill-in lines and the four signature lines stay as real
+underscore lines, since this is meant to be filled in and signed by hand. The document title's
 company branding is a blank line, not "LGD" or any other landlord's name, since the
 same print lease is shared across every landlord in `accounts.json` — see
 `tests/test_generate_print_lease.py` for what it locks in, including two real bugs
 found while building it (signature lines merging into one unreadable blob for the
-same underlying reason the PandaDoc generator's paragraph-merge bug happened, and a
+the same underlying paragraph-merge cause, and a
 context-window that wasn't wide enough to correctly size the Lessor-name blank).
 
 Page numbers ("Page X of Y") appear at both the top and the bottom of every
@@ -65,46 +62,6 @@ label's radio is *not* checked - the chosen option stays plain, the other
 is crossed out. Auto-print still fires on page load - picking one first
 means cancelling that dialog once, then printing again manually.
 
-## Keeping the PandaDoc template body in sync
-
-[`pandadoc/lease_template_body.md`](pandadoc/lease_template_body.md) is a
-**generated file** — never hand-edit it. It's produced from `documents/lease.md`
-by [`pandadoc/generate_template_body.py`](pandadoc/generate_template_body.py):
-same wording, with each blank replaced by a PandaDoc token (`[Group.Name]` form).
-It's what actually gets pasted into the PandaDoc template editor.
-
-**Whenever `documents/lease.md` changes, run the generator and re-paste the
-result into PandaDoc:**
-
-    python pandadoc/generate_template_body.py
-
-There is still no *automated* sync into PandaDoc itself — that paste is a manual
-step — but the two local files can no longer silently drift apart, since the
-second one is machine-derived from the first. The generator fails loudly (raises,
-doesn't guess) if a blank has moved, been removed, or a new one appeared that it
-doesn't know about — see `tests/test_generate_template_body.py` for what it
-guards against, including a real bug it was built to fix: the scanned lease's
-page cuts sometimes fall mid-sentence, and a naive "blank line = new paragraph"
-approach silently mangled those sentences on the first attempt.
-
-Blank fill-in lines (`__________`) in `documents/lease.md` are filled per-lease by
-the app via PandaDoc tokens at send time, not by editing the file directly — see
-[`app/lease.py`](app/lease.py) for the token mapping used at runtime (a separate,
-hand-maintained mapping from the generator's — keep both in mind if a blank is
-ever added or removed).
-
-§20 PARKING's `[Parking.Clause]` token is different from every other token:
-it isn't one blank's value, it's *both radio options* (glyphs included),
-because whichever one isn't chosen has to be crossed out entirely, not just
-fill one word. `app/lease.py`'s `strike()` does that by overlaying a
-combining strikethrough character (U+0336) on every character of the
-unchosen option - PandaDoc tokens are plain-text substitutions, with
-no way to send "make this struck-through" as a separate instruction, but a
-combining character is just a literal character, so it survives one.
-Confirmed to render correctly in a browser; **not yet verified against a
-real PandaDoc-rendered PDF**, since PandaDoc integration is on hold (see
-below) - check this once a provider is actually chosen and wired up.
-
 ## Wording is a legal decision, not a typo to autocorrect
 
 The original scanned lease has several apparent OCR-era wording quirks. Never "fix"
@@ -113,7 +70,7 @@ the instrument. That's a decision for whoever has legal authority over the docum
 (the user), made deliberately, not something to autocorrect in passing.
 
 Eight were reviewed and corrected by the user on 2026-09-06, in both
-`documents/lease.md` and `pandadoc/lease_template_body.md`. Section numbers below are
+`documents/lease.md`. Section numbers below are
 **current** (post-2026-09-07 PARKING move, see the changelog after this table):
 
 | Section | Before | After |
@@ -131,27 +88,6 @@ Eight were reviewed and corrected by the user on 2026-09-06, in both
 untouched, as it always will.
 
 If another apparent typo turns up later, flag it and ask — don't fix it silently.
-
-## E-signature provider: on hold, moving off PandaDoc
-
-As of 2026-09-06, the user decided to move off PandaDoc for e-signature (cited its
-template editor as "quite the clunker") to some other provider, not yet chosen.
-Everything PandaDoc-specific is parked, not removed: `app/pandadoc.py`, the
-template/role/token setup in `pandadoc/TEMPLATE_SETUP.md` steps 3-5, and the
-`PANDADOC_TEMPLATE_UUID`/`PANDADOC_WEBHOOK_SHARED_KEY` env vars. `.env` has
-temporary placeholder values (`placeholder-pending-signature-provider`) for both,
-since `Settings.load()` requires them non-empty to boot at all — without a
-placeholder the app can't start even to serve the dashboard/login, which have
-nothing to do with signing. Replace both with real values (or replumb this app
-entirely for the new provider) before "Generate lease" can work; login, the
-dashboard, and the blank-lease print button don't depend on this at all.
-
-Everything else already built — the dashboard, accounts, lease DB, archive
-storage, the Render+Supabase dual-backend work below — is provider-agnostic and
-does not need to change when the provider does. Only `app/pandadoc.py` (the
-client), `app/main.py`'s calls into it, the webhook receiver, and the token
-mapping in `app/lease.py` are PandaDoc-specific and would need rewriting for a
-new provider's API.
 
 ## `people` and `users` are two different tables, and not yet connected
 
@@ -212,8 +148,8 @@ call site should never need to know or care which backend it's talking to.
 The three test files `tests/test_db_postgres.py`, `tests/test_config_postgres.py`,
 and `tests/test_archive_storage.py`'s Supabase half all mock the network client
 (`asyncpg`/`supabase`) rather than touching a real Postgres or Supabase project, the
-same way `FakePandaDoc` stands in for PandaDoc — this is what keeps the suite fast,
-free, and runnable offline. If a real integration test against a live Supabase
+rather than a live service — this is what keeps the suite fast, free, and
+runnable offline. If a real integration test against a live Supabase
 project is ever wanted, it should be separate and opt-in, not part of the default
 `pytest` run.
 
@@ -249,6 +185,13 @@ replace it, whenever a clause decision draws on outside research — it's meant 
 survive as a reference trail, including for potential litigation.
 
 ## Clause changes changelog
+
+**Entries before 2026-09-08 mention `pandadoc/lease_template_body.md`, which no
+longer exists.** PandaDoc was removed that day along with the whole e-signature
+path; the file was generated from `documents/lease.md`, so anything an entry
+says was "applied identically" to both now lives in `documents/lease.md` alone.
+The entries are left as written rather than edited, because they are a record
+of what was actually done at the time.
 
 Additions, restructuring, and amount changes to lease terms — as opposed to the
 wording-error corrections table above. See [`LEGAL_RESEARCH.md`](LEGAL_RESEARCH.md)

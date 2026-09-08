@@ -164,26 +164,9 @@ function backendsSection(backends) {
   return section("Storage backends", "Which store is active for each piece of data.", dl);
 }
 
-function pandadocSection(info) {
-  const dl = el("dl");
-  dl.append(el("dt", { text: "Mode" }));
-  const modeBadge = el("span", {
-    class: `badge ${info.mode === "sandbox" ? "warn" : ""}`.trim(),
-    text: info.mode,
-  });
-  dl.append(el("dd", {}, modeBadge));
-  dl.append(el("dt", { text: "Template configured" }));
-  dl.append(el("dd", { text: info.template_uuid_set ? "Yes" : "No — \"Generate lease\" will not work yet" }));
-  return section(
-    "E-signature (PandaDoc)",
-    "Currently on hold while a replacement provider is chosen — see CLAUDE.md.",
-    dl
-  );
-}
-
 function linksSection(links) {
   const box = el("div", { class: "links" });
-  const labels = { github: "GitHub repo", render: "Render dashboard", supabase: "Supabase dashboard", pandadoc: "PandaDoc dashboard" };
+  const labels = { github: "GitHub repo", render: "Render dashboard", supabase: "Supabase dashboard" };
   for (const [key, label] of Object.entries(labels)) {
     if (!links[key]) continue;
     box.append(el("a", { href: links[key], target: "_blank", rel: "noopener", text: label }));
@@ -211,7 +194,6 @@ async function boot() {
       landlordsSection(info.landlords),
       usersSection(info.users, info.landlords),
       backendsSection(info.backends),
-      pandadocSection(info.pandadoc),
       linksSection(info.links)
     );
   } catch (error) {

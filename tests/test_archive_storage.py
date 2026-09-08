@@ -1,6 +1,6 @@
 """app/archive_storage.py: local disk always works; Supabase Storage is
-exercised with a fake client, exactly like FakePandaDoc stands in for
-PandaDoc, so the suite never needs a live network Supabase project."""
+exercised with a fake client, so the suite never needs a live network
+Supabase project."""
 from __future__ import annotations
 
 from typing import Any

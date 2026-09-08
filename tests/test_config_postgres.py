@@ -1,6 +1,6 @@
 """preload_accounts_from_postgres, exercised against a fake asyncpg
 connection - no live network Postgres/Supabase needed, same reasoning as
-FakePandaDoc and tests/test_accounts_postgres.py."""
+tests/test_accounts_postgres.py."""
 from __future__ import annotations
 
 from typing import Any
@@ -13,11 +13,6 @@ from app.config import ConfigError, ROLE_ADMIN, ROLE_MANAGER, Settings
 pytestmark = pytest.mark.anyio
 
 BASE_ENV = {
-    "PANDADOC_MODE": "production",
-    "PANDADOC_API_KEY": "production-key",
-    "PANDADOC_SANDBOX_API_KEY": "sandbox-key",
-    "PANDADOC_TEMPLATE_UUID": "template-uuid",
-    "PANDADOC_WEBHOOK_SHARED_KEY": "shared-key",
 }
 
 DSN = "postgres://user:secret@example.supabase.co:5432/postgres"

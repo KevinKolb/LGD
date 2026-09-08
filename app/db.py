@@ -1,18 +1,18 @@
-"""Lease persistence: SQLite locally, Postgres (e.g. Supabase) in production.
+"""Record persistence: SQLite locally, Postgres (e.g. Supabase) in production.
 
 Every public function here takes `db_path` as its first argument, exactly as
 before this file supported two backends. Which backend actually runs is
 decided purely by what `db_path` looks like:
 
-    "leases.db"                          -> SQLite (a local file)
+    "records.db"                         -> SQLite (a local file)
     "postgres://..." / "postgresql://..." -> Postgres, via asyncpg
 
 This means `app/main.py` never needs to know which backend is active - it
 just passes `settings.db_path` through unchanged. The point of the second
 backend is Render's free tier: local files there get wiped on every restart,
-so a real lease record can't live on local disk if this is ever deployed
-there. Postgres (a free Supabase project, in practice) survives restarts;
-SQLite is what tests use, and what running this on a laptop always used.
+so a record can't live on local disk if this is ever deployed there.
+Postgres (a free Supabase project, in practice) survives restarts; SQLite is
+what tests use, and what running this on a laptop always used.
 """
 from __future__ import annotations
 
@@ -27,30 +27,6 @@ from zoneinfo import ZoneInfo
 CENTRAL_TIME = ZoneInfo("America/Chicago")
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS leases (
-    document_id       TEXT PRIMARY KEY,
-    document_name     TEXT NOT NULL,
-    landlord_id       TEXT NOT NULL,
-    lessor_name       TEXT NOT NULL,
-    premises_address  TEXT NOT NULL,
-    tenants_json      TEXT NOT NULL,
-    tenant_email      TEXT NOT NULL,
-    signing_url       TEXT,
-    signing_url_kind  TEXT,
-    status            TEXT NOT NULL,
-    monthly_rent      TEXT NOT NULL,
-    term_start        TEXT NOT NULL,
-    term_end          TEXT NOT NULL,
-    mode              TEXT NOT NULL,
-    created_by        TEXT NOT NULL,
-    archive_file      TEXT,
-    completed_at      TEXT,
-    created_at        TEXT NOT NULL,
-    updated_at        TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS leases_created_at ON leases (created_at DESC);
-CREATE INDEX IF NOT EXISTS leases_landlord ON leases (landlord_id, created_at DESC);
-
 -- Public rental applications, submitted from the tenant page with no login.
 -- property_interest is free text, not a landlord id - see ApplicationRequest
 -- in app/tenant_portal.py - so these are never landlord-scoped, admin-only.
@@ -145,20 +121,11 @@ APPLICATION_COLUMNS = [
 NOTICE_COLUMNS = ["id", "tenant_username", "message", "created_by", "created_at"]
 NEWS_COLUMNS = ["id", "landlord_id", "headline", "article", "created_by", "created_at"]
 
-# Same columns, Postgres syntax (SERIAL/AUTOINCREMENT differences don't apply
-# here - document_id is always a real PandaDoc id, never generated).
+# The same DDL is valid on both backends. Kept as one derived constant so a
+# future column change cannot update one schema and miss the other.
 POSTGRES_SCHEMA = SCHEMA.replace(
     "CREATE INDEX IF NOT EXISTS", "CREATE INDEX IF NOT EXISTS"
-)  # identical DDL is valid on both - kept as one constant so a future column
-   # change can't accidentally update one schema and not the other.
-
-COLUMNS = [
-    "document_id", "document_name", "landlord_id", "lessor_name",
-    "premises_address", "tenants_json", "tenant_email", "signing_url",
-    "signing_url_kind", "status", "monthly_rent", "term_start", "term_end",
-    "mode", "created_by", "archive_file", "completed_at", "created_at",
-    "updated_at",
-]
+)
 
 
 def _now() -> str:
@@ -182,8 +149,8 @@ def _now_central() -> str:
 # CREATE TABLE IF NOT EXISTS does not reshape an existing table - it leaves
 # the old columns sitting there and reports success, which is exactly how a
 # missing column took the whole app down once already (see the users.email
-# migration in app/config.py). Both of these were empty and no code ever
-# read or wrote them, so replacing them outright loses nothing.
+# migration in app/config.py). None of these are read or written any more,
+# so replacing or retiring them outright loses nothing.
 #
 # Each entry is (table, column unique to the OLD shape). The column is the
 # guard: it only matches a table left over from the old schema, so this is
@@ -192,6 +159,7 @@ SUPERSEDED_TABLES = [
     ("properties", "landlord"),   # old shape: (address PRIMARY KEY, landlord)
     ("tenants", "full_name"),     # superseded by people
     ("residents", "full_name"),   # renamed to people, which covers every role
+    ("leases", "document_id"),    # PandaDoc document tracking, feature removed
 ]
 
 
@@ -221,67 +189,6 @@ def _sqlite_init(db_path: str) -> None:
             if old_column in columns:
                 connection.execute(f"DROP TABLE {table}")
         connection.executescript(SCHEMA)
-
-
-def _sqlite_insert(db_path: str, row: dict[str, Any]) -> None:
-    columns = ", ".join(row)
-    placeholders = ", ".join(f":{key}" for key in row)
-    with _connect(db_path) as connection:
-        connection.execute(
-            f"INSERT INTO leases ({columns}) VALUES ({placeholders})", row
-        )
-
-
-def _sqlite_update_status(db_path: str, document_id: str, status: str) -> bool:
-    with _connect(db_path) as connection:
-        cursor = connection.execute(
-            "UPDATE leases SET status = ?, updated_at = ? WHERE document_id = ?",
-            (status, _now(), document_id),
-        )
-        return cursor.rowcount > 0
-
-
-def _sqlite_get(db_path: str, document_id: str) -> dict[str, Any] | None:
-    with _connect(db_path) as connection:
-        row = connection.execute(
-            "SELECT * FROM leases WHERE document_id = ?", (document_id,)
-        ).fetchone()
-    if row is None:
-        return None
-    record = dict(row)
-    record["tenants"] = json.loads(record.pop("tenants_json"))
-    return record
-
-
-def _sqlite_record_archive(db_path: str, document_id: str, archive_file: str) -> bool:
-    with _connect(db_path) as connection:
-        cursor = connection.execute(
-            "UPDATE leases SET archive_file = ?, completed_at = ?, updated_at = ? "
-            "WHERE document_id = ?",
-            (archive_file, _now(), _now(), document_id),
-        )
-        return cursor.rowcount > 0
-
-
-def _sqlite_list(db_path: str, limit: int,
-                 landlord_id: str | None) -> list[dict[str, Any]]:
-    with _connect(db_path) as connection:
-        if landlord_id is None:
-            rows = connection.execute(
-                "SELECT * FROM leases ORDER BY created_at DESC LIMIT ?", (limit,)
-            ).fetchall()
-        else:
-            rows = connection.execute(
-                "SELECT * FROM leases WHERE landlord_id = ? "
-                "ORDER BY created_at DESC LIMIT ?",
-                (landlord_id, limit),
-            ).fetchall()
-    result = []
-    for row in rows:
-        record = dict(row)
-        record["tenants"] = json.loads(record.pop("tenants_json"))
-        result.append(record)
-    return result
 
 
 def _sqlite_record_application(db_path: str, row: dict[str, Any]) -> None:
@@ -400,74 +307,6 @@ async def close_pools() -> None:
     _pools.clear()
 
 
-async def _pg_insert(dsn: str, row: dict[str, Any]) -> None:
-    pool = await _pg_pool(dsn)
-    columns = ", ".join(COLUMNS)
-    placeholders = ", ".join(f"${i + 1}" for i in range(len(COLUMNS)))
-    values = [row.get(column) for column in COLUMNS]
-    async with pool.acquire() as connection:
-        await connection.execute(
-            f"INSERT INTO leases ({columns}) VALUES ({placeholders})", *values
-        )
-
-
-async def _pg_update_status(dsn: str, document_id: str, status: str) -> bool:
-    pool = await _pg_pool(dsn)
-    async with pool.acquire() as connection:
-        result = await connection.execute(
-            "UPDATE leases SET status = $1, updated_at = $2 WHERE document_id = $3",
-            status, _now(), document_id,
-        )
-    return result != "UPDATE 0"
-
-
-async def _pg_get(dsn: str, document_id: str) -> dict[str, Any] | None:
-    pool = await _pg_pool(dsn)
-    async with pool.acquire() as connection:
-        row = await connection.fetchrow(
-            "SELECT * FROM leases WHERE document_id = $1", document_id
-        )
-    if row is None:
-        return None
-    record = dict(row)
-    record["tenants"] = json.loads(record.pop("tenants_json"))
-    return record
-
-
-async def _pg_record_archive(dsn: str, document_id: str, archive_file: str) -> bool:
-    pool = await _pg_pool(dsn)
-    now = _now()
-    async with pool.acquire() as connection:
-        result = await connection.execute(
-            "UPDATE leases SET archive_file = $1, completed_at = $2, "
-            "updated_at = $3 WHERE document_id = $4",
-            archive_file, now, now, document_id,
-        )
-    return result != "UPDATE 0"
-
-
-async def _pg_list(dsn: str, limit: int,
-                   landlord_id: str | None) -> list[dict[str, Any]]:
-    pool = await _pg_pool(dsn)
-    async with pool.acquire() as connection:
-        if landlord_id is None:
-            rows = await connection.fetch(
-                "SELECT * FROM leases ORDER BY created_at DESC LIMIT $1", limit
-            )
-        else:
-            rows = await connection.fetch(
-                "SELECT * FROM leases WHERE landlord_id = $1 "
-                "ORDER BY created_at DESC LIMIT $2",
-                landlord_id, limit,
-            )
-    result = []
-    for row in rows:
-        record = dict(row)
-        record["tenants"] = json.loads(record.pop("tenants_json"))
-        result.append(record)
-    return result
-
-
 async def _pg_record_application(dsn: str, row: dict[str, Any]) -> None:
     pool = await _pg_pool(dsn)
     columns = ", ".join(APPLICATION_COLUMNS)
@@ -549,71 +388,6 @@ async def init(db_path: str) -> None:
         await _pg_pool(db_path)  # creating the pool also runs the schema
     else:
         await asyncio.to_thread(_sqlite_init, db_path)
-
-
-async def record_lease(db_path: str, *, document_id: str, document_name: str,
-                       landlord_id: str, lessor_name: str,
-                       premises_address: str,
-                       tenants: list[dict[str, str]], tenant_email: str,
-                       signing_url: str | None, signing_url_kind: str | None,
-                       status: str, monthly_rent: str, term_start: str,
-                       term_end: str, mode: str, created_by: str) -> None:
-    timestamp = _now()
-    row = {
-        "document_id": document_id,
-        "document_name": document_name,
-        "landlord_id": landlord_id,
-        "lessor_name": lessor_name,
-        "premises_address": premises_address,
-        "tenants_json": json.dumps(tenants),
-        "tenant_email": tenant_email,
-        "signing_url": signing_url,
-        "signing_url_kind": signing_url_kind,
-        "status": status,
-        "monthly_rent": monthly_rent,
-        "term_start": term_start,
-        "term_end": term_end,
-        "mode": mode,
-        "created_by": created_by,
-        "archive_file": None,
-        "completed_at": None,
-        "created_at": timestamp,
-        "updated_at": timestamp,
-    }
-    if _is_postgres(db_path):
-        await _pg_insert(db_path, row)
-    else:
-        await asyncio.to_thread(_sqlite_insert, db_path, row)
-
-
-async def update_status(db_path: str, document_id: str, status: str) -> bool:
-    if _is_postgres(db_path):
-        return await _pg_update_status(db_path, document_id, status)
-    return await asyncio.to_thread(_sqlite_update_status, db_path, document_id, status)
-
-
-async def list_leases(db_path: str, *, limit: int = 200,
-                      landlord_id: str | None = None) -> list[dict[str, Any]]:
-    """All leases, or only one landlord's when `landlord_id` is given."""
-    if _is_postgres(db_path):
-        return await _pg_list(db_path, limit, landlord_id)
-    return await asyncio.to_thread(_sqlite_list, db_path, limit, landlord_id)
-
-
-async def get_lease(db_path: str, document_id: str) -> dict[str, Any] | None:
-    if _is_postgres(db_path):
-        return await _pg_get(db_path, document_id)
-    return await asyncio.to_thread(_sqlite_get, db_path, document_id)
-
-
-async def record_archive(db_path: str, document_id: str,
-                         archive_file: str) -> bool:
-    """Note that the executed PDF has been saved to the archive."""
-    if _is_postgres(db_path):
-        return await _pg_record_archive(db_path, document_id, archive_file)
-    return await asyncio.to_thread(
-        _sqlite_record_archive, db_path, document_id, archive_file
-    )
 
 
 async def record_application(db_path: str, *, applicant_name: str,

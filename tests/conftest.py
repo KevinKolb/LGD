@@ -1,4 +1,4 @@
-"""Shared fixtures: a stubbed environment, accounts file, and fake PandaDoc."""
+"""Shared fixtures: a stubbed environment and a throwaway accounts file."""
 from __future__ import annotations
 
 import json
@@ -20,8 +20,6 @@ import pytest
 import app.config  # noqa: F401
 from app.auth import hash_password
 
-SHARED_KEY = "test-shared-key"
-TEMPLATE_UUID = "template-uuid-1234"
 
 # Real Render/Supabase credentials in a developer's local .env must never
 # leak into a test run - app/config.py's load_dotenv() would otherwise put
@@ -98,60 +96,16 @@ def accounts_document() -> dict[str, Any]:
     }
 
 
-class FakePandaDoc:
-    """Stands in for PandaDocClient, recording what the app sent."""
-
-    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
-        self.created: list[dict[str, Any]] = []
-        self.sent: list[dict[str, Any]] = []
-        self.downloads: list[dict[str, Any]] = []
-        self.shared_link: str | None = "https://app.pandadoc.com/document/fake-link"
-        self.next_document_id = "doc-1"
-        # None models PandaDoc still preparing the signed PDF (HTTP 202).
-        self.pdf_bytes: bytes | None = b"%PDF-1.4 fake signed lease"
-
-    async def create_document_from_template(self, **kwargs: Any) -> str:
-        self.created.append(kwargs)
-        return self.next_document_id
-
-    async def wait_until_draft(self, document_id: str, **_kwargs: Any) -> None:
-        return None
-
-    async def send_document(self, document_id: str, **kwargs: Any) -> dict[str, Any]:
-        self.sent.append({"document_id": document_id, **kwargs})
-        return {"id": document_id, "status": "document.sent"}
-
-    async def shared_link_for(self, document_id: str, email: str) -> str | None:
-        return self.shared_link
-
-    async def create_session_link(self, document_id: str, email: str,
-                                  *, lifetime: int) -> str:
-        return f"https://app.pandadoc.com/s/session-for-{email}"
-
-    async def download_completed_pdf(self, document_id: str,
-                                     *, protected: bool) -> bytes | None:
-        self.downloads.append({"document_id": document_id, "protected": protected})
-        return self.pdf_bytes
-
-    async def aclose(self) -> None:
-        return None
-
-
-@pytest.fixture
-def fake_pandadoc() -> FakePandaDoc:
-    return FakePandaDoc()
-
-
 @pytest.fixture
 def archive_dir(tmp_path):
     return tmp_path / "archive"
 
 
 @pytest.fixture
-def make_client(tmp_path, monkeypatch, fake_pandadoc, archive_dir):
-    """Builds a TestClient, letting a test choose the PandaDoc mode."""
+def make_client(tmp_path, monkeypatch, archive_dir):
+    """Builds a TestClient against a throwaway accounts file and database."""
 
-    def build(mode: str = "production"):
+    def build():
         # Explicit, not just relying on the _no_live_credentials autouse
         # fixture's ordering relative to this one: a developer's real
         # DATABASE_URL/SUPABASE_* must be gone *before* the TestClient
@@ -169,16 +123,9 @@ def make_client(tmp_path, monkeypatch, fake_pandadoc, archive_dir):
         accounts_path = tmp_path / "accounts.json"
         accounts_path.write_text(json.dumps(accounts_document()), encoding="utf-8")
 
-        monkeypatch.setenv("PANDADOC_MODE", mode)
-        monkeypatch.setenv("PANDADOC_API_KEY", "production-key")
-        monkeypatch.setenv("PANDADOC_SANDBOX_API_KEY", "sandbox-key")
-        monkeypatch.setenv("PANDADOC_TEMPLATE_UUID", TEMPLATE_UUID)
-        monkeypatch.setenv("PANDADOC_WEBHOOK_SHARED_KEY", SHARED_KEY)
-        monkeypatch.setenv("PANDADOC_SENDS_EMAIL", "false")
         monkeypatch.setenv("LGD_ACCOUNTS_FILE", str(accounts_path))
-        monkeypatch.setenv("LGD_DB_PATH", str(tmp_path / "test-leases.db"))
+        monkeypatch.setenv("LGD_DB_PATH", str(tmp_path / "test-records.db"))
         monkeypatch.setenv("LGD_ARCHIVE_DIR", str(archive_dir))
-        monkeypatch.setenv("LGD_EARLY_PAYMENT_DISCOUNT", "50")
 
         from fastapi.testclient import TestClient
 
@@ -186,20 +133,18 @@ def make_client(tmp_path, monkeypatch, fake_pandadoc, archive_dir):
         from app.config import get_settings
 
         get_settings.cache_clear()
-        monkeypatch.setattr(main, "PandaDocClient", lambda *a, **k: fake_pandadoc)
         return TestClient(main.app)
 
     yield build
 
-    from app.config import _reset_mode_override_for_tests, get_settings
+    from app.config import get_settings
 
     get_settings.cache_clear()
-    _reset_mode_override_for_tests()
 
 
 @pytest.fixture
 def client(make_client):
-    """Production mode, signed in as the admin."""
+    """Signed in as the admin."""
     with make_client() as test_client:
         test_client.auth = ADMIN
         yield test_client

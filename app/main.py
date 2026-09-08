@@ -1,6 +1,9 @@
-"""LGD lease automation service.
+"""LGD web service.
 
-Manager dashboard (HTTP Basic) + JSON API + PandaDoc webhook receiver.
+Serves the static pages and the printable blank lease, plus a small JSON
+API behind HTTP Basic for the manager and admin areas. Accounts and the
+application/notice/news records live in Supabase Postgres when configured,
+and on local disk otherwise - see app/config.py and app/db.py.
 """
 from __future__ import annotations
 
@@ -8,24 +11,15 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from fastapi import (
-    BackgroundTasks,
-    Depends,
-    FastAPI,
-    HTTPException,
-    Request,
-    Response,
-    status,
-)
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field
 
-from app import accounts, archive_storage, db
+from app import accounts, db
 from app.accounts import MIN_PASSWORD_LENGTH
 from app.auth import check_credentials, hash_password, verify_password
 from app.config import (
@@ -33,19 +27,10 @@ from app.config import (
     Landlord,
     ROLE_RESIDENT,
     User,
-    VALID_MODES,
     get_settings,
     preload_accounts_from_postgres,
-    set_mode_override,
 )
-from app.lease import LeaseRequest
 from app.tenant_portal import ApplicationRequest, NewsRequest, NoticeRequest
-from app.pandadoc import (
-    COMPLETED_STATUS,
-    PandaDocClient,
-    PandaDocError,
-    verify_webhook_signature,
-)
 
 # Verified against when a username does not exist, so that an unknown user and
 # a wrong password are indistinguishable in both answer and timing.
@@ -61,6 +46,8 @@ MANAGER_DIR = (Path(__file__).resolve().parent.parent / "manager").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
 SHARED_DIR = (Path(__file__).resolve().parent.parent / "shared").resolve()
 PRINT_DIR = (Path(__file__).resolve().parent.parent / "print").resolve()
+RESIDENT_DIR = (Path(__file__).resolve().parent.parent / "resident").resolve()
+APPLICANT_DIR = (Path(__file__).resolve().parent.parent / "applicant").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from documents/lease.md by
@@ -83,29 +70,18 @@ async def lifespan(application: FastAPI):
 
     settings = get_settings()
     await db.init(settings.db_path)
-    application.state.pandadoc = PandaDocClient(
-        settings.api_key, api_base=settings.api_base
-    )
     logger.info(
-        "LGD lease service ready in %s mode (template %s, %d landlord(s), "
-        "%d user(s))",
-        settings.mode.upper(),
-        settings.template_uuid,
+        "LGD service ready (%d landlord(s), %d user(s))",
         len(settings.landlords),
         len(settings.users),
     )
-    if settings.is_sandbox:
-        logger.warning(
-            "SANDBOX mode: documents cost nothing and are NOT legally binding."
-        )
     try:
         yield
     finally:
-        await application.state.pandadoc.aclose()
         await db.close_pools()
 
 
-app = FastAPI(title="LGD Lease Maker", lifespan=lifespan)
+app = FastAPI(title="LGD", lifespan=lifespan)
 
 
 def current_user(
@@ -285,10 +261,6 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
             for u in settings.users
             if u.role == ROLE_RESIDENT and (user.is_admin or u.landlord_id == user.landlord_id)
         ],
-        "mode": settings.mode,
-        "is_sandbox": settings.is_sandbox,
-        "early_payment_discount": str(settings.early_payment_discount),
-        "pandadoc_sends_email": settings.pandadoc_sends_email,
     }
 
 
@@ -328,41 +300,6 @@ async def api_change_password(
     return {"detail": "Password updated."}
 
 
-class SetModeRequest(BaseModel):
-    mode: str
-
-
-@app.post("/api/admin/mode")
-async def api_set_mode(
-    payload: SetModeRequest,
-    user: User = Depends(current_user),
-) -> dict[str, Any]:
-    """Admin-only sandbox/production toggle.
-
-    Deliberately not persisted anywhere - see set_mode_override's docstring
-    in app/config.py. A restart always falls back to the deployment's own
-    PANDADOC_MODE (sandbox, unless set otherwise), never stays stuck in
-    production because someone forgot to switch back.
-    """
-    if not user.is_admin:
-        raise HTTPException(status_code=404, detail="No such page.")
-    if payload.mode not in VALID_MODES:
-        raise HTTPException(
-            status_code=400, detail=f"mode must be one of {sorted(VALID_MODES)}."
-        )
-    set_mode_override(payload.mode)
-    get_settings.cache_clear()
-    try:
-        settings = get_settings()
-    except ConfigError as exc:
-        # e.g. switching to production with no PANDADOC_API_KEY configured -
-        # revert the override rather than leaving the app unable to boot.
-        set_mode_override(None)
-        get_settings.cache_clear()
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"mode": settings.mode, "is_sandbox": settings.is_sandbox}
-
-
 @app.get("/api/admin/info")
 async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
     """Reference info for the admin page: who exists and which backend each
@@ -392,18 +329,13 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
             for u in settings.users
         ],
         "backends": {
-            "leases": "Supabase Postgres" if database_url else "local SQLite",
+            "records": "Supabase Postgres" if database_url else "local SQLite",
             "accounts": "Supabase Postgres" if database_url else "accounts.json",
-            "archive": (
+            "files": (
                 f"Supabase Storage ({settings.archive_dir.split(':', 1)[1]})"
                 if settings.archive_dir.startswith("supabase:")
                 else f"local disk ({settings.archive_dir})"
             ),
-        },
-        "pandadoc": {
-            "mode": settings.mode,
-            "template_uuid_set": settings.template_uuid
-            != "placeholder-pending-signature-provider",
         },
         "links": {
             "github": "https://github.com/KevinKolb/LGD",
@@ -413,227 +345,8 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
                 f"{supabase_url.removeprefix('https://').split('.')[0]}"
                 if supabase_url else None
             ),
-            "pandadoc": "https://app.pandadoc.com/a/#/developers",
         },
     }
-
-
-@app.get("/api/leases")
-async def api_list_leases(user: User = Depends(current_user)) -> dict[str, Any]:
-    """Admins see every lease; a landlord sees only their own."""
-    require_not_resident(user)
-    settings = get_settings()
-    leases = await db.list_leases(
-        settings.db_path,
-        landlord_id=None if user.is_admin else user.landlord_id,
-    )
-    return {"leases": leases}
-
-
-@app.post("/api/leases/preview")
-async def api_preview_lease(
-    lease: LeaseRequest,
-    user: User = Depends(current_user),
-) -> dict[str, Any]:
-    """Show the filled-in values without touching PandaDoc.
-
-    Production has a 60-document annual allowance, so this exists to catch a
-    typo before it costs one of them. It is free in either mode.
-    """
-    require_not_resident(user)
-    settings = get_settings()
-    lessor = authorize_landlord(user, lease.lessor_id)
-    discount = Decimal(settings.early_payment_discount)
-    recipients = lease.recipients(
-        lessor_name=lessor.signer_name, lessor_email=lessor.email
-    )
-    return {
-        "document_name": lease.document_name(),
-        "tokens": lease.tokens(lessor_name=lessor.company, discount=discount),
-        "recipients": [
-            {
-                "role": person["role"],
-                "name": f"{person['first_name']} {person['last_name']}".strip(),
-                "email": person["email"],
-            }
-            for person in recipients
-        ],
-    }
-
-
-@app.post("/api/leases", status_code=201)
-async def api_create_lease(
-    lease: LeaseRequest,
-    request: Request,
-    user: User = Depends(current_user),
-) -> dict[str, Any]:
-    """Create the lease in PandaDoc and return a signing link to send out."""
-    require_not_resident(user)
-    settings = get_settings()
-    client: PandaDocClient = request.app.state.pandadoc
-
-    lessor = authorize_landlord(user, lease.lessor_id)
-    discount = Decimal(settings.early_payment_discount)
-    primary = lease.tenants[0]
-
-    try:
-        document_id = await client.create_document_from_template(
-            template_uuid=settings.template_uuid,
-            name=lease.document_name(),
-            recipients=lease.recipients(
-                lessor_name=lessor.signer_name, lessor_email=lessor.email
-            ),
-            tokens=lease.tokens(lessor_name=lessor.company, discount=discount),
-            metadata={
-                "premises": lease.premises_address[:200],
-                "landlord_id": lessor.id,
-            },
-        )
-        await client.wait_until_draft(document_id)
-        await client.send_document(
-            document_id,
-            subject=f"Lease for {lease.premises_address}",
-            message=f"Please review and sign the lease for {lease.premises_address}.",
-            silent=not settings.pandadoc_sends_email,
-        )
-
-        # Prefer the hosted link: it does not expire and survives restarts.
-        signing_url = await client.shared_link_for(document_id, primary.email)
-        url_kind = "shared_link"
-        if not signing_url:
-            signing_url = await client.create_session_link(
-                document_id,
-                primary.email,
-                lifetime=settings.session_lifetime_seconds,
-            )
-            url_kind = "session_link"
-    except PandaDocError as exc:
-        logger.error("Lease creation failed: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    tenants = [{"name": t.full_name, "email": t.email} for t in lease.tenants]
-    await db.record_lease(
-        settings.db_path,
-        document_id=document_id,
-        document_name=lease.document_name(),
-        landlord_id=lessor.id,
-        lessor_name=lessor.company,
-        premises_address=lease.premises_address,
-        tenants=tenants,
-        tenant_email=primary.email,
-        signing_url=signing_url,
-        signing_url_kind=url_kind,
-        status="document.sent",
-        monthly_rent=str(lease.monthly_rent),
-        term_start=lease.term_start.isoformat(),
-        term_end=lease.term_end_date.isoformat(),
-        mode=settings.mode,
-        created_by=user.username,
-    )
-    logger.info(
-        "Created %s lease %s for %s (%s, by %s)",
-        settings.mode, document_id, lease.premises_address,
-        lessor.company, user.username,
-    )
-
-    return {
-        "document_id": document_id,
-        "signing_url": signing_url,
-        "signing_url_kind": url_kind,
-        "emailed_by_pandadoc": settings.pandadoc_sends_email,
-        "tenants": tenants,
-        "mode": settings.mode,
-        "is_sandbox": settings.is_sandbox,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Archive of executed leases
-# ---------------------------------------------------------------------------
-
-async def archive_signed_lease(client: PandaDocClient, document_id: str) -> str | None:
-    """Download the executed PDF and file it under the archive directory.
-
-    Returns the archived filename, or None if PandaDoc is still preparing it.
-    Safe to call repeatedly: an already-archived lease is left alone.
-    """
-    settings = get_settings()
-    lease = await db.get_lease(settings.db_path, document_id)
-    if lease is None:
-        return None
-    if lease.get("archive_file"):
-        return lease["archive_file"]
-
-    try:
-        pdf = await client.download_completed_pdf(
-            document_id, protected=not settings.is_sandbox
-        )
-    except PandaDocError as exc:
-        logger.error("Could not archive %s: %s", document_id, exc)
-        return None
-    if pdf is None:
-        return None
-
-    filename = f"{document_id}.pdf"
-    await archive_storage.save(
-        settings.archive_dir, filename, pdf,
-        supabase_url=settings.supabase_url, supabase_key=settings.supabase_key,
-    )
-
-    await db.record_archive(settings.db_path, document_id, filename)
-    logger.info("Archived executed lease %s (%d bytes)", document_id, len(pdf))
-    return filename
-
-
-@app.get("/api/leases/{document_id}/document")
-async def api_download_lease(
-    document_id: str,
-    request: Request,
-    user: User = Depends(current_user),
-):
-    """Serve the executed PDF, fetching it from PandaDoc if not yet archived."""
-    require_not_resident(user)
-    settings = get_settings()
-    lease = await db.get_lease(settings.db_path, document_id)
-    if lease is None:
-        raise HTTPException(status_code=404, detail="No such lease.")
-    if not user.is_admin and lease["landlord_id"] != user.landlord_id:
-        raise HTTPException(status_code=404, detail="No such lease.")
-
-    filename = lease.get("archive_file")
-    if not filename:
-        filename = await archive_signed_lease(request.app.state.pandadoc, document_id)
-    if not filename:
-        raise HTTPException(
-            status_code=409,
-            detail="The signed PDF is not ready yet. Try again shortly.",
-        )
-
-    pdf = await archive_storage.read(
-        settings.archive_dir, filename,
-        supabase_url=settings.supabase_url, supabase_key=settings.supabase_key,
-    )
-    if pdf is None:
-        raise HTTPException(status_code=404, detail="Archived file is missing.")
-
-    safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", lease["document_name"]).strip("-")
-    return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="{safe_name or document_id}.pdf"'
-        },
-    )
-
-
-# ---------------------------------------------------------------------------
-# Tenant portal: a public application form, plus notices for logged-in
-# tenants. Entirely separate from the PandaDoc lease flow above - see
-# tenant/index.html for the page these back.
-# ---------------------------------------------------------------------------
-
-RESIDENT_DIR = (Path(__file__).resolve().parent.parent / "resident").resolve()
-APPLICANT_DIR = (Path(__file__).resolve().parent.parent / "applicant").resolve()
 
 
 @app.get("/resident/", include_in_schema=False)
@@ -750,63 +463,6 @@ async def api_list_news(user: User = Depends(current_user)) -> dict[str, Any]:
     landlord_id = None if user.is_admin else user.landlord_id
     news = await db.list_news(settings.db_path, landlord_id=landlord_id)
     return {"news": news}
-
-
-# ---------------------------------------------------------------------------
-# PandaDoc webhook
-# ---------------------------------------------------------------------------
-
-@app.post("/webhooks/pandadoc", include_in_schema=False)
-async def pandadoc_webhook(request: Request,
-                           background: BackgroundTasks) -> Response:
-    """Receive document events. Authenticated by HMAC, not by Basic auth."""
-    settings = get_settings()
-    raw_body = await request.body()
-    signature = request.query_params.get("signature", "")
-
-    if not verify_webhook_signature(settings.webhook_shared_key, raw_body, signature):
-        logger.warning(
-            "Rejected webhook with bad signature from %s",
-            request.client.host if request.client else "unknown",
-        )
-        return JSONResponse({"detail": "Invalid signature"}, status_code=403)
-
-    try:
-        events = await request.json()
-    except ValueError:
-        return JSONResponse({"detail": "Malformed JSON"}, status_code=400)
-    if not isinstance(events, list):
-        events = [events]
-
-    for event in events:
-        if not isinstance(event, dict):
-            continue
-        data = event.get("data") or {}
-        document_id = data.get("id")
-        if not document_id:
-            continue
-
-        name = event.get("event")
-        new_status = data.get("status")
-        known = True
-        if new_status:
-            known = await db.update_status(settings.db_path, document_id, new_status)
-            if known:
-                logger.info("Lease %s -> %s (%s)", document_id, new_status, name)
-            else:
-                logger.info("Ignoring event for unknown document %s", document_id)
-
-        # Archive the executed PDF once it exists. Downloading here would risk
-        # the 20 second webhook timeout, so it runs after the response is sent.
-        if known and (
-            name == "document_completed_pdf_ready"
-            or new_status == COMPLETED_STATUS
-        ):
-            background.add_task(
-                archive_signed_lease, request.app.state.pandadoc, document_id
-            )
-
-    return Response(status_code=200)
 
 
 @app.get("/healthz", include_in_schema=False)

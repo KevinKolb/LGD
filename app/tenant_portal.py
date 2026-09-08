@@ -2,8 +2,8 @@
 notices a landlord/admin sends to a specific tenant, and news a landlord/
 admin posts.
 
-Kept separate from app/lease.py, which is about the PandaDoc lease itself -
-these two features don't touch PandaDoc at all.
+These are the records the public pages write, and the manager dashboard
+reads back.
 """
 from __future__ import annotations
 

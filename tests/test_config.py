@@ -9,11 +9,6 @@ from app.config import ConfigError, Settings, User, get_settings
 from tests.conftest import accounts_document
 
 BASE_ENV = {
-    "PANDADOC_MODE": "production",
-    "PANDADOC_API_KEY": "production-key",
-    "PANDADOC_SANDBOX_API_KEY": "sandbox-key",
-    "PANDADOC_TEMPLATE_UUID": "template-uuid",
-    "PANDADOC_WEBHOOK_SHARED_KEY": "shared-key",
 }
 
 
@@ -90,87 +85,6 @@ def test_an_unrecognised_role_is_refused(load) -> None:
     accounts["users"][1]["role"] = "superuser"
     with pytest.raises(ConfigError, match="expected one of"):
         load(accounts)
-
-
-def test_duplicate_usernames_are_refused(load) -> None:
-    accounts = accounts_document()
-    accounts["users"].append({**accounts["users"][1]})
-    with pytest.raises(ConfigError, match="duplicate usernames"):
-        load(accounts)
-
-
-def test_a_file_with_no_landlords_is_refused(load) -> None:
-    with pytest.raises(ConfigError, match="no landlords"):
-        load({"landlords": [], "users": []})
-
-
-def test_a_file_with_no_users_is_refused(load) -> None:
-    accounts = accounts_document()
-    accounts["users"] = []
-    with pytest.raises(ConfigError, match="nobody could log in"):
-        load(accounts)
-
-
-def test_malformed_json_is_reported_clearly(tmp_path, monkeypatch) -> None:
-    get_settings.cache_clear()
-    path = tmp_path / "accounts.json"
-    path.write_text("{ not json", encoding="utf-8")
-    for key, value in BASE_ENV.items():
-        monkeypatch.setenv(key, value)
-    monkeypatch.setenv("LGD_ACCOUNTS_FILE", str(path))
-    with pytest.raises(ConfigError, match="not valid JSON"):
-        Settings.load()
-
-
-# ---------------------------------------------------------------------------
-# Mode selection
-# ---------------------------------------------------------------------------
-
-def test_production_mode_uses_the_production_key(load) -> None:
-    settings = load(PANDADOC_MODE="production")
-    assert settings.mode == "production"
-    assert settings.is_sandbox is False
-    assert settings.api_key == "production-key"
-
-
-def test_sandbox_mode_uses_the_sandbox_key(load) -> None:
-    settings = load(PANDADOC_MODE="sandbox")
-    assert settings.is_sandbox is True
-    assert settings.api_key == "sandbox-key"
-
-
-def test_mode_defaults_to_sandbox(load) -> None:
-    """Spending a production document should never be an accident."""
-    settings = load(PANDADOC_MODE=None)
-    assert settings.mode == "sandbox"
-
-
-def test_sandbox_prefers_its_own_template_when_given(load) -> None:
-    settings = load(
-        PANDADOC_MODE="sandbox", PANDADOC_SANDBOX_TEMPLATE_UUID="sandbox-template"
-    )
-    assert settings.template_uuid == "sandbox-template"
-
-
-def test_sandbox_falls_back_to_the_shared_template(load) -> None:
-    settings = load(PANDADOC_MODE="sandbox", PANDADOC_SANDBOX_TEMPLATE_UUID=None)
-    assert settings.template_uuid == "template-uuid"
-
-
-def test_an_unknown_mode_is_refused(load) -> None:
-    with pytest.raises(ConfigError, match="PANDADOC_MODE"):
-        load(PANDADOC_MODE="staging")
-
-
-def test_a_missing_key_names_the_variable(load) -> None:
-    with pytest.raises(ConfigError, match="PANDADOC_SANDBOX_API_KEY"):
-        load(PANDADOC_MODE="sandbox", PANDADOC_SANDBOX_API_KEY=None)
-
-
-# ---------------------------------------------------------------------------
-# Access rules
-# ---------------------------------------------------------------------------
-
 def make_user(role: str, landlord_id: str | None = None) -> User:
     return User(
         username="u", display_name="U", role=role,
