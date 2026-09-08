@@ -19,11 +19,24 @@ def anyio_backend() -> str:
 
 
 class FakeConnection:
-    def __init__(self, store: dict[str, dict[str, Any]]) -> None:
+    def __init__(self, store: dict[str, dict[str, Any]],
+                 stale_tables: set[str] | None = None) -> None:
         self.store = store
+        # Tables that still have their old, pre-migration shape.
+        self.stale_tables = stale_tables or set()
+        self.dropped: list[str] = []
+
+    async def fetchval(self, sql: str, *args: Any) -> Any:
+        if "information_schema.columns" in sql:
+            table, _column = args
+            return 1 if table in self.stale_tables else None
+        raise AssertionError(f"unexpected fetchval: {sql!r}")
 
     async def execute(self, sql: str, *args: Any) -> str:
         text = " ".join(sql.split())
+        if text.startswith("DROP TABLE"):
+            self.dropped.append(text)
+            return "DROP TABLE"
         if text.startswith("CREATE TABLE") or "CREATE INDEX" in text:
             return "OK"
         if text.startswith("INSERT INTO leases"):
@@ -75,12 +88,17 @@ class FakeAcquire:
 
 
 class FakePool:
-    def __init__(self) -> None:
+    def __init__(self, stale_tables: set[str] | None = None) -> None:
         self.store: dict[str, dict[str, Any]] = {}
         self.closed = False
+        self.stale_tables = stale_tables or set()
+        self.dropped: list[str] = []
 
     def acquire(self) -> FakeAcquire:
-        return FakeAcquire(FakeConnection(self.store))
+        connection = FakeConnection(self.store, self.stale_tables)
+        # Share one list so a test can see what the pool dropped overall.
+        connection.dropped = self.dropped
+        return FakeAcquire(connection)
 
     async def close(self) -> None:
         self.closed = True
@@ -125,6 +143,36 @@ async def test_init_creates_the_pool(fake_pool) -> None:
     await db.init(DSN)
 
     assert DSN in db._pools
+
+
+async def test_init_leaves_already_migrated_tables_alone(fake_pool) -> None:
+    """Nothing stale, so nothing should be dropped - this runs on every
+    startup, and a live database is on the other end of it."""
+    await db.init(DSN)
+
+    assert fake_pool.dropped == []
+
+
+async def test_init_drops_the_old_shaped_tables(monkeypatch) -> None:
+    """A deployment created before this redesign still has the old
+    properties/tenants shape, and CREATE TABLE IF NOT EXISTS will not
+    reshape it - the same trap that took startup down over users.email."""
+    pool = FakePool(stale_tables={"properties", "tenants"})
+
+    async def fake_create_pool(dsn: str, *, min_size: int, max_size: int,
+                               statement_cache_size: int = 100) -> FakePool:
+        return pool
+
+    import asyncpg
+
+    monkeypatch.setattr(asyncpg, "create_pool", fake_create_pool)
+    db._pools.clear()
+    try:
+        await db.init(DSN)
+    finally:
+        db._pools.clear()
+
+    assert pool.dropped == ['DROP TABLE "properties"', 'DROP TABLE "tenants"']
 
 
 async def test_record_and_get_lease_round_trip(fake_pool) -> None:

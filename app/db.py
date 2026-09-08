@@ -82,21 +82,33 @@ CREATE TABLE IF NOT EXISTS notices (
 );
 CREATE INDEX IF NOT EXISTS notices_tenant ON notices (tenant_username, created_at DESC);
 
--- Which landlord owns which property address.
+-- One row per rentable unit. Keyed on a generated id rather than on the
+-- address: one street address can hold several units, and an address that
+-- gets retyped or reformatted would otherwise orphan every resident
+-- pointing at it.
 CREATE TABLE IF NOT EXISTS properties (
-    address   TEXT PRIMARY KEY,
-    landlord  TEXT NOT NULL
+    id           TEXT PRIMARY KEY,
+    landlord_id  TEXT NOT NULL,
+    address      TEXT NOT NULL,
+    apt          TEXT,
+    city         TEXT NOT NULL DEFAULT 'New Orleans',
+    state        TEXT NOT NULL DEFAULT 'LA',
+    created_at   TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS properties_landlord ON properties (landlord_id, address);
 
--- Tenant address book (name + mailing address), independent of the
--- tenants_json list embedded in each lease.
-CREATE TABLE IF NOT EXISTS tenants (
-    full_name  TEXT NOT NULL,
-    address    TEXT NOT NULL,
-    apt        TEXT,
-    city       TEXT NOT NULL DEFAULT 'New Orleans',
-    state      TEXT NOT NULL DEFAULT 'LA'
+-- Who lives in a unit. property_id is a real foreign key, so a resident
+-- cannot point at a property that does not exist (SQLite enforces this
+-- too - see PRAGMA foreign_keys in _connect).
+CREATE TABLE IF NOT EXISTS residents (
+    id           TEXT PRIMARY KEY,
+    property_id  TEXT NOT NULL REFERENCES properties(id),
+    full_name    TEXT NOT NULL,
+    email        TEXT,
+    phone        TEXT,
+    created_at   TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS residents_property ON residents (property_id);
 
 -- News a landlord/admin posts, from the manager dashboard. created_at is
 -- recorded in Central time (see _now_central below), unlike every other
@@ -155,6 +167,22 @@ def _now_central() -> str:
     return datetime.now(CENTRAL_TIME).isoformat(timespec="microseconds")
 
 
+# Tables an earlier version of this schema created with a different shape.
+# CREATE TABLE IF NOT EXISTS does not reshape an existing table - it leaves
+# the old columns sitting there and reports success, which is exactly how a
+# missing column took the whole app down once already (see the users.email
+# migration in app/config.py). Both of these were empty and no code ever
+# read or wrote them, so replacing them outright loses nothing.
+#
+# Each entry is (table, column unique to the OLD shape). The column is the
+# guard: it only matches a table left over from the old schema, so this is
+# idempotent and will not touch the new tables on any later startup.
+SUPERSEDED_TABLES = [
+    ("properties", "landlord"),   # old shape: (address PRIMARY KEY, landlord)
+    ("tenants", "full_name"),     # superseded by the residents table
+]
+
+
 def _is_postgres(db_path: str) -> bool:
     return db_path.startswith("postgres://") or db_path.startswith("postgresql://")
 
@@ -173,6 +201,13 @@ def _connect(db_path: str) -> sqlite3.Connection:
 
 def _sqlite_init(db_path: str) -> None:
     with _connect(db_path) as connection:
+        for table, old_column in SUPERSEDED_TABLES:
+            # Table names come from the constant above, never from input.
+            columns = [
+                row[1] for row in connection.execute(f"PRAGMA table_info({table})")
+            ]
+            if old_column in columns:
+                connection.execute(f"DROP TABLE {table}")
         connection.executescript(SCHEMA)
 
 
@@ -332,6 +367,15 @@ async def _pg_pool(dsn: str):
                 dsn, min_size=1, max_size=5, statement_cache_size=0
             )
             async with pool.acquire() as connection:
+                for table, old_column in SUPERSEDED_TABLES:
+                    stale = await connection.fetchval(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = $1 AND column_name = $2",
+                        table, old_column,
+                    )
+                    if stale:
+                        # Table name comes from the constant, never from input.
+                        await connection.execute(f'DROP TABLE "{table}"')
                 await connection.execute(POSTGRES_SCHEMA)
             _pools[dsn] = pool
     return _pools[dsn]
