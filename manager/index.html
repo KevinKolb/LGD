@@ -76,7 +76,44 @@
     color: var(--muted);
   }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .step-head h2 { margin: 0; }
+  .step {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    /* The numeral is decoration; the heading beside it carries the meaning,
+       so it is aria-hidden and sits slightly high without it. */
+    line-height: 1;
+    padding-bottom: 1px;
+  }
   .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .note { color: var(--muted); font-size: 12px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.secondary {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    padding: 9px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
   .button-link {
     display: inline-block;
     font: inherit;
@@ -154,7 +191,24 @@
 
 <main hidden>
   <section>
-    <h2>Paper lease</h2>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">1</span>
+      <h2>Application</h2>
+    </div>
+    <p class="hint">
+      The blank rental application, to hand to someone before a lease exists.
+    </p>
+    <div class="actions">
+      <button type="button" class="secondary" disabled>Print application</button>
+      <span class="note">Not built yet.</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">2</span>
+      <h2>Paper lease</h2>
+    </div>
     <p class="hint">
       The standard residential lease, blank and unsigned &mdash; to print and fill
       in by hand, or just to look over.
@@ -162,6 +216,26 @@
     <div class="actions">
       <a class="button-link secondary" id="print-lease-link"
          href="../print/lease_print.html" target="_blank" rel="noopener">Print paper lease</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">3</span>
+      <h2>Legal research</h2>
+    </div>
+    <p class="hint">
+      The sources checked behind each lease clause &mdash; what was read, how
+      thoroughly, and what was decided. Appended to as clauses change, so an
+      attorney reviewing one later has a trail back to the primary source.
+    </p>
+    <div class="actions">
+      <!-- GitHub's rendered view rather than the file next to this page:
+           a .md is served as text/markdown, which browsers download instead
+           of displaying. This renders properly from either host. -->
+      <a class="button-link secondary" id="legal-research-link"
+         href="https://github.com/KevinKolb/LGD/blob/main/manager/LEGAL_RESEARCH.md"
+         target="_blank" rel="noopener">Read the research log</a>
     </div>
   </section>
 </main>

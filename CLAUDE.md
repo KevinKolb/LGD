@@ -177,7 +177,7 @@ that fixture without replacing it with something equally strict.
 
 ## Legal research
 
-[`LEGAL_RESEARCH.md`](LEGAL_RESEARCH.md) records the court cases and websites
+[`manager/LEGAL_RESEARCH.md`](manager/LEGAL_RESEARCH.md) records the court cases and websites
 consulted while drafting or amending specific clauses (e.g. the §18 attorney's-fees
 floor, the §13 utilities-penalty amount), including which sources were actually
 read in full versus only seen via a search tool's summary. Append to it, don't
@@ -194,7 +194,7 @@ The entries are left as written rather than edited, because they are a record
 of what was actually done at the time.
 
 Additions, restructuring, and amount changes to lease terms — as opposed to the
-wording-error corrections table above. See [`LEGAL_RESEARCH.md`](LEGAL_RESEARCH.md)
+wording-error corrections table above. See [`manager/LEGAL_RESEARCH.md`](manager/LEGAL_RESEARCH.md)
 for the research behind any entry that cites outside sources.
 
 - **2026-09-06 — §6 SMOKING** (approved "for now," per the user). No prior clause
@@ -206,12 +206,12 @@ for the research behind any entry that cites outside sources.
   `pandadoc/lease_template_body.md`.
 
 - **2026-09-06 — §14 UTILITIES, per-day penalty $5 → $10** (approved by the user).
-  See `LEGAL_RESEARCH.md` for the New Orleans utility-cost research behind the
+  See `manager/LEGAL_RESEARCH.md` for the New Orleans utility-cost research behind the
   figure. Applied identically to `documents/lease.md` and
   `pandadoc/lease_template_body.md`.
 
 - **2026-09-06 — §19 ATTORNEY'S FEES, minimum floor $100 → $500** (approved by
-  the user; 25% rate unchanged). See `LEGAL_RESEARCH.md` for the NOMAR-standard
+  the user; 25% rate unchanged). See `manager/LEGAL_RESEARCH.md` for the NOMAR-standard
   comparison and Louisiana case law behind keeping 25% but raising the floor.
   Applied identically to `documents/lease.md` and
   `pandadoc/lease_template_body.md`.
