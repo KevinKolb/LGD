@@ -56,7 +56,7 @@ this app never sends a key to the client.
 
 1. Run `python pandadoc/generate_template_body.py` to make sure
    [`lease_template_body.md`](lease_template_body.md) reflects the current
-   [`originals/lease.md`](../originals/lease.md) — it's a generated file, never
+   [`documents/lease.md`](../documents/lease.md) — it's a generated file, never
    hand-edited, so this is always safe and fast to re-run.
 2. **Templates → New template → Start from scratch.**
 3. Name it something like `Residential Lease` — not "LGD" specifically, since the landlord is chosen per-lease at generation time, not baked into the template.

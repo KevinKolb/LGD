@@ -63,7 +63,7 @@ SHARED_DIR = (Path(__file__).resolve().parent.parent / "shared").resolve()
 PRINT_DIR = (Path(__file__).resolve().parent.parent / "print").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
-# The blank, printable lease - generated from originals/lease.md by
+# The blank, printable lease - generated from documents/lease.md by
 # print/generate_print_lease.py. Served here rather than added to
 # MANAGER_DIR so there's still exactly one copy of it on disk.
 BLANK_LEASE_PATH = (

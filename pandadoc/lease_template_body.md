@@ -4,14 +4,14 @@
 
     python pandadoc/generate_template_body.py
 
-Wording is derived automatically from [`originals/lease.md`](../originals/lease.md)
+Wording is derived automatically from [`documents/lease.md`](../documents/lease.md)
 — the live working copy of the lease — with each blank replaced by a PandaDoc
-token in `[Group.Name]` form. To change the wording, edit `originals/lease.md`,
+token in `[Group.Name]` form. To change the wording, edit `documents/lease.md`,
 then re-run the generator; never edit this file directly, or the next
 regeneration will silently discard the edit.
 
 If an apparent typo turns up in the lease text, don't "fix" the spelling here:
-decide deliberately in `originals/lease.md` first (see `CLAUDE.md`'s
+decide deliberately in `documents/lease.md` first (see `CLAUDE.md`'s
 wording-corrections table for the review already done), record it there, then
 regenerate.
 

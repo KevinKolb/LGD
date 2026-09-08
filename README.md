@@ -9,7 +9,7 @@ current and archive the executed PDF once it's signed.
 
 | Path | What it is |
 | --- | --- |
-| [originals/lease.md](originals/lease.md) | The **live** lease text. Edit this one. |
+| [documents/lease.md](documents/lease.md) | The **live** lease text. Edit this one. |
 | [originals/lease_transcript_verbatim.md](originals/lease_transcript_verbatim.md) | The original scan, transcribed verbatim. **Do not edit.** |
 | [pandadoc/](pandadoc/) | One-time PandaDoc setup and the template body to paste in |
 | [manager/](manager/) | The dashboard — a single static page behind HTTP Basic |
@@ -225,19 +225,19 @@ PandaDoc is stubbed throughout, so the suite is free to run and safe offline.
 the original scanned paper lease. It is a historical record and is **not to be
 edited** — ever.
 
-`originals/lease.md` is the **live working copy**, meant to be edited over time as
+`documents/lease.md` is the **live working copy**, meant to be edited over time as
 the lease's actual terms change. It started identical to the verbatim transcript, and
 is kept free of process notes and commentary so it stays a clean document to edit —
 see [`CLAUDE.md`](CLAUDE.md) for that context instead.
 [`pandadoc/lease_template_body.md`](pandadoc/lease_template_body.md) is a
 **generated file** (blanks replaced by PandaDoc tokens), produced by
 [`pandadoc/generate_template_body.py`](pandadoc/generate_template_body.py) — never
-edit it directly. After editing `originals/lease.md`, run
+edit it directly. After editing `documents/lease.md`, run
 `python pandadoc/generate_template_body.py` and re-paste the result into PandaDoc.
 
 The verbatim transcript preserves several original OCR-era wording quirks
 ("commended" for commenced, "solidarity" for solidarily, and others) that were
-reviewed and deliberately corrected in `originals/lease.md` on 2026-09-06 — see
+reviewed and deliberately corrected in `documents/lease.md` on 2026-09-06 — see
 `CLAUDE.md` for the full before/after list. Any further correction to the lease's
 wording is a legal decision, not a find-and-replace: it belongs in
-`originals/lease.md`, made deliberately, never silently.
+`documents/lease.md`, made deliberately, never silently.

@@ -1,7 +1,7 @@
 """Lease form model and PandaDoc token mapping.
 
 Every field here corresponds to a blank in the source lease, kept as the live
-working copy at `originals/lease.md`. Section numbers in comments refer to that
+working copy at `documents/lease.md`. Section numbers in comments refer to that
 document. (The original scan's untouched transcript lives separately at
 `originals/lease_transcript_verbatim.md` and is not to be edited.)
 

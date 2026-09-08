@@ -122,4 +122,4 @@ a tenant from just leaving it unswitched. $10/day gives headroom over any
 single utility's estimated real daily cost while staying a defensible,
 non-punitive figure tied to actual cost data rather than an arbitrary
 escalation. **Status: approved and finalized** — applied to both
-`originals/lease.md` and `pandadoc/lease_template_body.md`.
+`documents/lease.md` and `pandadoc/lease_template_body.md`.

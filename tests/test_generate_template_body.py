@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 MODULE_PATH = Path(__file__).resolve().parent.parent / "pandadoc" / "generate_template_body.py"
-SOURCE_PATH = Path(__file__).resolve().parent.parent / "originals" / "lease.md"
+SOURCE_PATH = Path(__file__).resolve().parent.parent / "documents" / "lease.md"
 
 
 def _load_module():
@@ -37,7 +37,7 @@ def real_lease_text() -> str:
 
 @pytest.fixture(scope="module")
 def real_output(gen, real_lease_text) -> str:
-    """Generated output against the actual current originals/lease.md."""
+    """Generated output against the actual current documents/lease.md."""
     return gen.generate(real_lease_text)
 
 

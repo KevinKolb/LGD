@@ -9,11 +9,19 @@ are kept out of the human-facing document files on purpose.
 - [`originals/lease_transcript_verbatim.md`](originals/lease_transcript_verbatim.md)
   — a character-for-character transcript of the original scanned paper lease.
   Historical record. **Never edit this file.**
-- [`originals/lease.md`](originals/lease.md) — the live, editable master. Started
+- [`documents/lease.md`](documents/lease.md) — the live, editable master. Started
   identical to the verbatim transcript. Edit *this* file when the lease's actual
   wording needs to change. It intentionally carries no process notes or commentary
   of its own, so a human can open and edit it as a clean document — all of that
   lives here instead.
+
+The two folders mean different things, and the split is the point:
+`originals/` is frozen source material — scans and their verbatim
+transcripts, never edited (it also holds the scanned paper application and
+its transcript). `documents/` holds the live masters that are edited and
+that the generators derive from. `lease.md` sat in `originals/` for a
+while, which invited exactly the wrong instinct about a file that is meant
+to be edited.
 
 Numbering in the lease originally ran 1–19 continuously across its six pages, with no
 section 20 — that was the original scanned document's own numbering, nothing was
@@ -23,7 +31,7 @@ renumbered everything from old §6 onward up by one; the lease now runs 1–20.
 ## A blank, printable paper lease
 
 [`print/generate_print_lease.py`](print/generate_print_lease.py) is the third thing
-derived from `originals/lease.md` (alongside `pandadoc/lease_template_body.md`) — a
+derived from `documents/lease.md` (alongside `pandadoc/lease_template_body.md`) — a
 self-contained HTML file meant to be opened in any browser and printed
 (Ctrl+P / Cmd+P) as a blank paper lease, before any PandaDoc setup exists at all.
 Regenerate with:
@@ -49,7 +57,7 @@ wrong.
 buttons instead of fill-in blanks: `mark_parking_radios` in the generator
 recognizes the two literal sentences "( ) Parking not available at this
 address." and "( ) Parking spaces are limited to..." in
-`originals/lease.md`, and swaps each for a real `<input type="radio"
+`documents/lease.md`, and swaps each for a real `<input type="radio"
 name="parking">` inside its own `<label class="checkbox-line">`. JS toggles
 a `.struck` (CSS `text-decoration: line-through`) class on whichever
 label's radio is *not* checked - the chosen option stays plain, the other
@@ -59,12 +67,12 @@ means cancelling that dialog once, then printing again manually.
 ## Keeping the PandaDoc template body in sync
 
 [`pandadoc/lease_template_body.md`](pandadoc/lease_template_body.md) is a
-**generated file** — never hand-edit it. It's produced from `originals/lease.md`
+**generated file** — never hand-edit it. It's produced from `documents/lease.md`
 by [`pandadoc/generate_template_body.py`](pandadoc/generate_template_body.py):
 same wording, with each blank replaced by a PandaDoc token (`[Group.Name]` form).
 It's what actually gets pasted into the PandaDoc template editor.
 
-**Whenever `originals/lease.md` changes, run the generator and re-paste the
+**Whenever `documents/lease.md` changes, run the generator and re-paste the
 result into PandaDoc:**
 
     python pandadoc/generate_template_body.py
@@ -78,7 +86,7 @@ guards against, including a real bug it was built to fix: the scanned lease's
 page cuts sometimes fall mid-sentence, and a naive "blank line = new paragraph"
 approach silently mangled those sentences on the first attempt.
 
-Blank fill-in lines (`__________`) in `originals/lease.md` are filled per-lease by
+Blank fill-in lines (`__________`) in `documents/lease.md` are filled per-lease by
 the app via PandaDoc tokens at send time, not by editing the file directly — see
 [`app/lease.py`](app/lease.py) for the token mapping used at runtime (a separate,
 hand-maintained mapping from the generator's — keep both in mind if a blank is
@@ -104,7 +112,7 @@ the instrument. That's a decision for whoever has legal authority over the docum
 (the user), made deliberately, not something to autocorrect in passing.
 
 Eight were reviewed and corrected by the user on 2026-09-06, in both
-`originals/lease.md` and `pandadoc/lease_template_body.md`. Section numbers below are
+`documents/lease.md` and `pandadoc/lease_template_body.md`. Section numbers below are
 **current** (post-2026-09-07 PARKING move, see the changelog after this table):
 
 | Section | Before | After |
@@ -211,18 +219,18 @@ for the research behind any entry that cites outside sources.
   §10 five-day cure) rather than an ordinary nuisance violation, given fire/odor
   damage risk; cleaning/repair cost is explicitly tied to the §3 security deposit.
   Inserted right after §5 PETS, renumbering everything from old §6 onward up by one
-  (old §6–§19 → new §7–§20). Applied identically to `originals/lease.md` and
+  (old §6–§19 → new §7–§20). Applied identically to `documents/lease.md` and
   `pandadoc/lease_template_body.md`.
 
 - **2026-09-06 — §14 UTILITIES, per-day penalty $5 → $10** (approved by the user).
   See `LEGAL_RESEARCH.md` for the New Orleans utility-cost research behind the
-  figure. Applied identically to `originals/lease.md` and
+  figure. Applied identically to `documents/lease.md` and
   `pandadoc/lease_template_body.md`.
 
 - **2026-09-06 — §19 ATTORNEY'S FEES, minimum floor $100 → $500** (approved by
   the user; 25% rate unchanged). See `LEGAL_RESEARCH.md` for the NOMAR-standard
   comparison and Louisiana case law behind keeping 25% but raising the floor.
-  Applied identically to `originals/lease.md` and
+  Applied identically to `documents/lease.md` and
   `pandadoc/lease_template_body.md`.
 
 - **2026-09-06 — §17 SIGNS AND ACCESS, expanded** (approved by the user). Added
@@ -235,7 +243,7 @@ for the research behind any entry that cites outside sources.
   three separate paragraphs under one heading, split by party (Lessor's right /
   Lessee's restriction / Lessee's exception), matching this document's existing
   style of paragraph breaks rather than bullets or sub-numbering. Applied
-  identically to `originals/lease.md` and `pandadoc/lease_template_body.md`.
+  identically to `documents/lease.md` and `pandadoc/lease_template_body.md`.
 
 - **2026-09-07 — §7 PARKING moved to the lease's last section (new §20)**
   (per the user's request). Old §7–§20 → new §7–§19 shift down by one to fill
@@ -244,7 +252,7 @@ for the research behind any entry that cites outside sources.
   VIOLATIONS AND NUISANCES), SIGNS AND ACCESS's "Section 15" → "Section 14"
   (ADDITIONS OR ALTERATIONS). Also added a checkbox to the section: "[ ]
   Parking not available at this address." - checking it crosses out the
-  entire clause. Applied identically to `originals/lease.md`,
+  entire clause. Applied identically to `documents/lease.md`,
   `pandadoc/lease_template_body.md`, and `print/lease_print.html` - see
   "A blank, printable paper lease" and "Keeping the PandaDoc template body
   in sync" above for how the checkbox and its strikethrough behavior
@@ -257,10 +265,10 @@ for the research behind any entry that cites outside sources.
   "( ) Parking not available at this address." and "( ) Parking spaces are
   limited to..." - with whichever one isn't chosen struck through, rather
   than only ever striking the "limited" sentence when the single checkbox
-  was checked. Applied identically to `originals/lease.md`,
+  was checked. Applied identically to `documents/lease.md`,
   `pandadoc/lease_template_body.md`, and `print/lease_print.html` - see
   "A blank, printable paper lease" and "Keeping the PandaDoc template body
   in sync" above for the updated mechanics in each.
 
-Nothing is currently pending in red in `originals/lease.md` — every drafted
+Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied to both files.

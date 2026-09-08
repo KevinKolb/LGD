@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate a self-contained, print-ready HTML lease from `originals/lease.md`.
+"""Generate a self-contained, print-ready HTML lease from `documents/lease.md`.
 
-Same idea as `pandadoc/generate_template_body.py`: `originals/lease.md` is the
+Same idea as `pandadoc/generate_template_body.py`: `documents/lease.md` is the
 only file anyone edits; this script derives a *different* output from it -
 here, a blank paper lease meant to be opened in any browser and printed
 (Ctrl+P / Cmd+P), rather than pasted into PandaDoc.
@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Iterator
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SOURCE = REPO_ROOT / "originals" / "lease.md"
+SOURCE = REPO_ROOT / "documents" / "lease.md"
 OUTPUT = REPO_ROOT / "print" / "lease_print.html"
 
 # Reused verbatim from pandadoc/generate_template_body.py's approach: a blank
@@ -181,10 +181,10 @@ HTML_HEAD = """<!doctype html>
 
 HTML_FOOTER = """
 <div class="footer-note">
-  This is a blank lease generated from <code>originals/lease.md</code> by
+  This is a blank lease generated from <code>documents/lease.md</code> by
   <code>print/generate_print_lease.py</code> for printing and hand-filling on
   paper. It will not appear on a printed copy (hidden in print styles).
-  Regenerate after editing <code>originals/lease.md</code>. The "Page X of Y"
+  Regenerate after editing <code>documents/lease.md</code>. The "Page X of Y"
   footer is a CSS page-number counter: it renders correctly when printed from
   Chrome, Edge, or Safari (18.2+), but not from Firefox, which does not yet
   support this CSS feature as of early 2026 - if you print from Firefox, that
@@ -277,7 +277,7 @@ def split_source(source_text: str) -> tuple[str, str]:
     start = source_text.find(marker)
     if start == -1:
         raise SystemExit(
-            f"Could not find {marker!r} in originals/lease.md - has the "
+            f"Could not find {marker!r} in documents/lease.md - has the "
             "execution sentence moved or changed?"
         )
     end_of_sentence = source_text.find(".", start)
@@ -303,7 +303,7 @@ def parse_signature_labels(signature_source: str) -> list[str]:
     if not labels:
         raise SystemExit(
             "No signature role labels found after the execution sentence in "
-            "originals/lease.md - has the signature block moved or changed?"
+            "documents/lease.md - has the signature block moved or changed?"
         )
     return labels
 
@@ -359,7 +359,7 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
         if width is None:
             raise SystemExit(
                 "Found more fill-in blanks than BLANK_WIDTHS_IN_ORDER expects "
-                f"(16) - a blank was added to originals/lease.md without "
+                f"(16) - a blank was added to documents/lease.md without "
                 "adding a matching entry here."
             )
         return render_blank(width)
@@ -427,7 +427,7 @@ PARKING_LABEL_B_START_SENTINEL = "\x00PARKINGLABELBSTART\x00"
 PARKING_LABEL_B_END_SENTINEL = "\x00PARKINGLABELBEND\x00"
 PARKING_RADIO_B_SENTINEL = "\x00PARKINGRADIOB\x00"
 
-# The literal two radio-marked sentences originals/lease.md's PARKING
+# The literal two radio-marked sentences documents/lease.md's PARKING
 # section is made of - see mark_parking_radios below.
 PARKING_MARKER_A_TEXT = "Parking not available at this address."
 PARKING_MARKER_B_TEXT = (
@@ -513,7 +513,7 @@ def generate(source_text: str) -> str:
     if leftover:
         raise SystemExit(
             f"{len(leftover)} width(s) in BLANK_WIDTHS_IN_ORDER were never "
-            "used - fewer blanks were found in originals/lease.md than "
+            "used - fewer blanks were found in documents/lease.md than "
             "expected. Has a blank been removed?"
         )
     signature_html = render_signature_lines(labels)

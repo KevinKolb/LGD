@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate `pandadoc/lease_template_body.md` from `originals/lease.md`.
+"""Generate `pandadoc/lease_template_body.md` from `documents/lease.md`.
 
-`originals/lease.md` is the single, human-editable source of the lease's
+`documents/lease.md` is the single, human-editable source of the lease's
 wording — see CLAUDE.md. This script is the only thing that should ever write
 `pandadoc/lease_template_body.md`; nobody should hand-edit that file, because
 it would silently drift out of sync with `lease.md` the next time this script
@@ -12,7 +12,7 @@ Usage:
     python pandadoc/generate_template_body.py
 
 What it does:
-    1. Reads originals/lease.md.
+    1. Reads documents/lease.md.
     2. Drops the scan-page artifacts ("## PAGE N" headings and the "---"
        dividers between them) - PandaDoc doesn't care about the original
        scan's page boundaries; its own page breaks are configured separately,
@@ -41,7 +41,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SOURCE = REPO_ROOT / "originals" / "lease.md"
+SOURCE = REPO_ROOT / "documents" / "lease.md"
 OUTPUT = REPO_ROOT / "pandadoc" / "lease_template_body.md"
 
 BLANK = r"_{2,}"  # a fill-in blank: two or more underscores (the shortest
@@ -150,14 +150,14 @@ HEADER = """# PandaDoc template body — Residential Lease
 
     python pandadoc/generate_template_body.py
 
-Wording is derived automatically from [`originals/lease.md`](../originals/lease.md)
+Wording is derived automatically from [`documents/lease.md`](../documents/lease.md)
 — the live working copy of the lease — with each blank replaced by a PandaDoc
-token in `[Group.Name]` form. To change the wording, edit `originals/lease.md`,
+token in `[Group.Name]` form. To change the wording, edit `documents/lease.md`,
 then re-run the generator; never edit this file directly, or the next
 regeneration will silently discard the edit.
 
 If an apparent typo turns up in the lease text, don't "fix" the spelling here:
-decide deliberately in `originals/lease.md` first (see `CLAUDE.md`'s
+decide deliberately in `documents/lease.md` first (see `CLAUDE.md`'s
 wording-corrections table for the review already done), record it there, then
 regenerate.
 
@@ -287,7 +287,7 @@ def split_off_signature_block(body: str) -> str:
     if index == -1:
         raise SystemExit(
             "Could not find the execution sentence "
-            f"({marker!r}) in originals/lease.md - has it moved or changed?"
+            f"({marker!r}) in documents/lease.md - has it moved or changed?"
         )
     end_of_sentence = body.find(".", index)
     if end_of_sentence == -1:
@@ -302,7 +302,7 @@ def apply_substitutions(body: str) -> tuple[str, list[str]]:
         match = re.search(pattern, body)
         if match is None:
             raise SystemExit(
-                "Could not find an expected blank in originals/lease.md.\n"
+                "Could not find an expected blank in documents/lease.md.\n"
                 f"  Looking for pattern: {pattern!r}\n"
                 "  The wording around a blank may have changed - update this "
                 "script's BLANK_SUBSTITUTIONS to match, or fix the lease text."
@@ -324,7 +324,7 @@ def check_no_blanks_remain(body: str) -> None:
         raise SystemExit(
             f"{len(remaining)} unhandled blank(s) remain after substitution. "
             "Add a BLANK_SUBSTITUTIONS entry for whatever changed in "
-            "originals/lease.md, or this script has a bug."
+            "documents/lease.md, or this script has a bug."
         )
 
 

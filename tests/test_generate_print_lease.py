@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 MODULE_PATH = Path(__file__).resolve().parent.parent / "print" / "generate_print_lease.py"
-SOURCE_PATH = Path(__file__).resolve().parent.parent / "originals" / "lease.md"
+SOURCE_PATH = Path(__file__).resolve().parent.parent / "documents" / "lease.md"
 
 
 def _load_module():
