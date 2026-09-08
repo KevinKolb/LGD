@@ -152,6 +152,30 @@ client), `app/main.py`'s calls into it, the webhook receiver, and the token
 mapping in `app/lease.py` are PandaDoc-specific and would need rewriting for a
 new provider's API.
 
+## `people` and `users` are two different tables, and not yet connected
+
+`people` (in `app/db.py`'s schema) is the directory of everyone the system
+knows about — residents, managers, admins and applicants alike, one row each,
+with an optional `property_id` because only a resident actually lives
+somewhere. It has no read/write code yet; it is schema only.
+
+`users` (in `app/accounts.py`, and mirrored in `accounts.json` locally) is the
+**login** table: username, password hash, role, landlord_id. This is what HTTP
+Basic auth actually checks, and in production it holds live credentials.
+
+The intent is for `people` to eventually cover logins for all four roles, which
+means these two tables describe overlapping humans with no link between them.
+**Nothing reconciles them today.** Before wiring anything up, decide which one
+owns identity — most likely `people.id` becoming the key and `users` shrinking
+to just credentials pointing at it — and treat it as a real migration: the live
+`users` table holds real password hashes, and changing how it is read is what
+took startup down on 2026-09-07 (see the `users.email` note in `app/config.py`).
+
+Role vocabulary also differs and needs settling in the same pass: the code uses
+`admin` / `landlord` / `tenant` (`ROLE_*` in `app/config.py`, and those literal
+strings are stored in `users.role` and in the live database), while the UI and
+`people.role` now say manager / resident / applicant.
+
 ## Two storage backends, one call site each
 
 `app/db.py` (leases), `app/config.py` (accounts), and `app/archive_storage.py`

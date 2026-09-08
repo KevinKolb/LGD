@@ -97,18 +97,29 @@ CREATE TABLE IF NOT EXISTS properties (
 );
 CREATE INDEX IF NOT EXISTS properties_landlord ON properties (landlord_id, address);
 
--- Who lives in a unit. property_id is a real foreign key, so a resident
--- cannot point at a property that does not exist (SQLite enforces this
--- too - see PRAGMA foreign_keys in _connect).
-CREATE TABLE IF NOT EXISTS residents (
+-- Everyone this system knows about, whatever their relationship to it:
+-- residents, managers, admins and applicants all live here.
+--
+-- property_id is a real foreign key, so nobody can point at a property
+-- that does not exist (SQLite enforces this too - see PRAGMA foreign_keys
+-- in _connect). It is nullable because only a resident lives somewhere: a
+-- manager, an admin, or an applicant who has not been placed yet has no
+-- unit to point at.
+--
+-- Logging people in still runs off the separate `users` table (see
+-- app/accounts.py), which holds the usernames and password hashes. These
+-- two are not yet connected - see CLAUDE.md.
+CREATE TABLE IF NOT EXISTS people (
     id           TEXT PRIMARY KEY,
-    property_id  TEXT NOT NULL REFERENCES properties(id),
+    role         TEXT NOT NULL,
     full_name    TEXT NOT NULL,
     email        TEXT,
     phone        TEXT,
+    property_id  TEXT REFERENCES properties(id),
     created_at   TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS residents_property ON residents (property_id);
+CREATE INDEX IF NOT EXISTS people_property ON people (property_id);
+CREATE INDEX IF NOT EXISTS people_role ON people (role);
 
 -- News a landlord/admin posts, from the manager dashboard. created_at is
 -- recorded in Central time (see _now_central below), unlike every other
@@ -179,7 +190,8 @@ def _now_central() -> str:
 # idempotent and will not touch the new tables on any later startup.
 SUPERSEDED_TABLES = [
     ("properties", "landlord"),   # old shape: (address PRIMARY KEY, landlord)
-    ("tenants", "full_name"),     # superseded by the residents table
+    ("tenants", "full_name"),     # superseded by people
+    ("residents", "full_name"),   # renamed to people, which covers every role
 ]
 
 

@@ -157,7 +157,7 @@ async def test_init_drops_the_old_shaped_tables(monkeypatch) -> None:
     """A deployment created before this redesign still has the old
     properties/tenants shape, and CREATE TABLE IF NOT EXISTS will not
     reshape it - the same trap that took startup down over users.email."""
-    pool = FakePool(stale_tables={"properties", "tenants"})
+    pool = FakePool(stale_tables={"properties", "tenants", "residents"})
 
     async def fake_create_pool(dsn: str, *, min_size: int, max_size: int,
                                statement_cache_size: int = 100) -> FakePool:
@@ -172,7 +172,9 @@ async def test_init_drops_the_old_shaped_tables(monkeypatch) -> None:
     finally:
         db._pools.clear()
 
-    assert pool.dropped == ['DROP TABLE "properties"', 'DROP TABLE "tenants"']
+    assert pool.dropped == [
+        'DROP TABLE "properties"', 'DROP TABLE "tenants"', 'DROP TABLE "residents"',
+    ]
 
 
 async def test_record_and_get_lease_round_trip(fake_pool) -> None:

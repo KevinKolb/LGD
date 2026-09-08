@@ -1,4 +1,4 @@
-"""The properties and residents tables, and the migration off their old shape.
+"""The properties and people tables, and the migration off their old shape.
 
 These run against real SQLite (a temp file), not a mock - the point is the
 schema and the foreign key actually behaving, which a fake connection cannot
@@ -21,6 +21,10 @@ CREATE TABLE tenants (
     city TEXT NOT NULL DEFAULT 'New Orleans',
     state TEXT NOT NULL DEFAULT 'LA'
 );
+CREATE TABLE residents (
+    id TEXT PRIMARY KEY, property_id TEXT NOT NULL,
+    full_name TEXT NOT NULL, email TEXT, phone TEXT, created_at TEXT NOT NULL
+);
 """
 
 
@@ -42,18 +46,18 @@ def columns(path: str, table: str) -> list[str]:
         connection.close()
 
 
-async def test_init_creates_properties_and_residents(db_path) -> None:
+async def test_init_creates_properties_and_people(db_path) -> None:
     await db.init(db_path)
 
     assert columns(db_path, "properties") == [
         "id", "landlord_id", "address", "apt", "city", "state", "created_at",
     ]
-    assert columns(db_path, "residents") == [
-        "id", "property_id", "full_name", "email", "phone", "created_at",
+    assert columns(db_path, "people") == [
+        "id", "role", "full_name", "email", "phone", "property_id", "created_at",
     ]
 
 
-async def test_a_resident_links_to_its_property(db_path) -> None:
+async def test_a_person_links_to_their_property(db_path) -> None:
     await db.init(db_path)
     connection = sqlite3.connect(db_path)
     try:
@@ -62,12 +66,12 @@ async def test_a_resident_links_to_its_property(db_path) -> None:
             "VALUES ('p1', 'lgd', '1556 Camp Street', 'B', '2026-09-07')"
         )
         connection.execute(
-            "INSERT INTO residents (id, property_id, full_name, created_at) "
-            "VALUES ('r1', 'p1', 'Jane Doe', '2026-09-07')"
+            "INSERT INTO people (id, role, full_name, property_id, created_at) "
+            "VALUES ('r1', 'resident', 'Jane Doe', 'p1', '2026-09-07')"
         )
         row = connection.execute(
             "SELECT r.full_name, p.address, p.apt, p.city, p.state "
-            "FROM residents r JOIN properties p ON p.id = r.property_id"
+            "FROM people r JOIN properties p ON p.id = r.property_id"
         ).fetchone()
     finally:
         connection.close()
@@ -76,7 +80,7 @@ async def test_a_resident_links_to_its_property(db_path) -> None:
     assert row == ("Jane Doe", "1556 Camp Street", "B", "New Orleans", "LA")
 
 
-async def test_a_resident_cannot_point_at_a_missing_property(db_path) -> None:
+async def test_a_person_cannot_point_at_a_missing_property(db_path) -> None:
     """The link is a real foreign key, not just a column that happens to
     hold an id - SQLite enforces it because _connect turns foreign keys on."""
     await db.init(db_path)
@@ -85,11 +89,33 @@ async def test_a_resident_cannot_point_at_a_missing_property(db_path) -> None:
     try:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO residents (id, property_id, full_name, created_at) "
-                "VALUES ('r1', 'no-such-property', 'Jane Doe', '2026-09-07')"
+                "INSERT INTO people (id, role, full_name, property_id, created_at) "
+                "VALUES ('r1', 'resident', 'Jane Doe', 'no-such-property', "
+                "'2026-09-07')"
             )
     finally:
         connection.close()
+
+
+async def test_a_person_with_no_property_is_allowed(db_path) -> None:
+    """Only a resident lives somewhere. A manager, an admin, or an
+    applicant who has not been placed yet has no unit to point at."""
+    await db.init(db_path)
+    connection = sqlite3.connect(db_path)
+    connection.execute("PRAGMA foreign_keys=ON")
+    try:
+        for role in ("manager", "admin", "applicant"):
+            connection.execute(
+                "INSERT INTO people (id, role, full_name, created_at) "
+                f"VALUES ('{role}-1', '{role}', 'No Fixed Unit', '2026-09-07')"
+            )
+        connection.commit()
+        count = connection.execute(
+            "SELECT count(*) FROM people WHERE property_id IS NULL"
+        ).fetchone()[0]
+    finally:
+        connection.close()
+    assert count == 3
 
 
 async def test_init_replaces_the_old_shaped_tables(db_path) -> None:
@@ -107,7 +133,9 @@ async def test_init_replaces_the_old_shaped_tables(db_path) -> None:
 
     assert "landlord_id" in columns(db_path, "properties")
     assert "landlord" not in columns(db_path, "properties")
-    assert columns(db_path, "tenants") == []  # superseded by residents
+    assert columns(db_path, "tenants") == []     # superseded by people
+    assert columns(db_path, "residents") == []   # renamed to people
+    assert "role" in columns(db_path, "people")
 
 
 async def test_the_migration_is_idempotent(db_path) -> None:
@@ -122,7 +150,7 @@ async def test_the_migration_is_idempotent(db_path) -> None:
     await db.init(db_path)
 
     assert "landlord_id" in columns(db_path, "properties")
-    assert "property_id" in columns(db_path, "residents")
+    assert "property_id" in columns(db_path, "people")
 
 
 async def test_the_migration_leaves_a_populated_new_table_alone(db_path) -> None:
