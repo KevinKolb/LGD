@@ -80,11 +80,6 @@
     letter-spacing: .03em;
   }
   button:disabled { opacity: .55; cursor: progress; }
-  .notice {
-    border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px;
-    margin-bottom: 10px; background: #fcfcfa;
-  }
-  .notice .when { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
   .empty { color: var(--muted); font-style: italic; }
 </style>
 </head>
@@ -95,17 +90,6 @@
 </header>
 
 <main>
-  <section id="login-prompt">
-    <h2>Your notices</h2>
-    <p class="hint">Log in to see notices from your property manager.</p>
-    <button type="button" id="show-notices">Log in</button>
-  </section>
-
-  <section id="notices-section" hidden>
-    <h2>Your notices</h2>
-    <div id="notice-list"></div>
-  </section>
-
   <section>
     <h2>Contact</h2>
     <p>
@@ -121,38 +105,10 @@
 <script>
 "use strict";
 
-function el(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    if (key === "class") node.className = value;
-    else if (key === "text") node.textContent = value;
-    else if (value !== null && value !== undefined) node.setAttribute(key, value);
-  }
-  for (const child of children) node.append(child);
-  return node;
-}
-
-function renderNotices(notices) {
-  const list = document.getElementById("notice-list");
-  list.replaceChildren();
-  if (!notices.length) {
-    list.append(el("p", { class: "empty", text: "No notices yet." }));
-    return;
-  }
-  for (const notice of notices) {
-    const card = el("div", { class: "notice" });
-    card.append(
-      el("p", { text: notice.message }),
-      el("p", { class: "when", text: new Date(notice.created_at).toLocaleString() })
-    );
-    list.append(card);
-  }
-}
-
 // Management company shown under the heading, picked by a ?company= URL
-// param rather than a login - this page is public, before anyone has an
-// account. "orange" and "lgd" are the two options; anything else (or no
-// param at all) leaves the line blank rather than guessing.
+// param rather than a login. Same two options as the applicant page.
+// This constant was missing here, which threw a ReferenceError on every
+// load of this page and stopped the rest of its script running.
 const COMPANY_NAMES = {
   orange: "Orange Street LLC",
   lgd: "LGD Properties",
@@ -163,35 +119,7 @@ function showCompanyName() {
   document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
 }
 
-function boot() {
-  showCompanyName();
-
-  document.getElementById("show-notices").addEventListener("click", async (event) => {
-    const button = event.target;
-    button.disabled = true;
-    try {
-      // Triggers the browser's native Basic Auth prompt on the first try -
-      // this page itself has no login form, since Basic Auth can't be fed
-      // credentials from a page's own form.
-      const response = await fetch("/api/notices");
-      if (response.status === 404) {
-        window.alert("That login isn't a resident account.");
-        return;
-      }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const { notices } = await response.json();
-      renderNotices(notices);
-      document.getElementById("login-prompt").hidden = true;
-      document.getElementById("notices-section").hidden = false;
-    } catch (error) {
-      window.alert(`Could not log in: ${error.message}`);
-    } finally {
-      button.disabled = false;
-    }
-  });
-}
-
-boot();
+showCompanyName();
 </script>
 <script src="../shared/footer.js"></script>
 </body>

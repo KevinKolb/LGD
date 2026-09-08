@@ -25,6 +25,7 @@ class FakeConnection:
         # Tables that still have their old, pre-migration shape.
         self.stale_tables = stale_tables or set()
         self.dropped: list[str] = []
+        self.altered: list[str] = []
 
     async def fetchval(self, sql: str, *args: Any) -> Any:
         if "information_schema.columns" in sql:
@@ -39,6 +40,11 @@ class FakeConnection:
             return "DROP TABLE"
         if text.startswith("CREATE TABLE") or "CREATE INDEX" in text:
             return "OK"
+        if text.startswith("ALTER TABLE"):
+            # db.ADDED_COLUMNS - guarded ADD COLUMN IF NOT EXISTS, run on
+            # every pool so a table created before a column existed catches up.
+            self.altered.append(text)
+            return "ALTER TABLE"
         if text.startswith("INSERT INTO leases"):
             row = dict(zip(db.COLUMNS, args))
             self.store[row["document_id"]] = row
@@ -67,9 +73,9 @@ class FakeConnection:
 
     async def fetch(self, sql: str, *args: Any) -> list[dict[str, Any]]:
         rows = list(self.store.values())
-        if "WHERE landlord_id" in sql:
-            landlord_id, limit = args
-            rows = [r for r in rows if r["landlord_id"] == landlord_id]
+        if "WHERE manager_id" in sql:
+            manager_id, limit = args
+            rows = [r for r in rows if r["manager_id"] == manager_id]
         else:
             (limit,) = args
         rows.sort(key=lambda r: r["created_at"], reverse=True)

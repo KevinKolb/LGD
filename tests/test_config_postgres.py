@@ -17,14 +17,14 @@ BASE_ENV = {
 
 DSN = "postgres://user:secret@example.supabase.co:5432/postgres"
 
-LANDLORD_ROW = {
-    "id": "lgd", "company": "LGD Properties",
-    "signer_name": "Pat Landlord", "email": "steve-landlord@example.com",
+MANAGER_ROW = {
+    "id": "lgd", "name": "LGD Properties",
+    "signer_name": "Pat Manager", "email": "steve-manager@example.com",
 }
 USER_ROW = {
     "username": "kevin", "display_name": "Kevin Kolb", "role": ROLE_ADMIN,
-    "landlord_id": None, "password_hash": "some-hash",
-    "email": "kevin@example.com",
+    "manager_id": None, "password_hash": "some-hash",
+    "email": "kevin@example.com", "auth_id": None, "person_id": "person-1",
 }
 
 
@@ -42,9 +42,9 @@ def reset_cache():
 
 
 class FakeConnection:
-    def __init__(self, landlord_rows: list[dict[str, Any]],
+    def __init__(self, manager_rows: list[dict[str, Any]],
                 user_rows: list[dict[str, Any]]) -> None:
-        self._landlord_rows = landlord_rows
+        self._manager_rows = manager_rows
         self._user_rows = user_rows
         self.executed: list[str] = []
         self.updates: list[tuple[Any, ...]] = []
@@ -55,9 +55,9 @@ class FakeConnection:
             self.updates.append(args)
 
     async def fetch(self, sql: str) -> list[dict[str, Any]]:
-        if "FROM landlords" in sql:
-            return self._landlord_rows
-        if "FROM users" in sql:
+        if "FROM managers" in sql:
+            return self._manager_rows
+        if "FROM webusers" in sql:
             return self._user_rows
         raise AssertionError(f"unexpected fetch: {sql!r}")
 
@@ -75,12 +75,12 @@ def _patch_connect(monkeypatch, connection: FakeConnection) -> None:
 
 
 async def test_preload_populates_the_cache(monkeypatch) -> None:
-    _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [USER_ROW]))
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [USER_ROW]))
 
     await config.preload_accounts_from_postgres(DSN)
 
-    landlords, users = config._accounts_cache
-    assert [l.id for l in landlords] == ["lgd"]
+    managers, users = config._accounts_cache
+    assert [l.id for l in managers] == ["lgd"]
     assert [u.username for u in users] == ["kevin"]
 
 
@@ -88,17 +88,17 @@ async def test_preload_adds_the_email_column_to_an_older_users_table(monkeypatch
     """A deployment created before users.email existed must not be left
     unbootable: selecting a missing column raises and startup dies, which
     is exactly what happened once against the live Supabase project."""
-    connection = FakeConnection([LANDLORD_ROW], [USER_ROW])
+    connection = FakeConnection([MANAGER_ROW], [USER_ROW])
     _patch_connect(monkeypatch, connection)
 
     await config.preload_accounts_from_postgres(DSN)
 
-    assert "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT" in connection.executed
+    assert "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS email TEXT" in connection.executed
 
 
 async def test_preload_migrates_the_old_role_names(monkeypatch) -> None:
-    """landlord -> manager and tenant -> resident, in the stored data."""
-    connection = FakeConnection([LANDLORD_ROW], [USER_ROW])
+    """manager -> manager and tenant -> resident, in the stored data."""
+    connection = FakeConnection([MANAGER_ROW], [USER_ROW])
     _patch_connect(monkeypatch, connection)
 
     await config.preload_accounts_from_postgres(DSN)
@@ -109,23 +109,23 @@ async def test_preload_migrates_the_old_role_names(monkeypatch) -> None:
 
 async def test_preload_still_accepts_a_pre_rename_role(monkeypatch) -> None:
     """The only authentication this app has is these rows. If a database
-    still holds "landlord"/"tenant" - because the UPDATE above has not run
+    still holds "manager"/"tenant" - because the UPDATE above has not run
     yet, or was rolled back - the load must map them forward rather than
     reject the user and lock everyone out."""
-    old_user = {**USER_ROW, "username": "pam", "role": "landlord",
-                "landlord_id": "lgd"}
-    _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [old_user]))
+    old_user = {**USER_ROW, "username": "pam", "role": "manager",
+                "manager_id": "lgd"}
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [old_user]))
 
     await config.preload_accounts_from_postgres(DSN)
 
-    _landlords, users = config._accounts_cache
+    _managers, users = config._accounts_cache
     assert users[0].role == "manager"
 
 
 async def test_settings_load_reads_the_cache_instead_of_json(
     monkeypatch
 ) -> None:
-    _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [USER_ROW]))
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [USER_ROW]))
     await config.preload_accounts_from_postgres(DSN)
     for key, value in BASE_ENV.items():
         monkeypatch.setenv(key, value)
@@ -136,14 +136,14 @@ async def test_settings_load_reads_the_cache_instead_of_json(
 
     settings = Settings.load()
 
-    assert [l.id for l in settings.landlords] == ["lgd"]
+    assert [l.id for l in settings.managers] == ["lgd"]
     assert [u.username for u in settings.users] == ["kevin"]
 
 
 async def test_settings_load_prefers_database_url_for_db_path(
     monkeypatch
 ) -> None:
-    _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [USER_ROW]))
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [USER_ROW]))
     await config.preload_accounts_from_postgres(DSN)
     for key, value in BASE_ENV.items():
         monkeypatch.setenv(key, value)
@@ -155,17 +155,17 @@ async def test_settings_load_prefers_database_url_for_db_path(
     assert settings.db_path == DSN
 
 
-async def test_preload_rejects_a_user_pointing_at_an_unknown_landlord(
+async def test_preload_rejects_a_user_pointing_at_an_unknown_manager(
     monkeypatch
 ) -> None:
-    bad_user = {**USER_ROW, "role": ROLE_MANAGER, "landlord_id": "no-such-landlord"}
-    _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [bad_user]))
+    bad_user = {**USER_ROW, "role": ROLE_MANAGER, "manager_id": "no-such-manager"}
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [bad_user]))
 
     with pytest.raises(ConfigError):
         await config.preload_accounts_from_postgres(DSN)
 
 
-async def test_preload_rejects_no_landlords(monkeypatch) -> None:
+async def test_preload_rejects_no_managers(monkeypatch) -> None:
     _patch_connect(monkeypatch, FakeConnection([], [USER_ROW]))
 
     with pytest.raises(ConfigError):

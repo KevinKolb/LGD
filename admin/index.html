@@ -102,6 +102,7 @@
   <p class="hint">Loading&hellip;</p>
 </main>
 
+<script src="../shared/auth.js"></script>
 <script>
 "use strict";
 
@@ -116,25 +117,25 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-function landlordsSection(landlords) {
+function managersSection(managers) {
   const table = el("table");
   table.append(
     el("thead", {}, el("tr", {},
-      el("th", { text: "ID" }), el("th", { text: "Company" }),
+      el("th", { text: "ID" }), el("th", { text: "Manager" }),
       el("th", { text: "Signer" }), el("th", { text: "Email" })))
   );
   const body = el("tbody");
-  for (const l of landlords) {
+  for (const manager of managers) {
     body.append(el("tr", {},
-      el("td", { text: l.id }), el("td", { text: l.company }),
-      el("td", { text: l.signer_name }), el("td", { text: l.email })));
+      el("td", { text: manager.id }), el("td", { text: manager.name }),
+      el("td", { text: manager.signer_name }), el("td", { text: manager.email })));
   }
   table.append(body);
   return section("Lessors", "Who a lease can be issued under.", table);
 }
 
-function usersSection(users, landlords) {
-  const byId = Object.fromEntries(landlords.map((l) => [l.id, l.company]));
+function usersSection(users, managers) {
+  const byId = Object.fromEntries(managers.map((c) => [c.id, c.name]));
   const table = el("table");
   table.append(
     el("thead", {}, el("tr", {},
@@ -143,7 +144,7 @@ function usersSection(users, landlords) {
   );
   const body = el("tbody");
   for (const u of users) {
-    const scope = u.role === "admin" ? "All landlords" : (byId[u.landlord_id] || u.landlord_id || "—");
+    const scope = u.role === "admin" ? "All managers" : (byId[u.manager_id] || u.manager_id || "—");
     body.append(el("tr", {},
       el("td", { text: u.username }), el("td", { text: u.role }),
       el("td", { text: scope })));
@@ -191,19 +192,42 @@ async function boot() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const info = await response.json();
     app.replaceChildren(
-      landlordsSection(info.landlords),
-      usersSection(info.users, info.landlords),
+      managersSection(info.managers),
+      usersSection(info.users, info.managers),
       backendsSection(info.backends),
       linksSection(info.links)
     );
   } catch (error) {
-    app.replaceChildren(el("p", { class: "empty", text: `Could not load: ${error.message}` }));
+    // No backend answered, which is the normal case on GitHub Pages: this
+    // page's contents come from the FastAPI app's /api/admin/info. Fall back
+    // to asking Supabase who is signed in, so an admin at least gets told
+    // why the page is empty and everyone else gets turned away.
+    await explainWithoutBackend(app);
   }
+}
+
+async function explainWithoutBackend(app) {
+  const auth = window.LGD.auth;
+  if (!auth.configured) {
+    app.replaceChildren(el("p", { class: "empty", text:
+      "This site is not connected to its login service yet." }));
+    return;
+  }
+  const result = await auth.requireRole(["admin"]);
+  if (result.reason === "signed-out") return;  // already heading to the login page
+  if (!result.ok) {
+    app.replaceChildren(el("p", { class: "empty", text: "Admins only." }));
+    return;
+  }
+  app.replaceChildren(el("p", { class: "empty", text:
+    "Signed in as an admin. This page reads from the app's own API, which is " +
+    "not running here - start it locally to see managers, users and storage " +
+    "backends." }));
 }
 
 boot();
 </script>
-<script src="../manager/account.js"></script>
+<script src="../shared/account.js"></script>
 <script src="../shared/footer.js"></script>
 </body>
 </html>

@@ -74,15 +74,15 @@ def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None
 
 
 def test_print_route_serves_the_blank_lease(client) -> None:
-    """The manager page links to ../print/lease_print.html so that one
+    """The manager page links to ../documents/print/lease_print.html so that one
     href works both here and on GitHub Pages, which has no /api/."""
-    response = client.get("/print/lease_print.html")
+    response = client.get("/documents/print/lease_print.html")
     assert response.status_code == 200
     assert "PARKING" in response.text
 
 
 def test_print_route_requires_a_login(client) -> None:
-    assert client.get("/print/lease_print.html", auth=None).status_code == 401
+    assert client.get("/documents/print/lease_print.html", auth=None).status_code == 401
 
 
 def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
@@ -101,14 +101,13 @@ def test_applicant_page_is_public_with_no_login(client) -> None:
     response = client.get("/applicant/", auth=None)
     assert response.status_code == 200
     assert "Rental application" in response.text
-    assert "Your notices" not in response.text
 
 
 def test_tenant_page_no_longer_has_the_application_form(client) -> None:
     response = client.get("/resident/", auth=None)
     assert response.status_code == 200
     assert "Rental application" not in response.text
-    assert "Your notices" in response.text
+    assert "Contact" in response.text
 
 
 @pytest.mark.parametrize("asset", ["..%2f.env", "..%2fapp%2fconfig.py", "nope.html"])
@@ -120,10 +119,10 @@ def test_dashboard_will_not_serve_files_outside_its_directory(client, asset) -> 
 # Config and role scoping
 # ---------------------------------------------------------------------------
 
-def test_admin_sees_both_landlords(client) -> None:
+def test_admin_sees_both_managers(client) -> None:
     body = client.get("/api/config", auth=ADMIN).json()
     assert body["user"]["is_admin"] is True
-    assert body["landlords"] == [
+    assert body["managers"] == [
         {"id": "lgd", "name": "LGD Properties"},
         {"id": "robertson", "name": "Jamie Reyes Properties"},
     ]
@@ -136,10 +135,10 @@ def test_admin_sees_both_landlords(client) -> None:
         (GAY, {"id": "robertson", "name": "Jamie Reyes Properties"}),
     ],
 )
-def test_a_landlord_sees_only_their_own(client, credentials, expected) -> None:
+def test_a_manager_sees_only_their_own(client, credentials, expected) -> None:
     body = client.get("/api/config", auth=credentials).json()
     assert body["user"]["is_admin"] is False
-    assert body["landlords"] == [expected]
+    assert body["managers"] == [expected]
 
 
 def test_config_never_leaks_email_addresses(client) -> None:
@@ -152,15 +151,15 @@ def test_config_never_leaks_email_addresses(client) -> None:
 # Admin reference page
 # ---------------------------------------------------------------------------
 
-def test_admin_info_is_refused_to_a_landlord_user(client) -> None:
+def test_admin_info_is_refused_to_a_manager_user(client) -> None:
     for credentials in (STEVE, GAY):
         assert client.get("/api/admin/info", auth=credentials).status_code == 404
 
 
-def test_admin_page_itself_still_loads_for_a_landlord(client) -> None:
+def test_admin_page_itself_still_loads_for_a_manager(client) -> None:
     """The static page is reachable (so the footer link works everywhere),
     even though its data (/api/admin/info, checked above) is admin-only -
-    the page's own JS shows "Admins only." for a landlord who lands there."""
+    the page's own JS shows "Admins only." for a manager who lands there."""
     response = client.get("/admin/", auth=STEVE)
     assert response.status_code == 200
     assert "Admin reference" in response.text
@@ -174,9 +173,9 @@ def test_admin_info_requires_authentication(client) -> None:
     assert client.get("/api/admin/info", auth=None).status_code == 401
 
 
-def test_admin_info_lists_landlords_and_users(client) -> None:
+def test_admin_info_lists_managers_and_users(client) -> None:
     body = client.get("/api/admin/info", auth=ADMIN).json()
-    assert {l["id"] for l in body["landlords"]} == {"lgd", "robertson"}
+    assert {l["id"] for l in body["managers"]} == {"lgd", "robertson"}
     assert {u["username"] for u in body["users"]} == {"kevin", "steve", "gay", "tenant1"}
 
 
@@ -247,17 +246,17 @@ def test_blank_lease_requires_authentication(client) -> None:
 
 
 def test_blank_lease_serves_the_generated_print_html(client) -> None:
-    """print/lease_print.html is a real, already-generated file in this
-    repo; any signed-in user (landlord or admin) can fetch it."""
+    """documents/print/lease_print.html is a real, already-generated file in this
+    repo; any signed-in user (manager or admin) can fetch it."""
     response = client.get("/api/blank-lease", auth=ADMIN)
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert "RESIDENTIAL LEASE" in response.text
 
 
-def test_blank_lease_is_available_to_a_landlord_user_too(client) -> None:
-    """Not landlord-scoped - it's the same blank template
-    for everyone, no tenant or landlord data in it."""
+def test_blank_lease_is_available_to_a_manager_user_too(client) -> None:
+    """Not manager-scoped - it's the same blank template
+    for everyone, no tenant or manager data in it."""
     assert client.get("/api/blank-lease", auth=STEVE).status_code == 200
 
 

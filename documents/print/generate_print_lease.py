@@ -9,7 +9,7 @@ Blanks stay as literal blank lines and the signature lines stay as real
 underscore lines: this is meant to be filled in and signed by hand.
 
 Usage:
-    python print/generate_print_lease.py
+    python documents/print/generate_print_lease.py
 
 No third-party dependencies: the output is one HTML file with its CSS
 inline, so it prints correctly offline, from any browser, on any machine -
@@ -22,9 +22,9 @@ import re
 from pathlib import Path
 from typing import Iterator
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SOURCE = REPO_ROOT / "documents" / "lease.md"
-OUTPUT = REPO_ROOT / "print" / "lease_print.html"
+OUTPUT = REPO_ROOT / "documents" / "print" / "lease_print.html"
 
 # A blank line in lease.md is not reliably a real paragraph break (the scanned
 # document's page cuts sometimes fall mid-sentence), so a block that doesn't
@@ -34,8 +34,8 @@ STARTS_NEW_SECTION = re.compile(r"^\d+\.\s*\*\*")
 BLANK = re.compile(r"_{2,}")
 
 # The company name heads the printed lease. This was a blank line for a
-# while, so one form could be shared across every landlord in accounts.json -
-# printing a name here means this lease is LGD's, and another landlord would
+# while, so one form could be shared across every manager in accounts.json -
+# printing a name here means this lease is LGD's, and another manager would
 # need their own copy.
 
 HTML_HEAD = """<!doctype html>
@@ -91,7 +91,7 @@ HTML_HEAD = """<!doctype html>
     font-size: 13pt;
     font-weight: bold;
     letter-spacing: 0.03em;
-    margin: 0 0 0.15in;
+    margin: 0 0 0.04in;
   }
   p.subtitle {
     text-align: center;
@@ -190,7 +190,7 @@ HTML_HEAD = """<!doctype html>
 HTML_FOOTER = """
 <div class="footer-note">
   This is a blank lease generated from <code>documents/lease.md</code> by
-  <code>print/generate_print_lease.py</code> for printing and hand-filling on
+  <code>documents/print/generate_print_lease.py</code> for printing and hand-filling on
   paper. It will not appear on a printed copy (hidden in print styles).
   Regenerate after editing <code>documents/lease.md</code>. The "Page X of Y"
   line at the top and bottom of each page is a CSS page-number counter: it
@@ -202,7 +202,7 @@ HTML_FOOTER = """
 <script>
   // Opening this page (from the dashboard's "Print blank lease" button) is
   // the whole point of the page, so bring up the browser's print dialog
-  // automatically rather than making the landlord find Ctrl+P themselves.
+  // automatically rather than making the manager find Ctrl+P themselves.
   // The small delay lets layout settle first so the print preview is right.
   window.addEventListener("load", () => setTimeout(() => window.print(), 150));
 

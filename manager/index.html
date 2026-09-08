@@ -153,37 +153,35 @@
     display: block; margin: 0 0 12px;
     color: var(--muted); font-size: 13px; font-weight: normal;
   }
-  .gate input {
-    width: 100%;
-    padding: 9px 10px;
-    margin-bottom: 12px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    font: inherit;
-  }
-  .gate button {
+  .gate .msg { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  .gate .msg.error { color: var(--danger); }
+  .gate .gate-button {
+    display: block;
     font: inherit;
     width: 100%;
+    margin-top: 8px;
     border-radius: 6px;
     border: 1px solid var(--accent);
     background: var(--accent);
     color: var(--accent-ink);
     padding: 9px 16px;
     cursor: pointer;
+    text-decoration: none;
     text-transform: uppercase;
     letter-spacing: .03em;
   }
-  .gate .msg { margin: 10px 0 0; color: var(--danger); font-size: 13px; }
+  .gate .gate-button.secondary { background: transparent; color: var(--accent); }
 </style>
 </head>
 <body>
-<form class="gate" id="gate">
+<div class="gate" id="gate">
   <h1>Manager Dashboard</h1>
-  <label for="gate-password">Enter the manager password.</label>
-  <input type="password" id="gate-password" autocomplete="current-password" required>
-  <button type="submit">Continue</button>
-  <p class="msg" id="gate-msg" hidden>That password is not right.</p>
-</form>
+  <p class="msg" id="gate-msg">Checking your access&hellip;</p>
+  <a class="gate-button" id="gate-login" href="../login/" hidden>Sign in</a>
+  <button type="button" class="gate-button secondary" id="gate-signout" hidden>
+    Sign out
+  </button>
+</div>
 
 <header hidden>
   <div>
@@ -218,7 +216,7 @@
     </p>
     <div class="actions">
       <a class="button-link secondary" id="print-lease-link"
-         href="../print/lease_print.html" target="_blank" rel="noopener">Print paper lease</a>
+         href="../documents/print/lease_print.html" target="_blank" rel="noopener">Print paper lease</a>
     </div>
   </section>
 
@@ -233,12 +231,8 @@
       so an attorney reviewing one later can get back to the primary source.
     </p>
     <div class="actions">
-      <!-- GitHub's rendered view rather than the file next to this page:
-           a .md is served as text/markdown, which browsers download instead
-           of displaying. This renders properly from either host. -->
       <a class="button-link secondary" id="legal-research-link"
-         href="https://github.com/KevinKolb/LGD/blob/main/manager/LEGAL_RESEARCH.md"
-         target="_blank" rel="noopener">Read the research log</a>
+         href="legal_research.html" target="_blank" rel="noopener">Read the research log</a>
     </div>
   </section>
 
@@ -259,99 +253,99 @@
   </section>
 </main>
 
+<script src="../shared/auth.js"></script>
 <script>
 "use strict";
 
-// --- Password gate -------------------------------------------------------
+// --- Who may see this page ------------------------------------------------
 //
-// A DETERRENT, NOT SECURITY. On GitHub Pages these files are static and
-// public, so this only stops someone who types the URL - not anyone who
-// views source, turns off JavaScript, or reads the repo, which is public.
-// The one real gate is the backend's HTTP Basic auth on /manager/, which
-// admits only manager and admin logins; when this page is served from
-// there, /api/config succeeds and the gate opens on its own.
+// A real login now, not the shared password this page used to ask for. That
+// old gate was a deterrent and nothing more: these files are static and
+// public on GitHub Pages, so viewing source or turning off JavaScript walked
+// straight past it. This asks Supabase who you are, and the manager sections
+// only render for a manager or an admin.
 //
-// The password is stored as a SHA-256 hash so it is not sitting in the
-// source in plain text. That is not much protection either - a short or
-// guessable phrase falls to an offline dictionary attack in seconds - so
-// use a throwaway word here, never one reused anywhere else. To change it:
-//   python -c "import hashlib;print(hashlib.sha256(b'NEW-PHRASE').hexdigest())"
-const GATE_HASH = "f9a866efd07e8f328940a7ce89b8d94711862d27dedd83ce6b081ae9bee5c178";
-const GATE_KEY = "lgd-manager-unlocked";
+// It is still the browser deciding what to show, which on its own would be
+// no better - the real enforcement is in the database. Row level security
+// means a signed-in applicant fetching this page's data gets nothing back,
+// whatever their browser chose to display. See
+// supabase/migrations/001_auth_people_rls.sql.
+const ALLOWED_ROLES = ["manager", "admin"];
 
-function unlock() {
+function unlock(greeting) {
   document.getElementById("gate").hidden = true;
   document.querySelector("header").hidden = false;
   document.querySelector("main").hidden = false;
+  if (greeting) document.getElementById("whoami").textContent = greeting;
 }
 
-async function sha256Hex(text) {
-  const bytes = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+function refuse(text, { offerSignIn = false, offerSignOut = false } = {}) {
+  const message = document.getElementById("gate-msg");
+  message.textContent = text;
+  message.className = "msg error";
+  document.getElementById("gate-login").hidden = !offerSignIn;
+  document.getElementById("gate-signout").hidden = !offerSignOut;
 }
 
-(function () {
-  // Session-scoped, so closing the browser re-locks.
-  try {
-    if (sessionStorage.getItem(GATE_KEY) === "1") unlock();
-  } catch (error) {
-    /* sessionStorage unavailable - just ask for the password. */
-  }
+document.getElementById("gate-signout").addEventListener("click", async () => {
+  await window.LGD.auth.signOut();
+  window.location.reload();
+});
 
-  document.getElementById("gate").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const input = document.getElementById("gate-password");
-    const message = document.getElementById("gate-msg");
-    let entered;
-    try {
-      entered = await sha256Hex(input.value);
-    } catch (error) {
-      // crypto.subtle needs a secure context (https or localhost).
-      message.textContent = "This page must be opened over https to unlock.";
-      message.hidden = false;
-      return;
-    }
-    if (entered !== GATE_HASH) {
-      message.textContent = "That password is not right.";
-      message.hidden = false;
-      input.select();
-      return;
-    }
-    try {
-      sessionStorage.setItem(GATE_KEY, "1");
-    } catch (error) {
-      /* Not remembering it is fine; the page still unlocks now. */
-    }
-    unlock();
-  });
-})();
-
-
-// Greets whoever is logged in, and opens the gate above without asking for
-// the password again: reaching /api/config at all means the backend already
-// checked a real manager or admin login. On GitHub Pages there is no
-// backend, this fails, and the password gate stands. Everything else this
-// page used to do lives in manager/working.html.
 (async function () {
+  // Served by the FastAPI app rather than GitHub Pages? Then HTTP Basic has
+  // already checked a manager or admin login before this file was handed
+  // over, and /api/config says who it was.
   try {
     const response = await fetch("/api/config");
-    if (!response.ok) return;
-    const config = await response.json();
-    unlock();
-    const firstName =
-      (config.user.display_name || config.user.username || "").split(" ")[0];
-    document.getElementById("whoami").textContent = config.user.is_admin
-      ? `Welcome, ${firstName} (admin)`
-      : `Welcome, ${firstName}`;
+    if (response.ok) {
+      const config = await response.json();
+      const firstName =
+        (config.user.display_name || config.user.username || "").split(" ")[0];
+      unlock(config.user.is_admin ? `Welcome, ${firstName} (admin)` : `Welcome, ${firstName}`);
+      return;
+    }
   } catch (error) {
-    /* Leave the default greeting in place. */
+    /* No backend here - the normal case on GitHub Pages. Fall through. */
   }
+
+  const auth = window.LGD.auth;
+  if (!auth.configured) {
+    refuse(
+      "This site is not connected to its login service yet, so there is no " +
+        "way to check who you are. (The publishable key in shared/auth.js is " +
+        "still a placeholder.)"
+    );
+    return;
+  }
+
+  const result = await auth.requireRole(ALLOWED_ROLES);
+  if (result.ok) {
+    const firstName = (result.profile.display_name || "").split(" ")[0];
+    unlock(
+      result.profile.role === "admin"
+        ? `Welcome, ${firstName} (admin)`
+        : `Welcome, ${firstName}`
+    );
+    return;
+  }
+  if (result.reason === "signed-out") return;  // already heading to the login page
+  if (result.reason === "unconfirmed") {
+    refuse(
+      "Your account is not confirmed yet. Click the link in the email we " +
+        "sent, then come back.",
+      { offerSignOut: true }
+    );
+    return;
+  }
+  refuse(
+    `Signed in as ${result.profile.display_name} (${result.profile.role}). ` +
+      "This area is for managers.",
+    { offerSignOut: true }
+  );
 })();
 </script>
-<script src="account.js"></script>
+<script src="../shared/account.js"></script>
 <script src="../shared/footer.js"></script>
 </body>
 </html>

@@ -20,13 +20,13 @@ text itself.
 
 The multi-company scaffolding that already exists should **not** be torn out to
 simplify 1.0: `accounts.json` (and its Postgres equivalent) already hold a
-`landlords` table with two companies, every record table carries a
-`landlord_id`, and the API already scopes a manager to their own company
+`managers` table with two companies, every record table carries a
+`manager_id`, and the API already scopes a manager to their own company
 server-side. That is the spine 2.0 grows from.
 
 ## The lease text lives in two files
 
-- [`originals/lease_transcript_verbatim.md`](originals/lease_transcript_verbatim.md)
+- [`documents/originals/lease_transcript_verbatim.md`](documents/originals/lease_transcript_verbatim.md)
   — a character-for-character transcript of the original scanned paper lease.
   Historical record. **Never edit this file.**
 - [`documents/lease.md`](documents/lease.md) — the live, editable master. Started
@@ -35,13 +35,14 @@ server-side. That is the spine 2.0 grows from.
   of its own, so a human can open and edit it as a clean document — all of that
   lives here instead.
 
-The two folders mean different things, and the split is the point:
-`originals/` is frozen source material — scans and their verbatim
-transcripts, never edited (it also holds the scanned paper application and
-its transcript). `documents/` holds the live masters that are edited and
-that the generators derive from. `lease.md` sat in `originals/` for a
-while, which invited exactly the wrong instinct about a file that is meant
-to be edited.
+Everything document-related now sits under `documents/`, and the split
+inside it is the point: `documents/originals/` is frozen source material —
+scans and their verbatim transcripts, never edited (it also holds the
+scanned paper application and its transcript); `documents/print/` holds a
+generator and its generated output; and `documents/` itself holds the live
+masters that are edited and that the generators derive from. `lease.md` sat
+in `originals/` for a while, which invited exactly the wrong instinct about
+a file that is meant to be edited.
 
 Numbering in the lease originally ran 1–19 continuously across its six pages, with no
 section 20 — that was the original scanned document's own numbering, nothing was
@@ -50,16 +51,16 @@ renumbered everything from old §6 onward up by one; the lease now runs 1–20.
 
 ## A blank, printable paper lease
 
-[`print/generate_print_lease.py`](print/generate_print_lease.py) derives a
+[`documents/print/generate_print_lease.py`](documents/print/generate_print_lease.py) derives a
 self-contained HTML file from `documents/lease.md`, meant to be opened in any
 browser and printed (Ctrl+P / Cmd+P) as a blank paper lease. Regenerate with:
 
-    python print/generate_print_lease.py
+    python documents/print/generate_print_lease.py
 
 Blanks stay as literal fill-in lines and the four signature lines stay as real
 underscore lines, since this is meant to be filled in and signed by hand. The document title's
-company branding is a blank line, not "LGD" or any other landlord's name, since the
-same print lease is shared across every landlord in `accounts.json` — see
+company branding is a blank line, not "LGD" or any other manager's name, since the
+same print lease is shared across every manager in `accounts.json` — see
 `tests/test_generate_print_lease.py` for what it locks in, including two real bugs
 found while building it (signature lines merging into one unreadable blob for the
 the same underlying paragraph-merge cause, and a
@@ -104,49 +105,150 @@ Eight were reviewed and corrected by the user on 2026-09-06, in both
 | §19 | "a waiver of relinquishment" | "a waiver or relinquishment" |
 | §19 (multi-tenant) | "jointly and solidarity liable" | "jointly and solidarily liable" |
 
-`originals/lease_transcript_verbatim.md` still preserves the pre-correction wording,
+`documents/originals/lease_transcript_verbatim.md` still preserves the pre-correction wording,
 untouched, as it always will.
 
 If another apparent typo turns up later, flag it and ask — don't fix it silently.
 
-## `people` and `users` are two different tables, and not yet connected
+## `people` and `webusers`, and who checks a password
 
 `people` (in `app/db.py`'s schema) is the directory of everyone the system
-knows about — residents, managers, admins and applicants alike, one row each,
+knows about - residents, managers, admins and applicants alike, one row each,
 with an optional `property_id` because only a resident actually lives
-somewhere. It has no read/write code yet; it is schema only.
+somewhere, and an optional `manager_id` for the company they belong to.
 
-`users` (in `app/accounts.py`, and mirrored in `accounts.json` locally) is the
-**login** table: username, password hash, role, landlord_id. This is what HTTP
-Basic auth actually checks, and in production it holds live credentials.
+`webusers` (in `app/accounts.py`, mirrored in `accounts.json` locally) is the
+**login** table, and it is a subset: `webusers.person_id` points at the person a
+login belongs to, NOT NULL, so **every login has exactly one person**. The
+reverse is deliberately not true and never will be - an applicant who filled
+in the form, or a resident who has never signed in, is a person with no login.
+That was the open question this file used to record; it is settled now, in
+favour of `people` being the superset.
 
-The intent is for `people` to eventually cover logins for all four roles, which
-means these two tables describe overlapping humans with no link between them.
-**Nothing reconciles them today.** Before wiring anything up, decide which one
-owns identity — most likely `people.id` becoming the key and `users` shrinking
-to just credentials pointing at it — and treat it as a real migration: the live
-`users` table holds real password hashes, and changing how it is read is what
-took startup down on 2026-09-07 (see the `users.email` note in `app/config.py`).
+The rule is enforced in the database rather than in code, because there is
+more than one way to create a login: a website signup, `python -m
+app.accounts`, or somebody typing an INSERT into the Supabase SQL editor. A
+BEFORE INSERT trigger on `webusers` creates the person row when one is not
+supplied, so all three paths obey it. Locally, where `webusers` lives in a JSON
+file that no trigger can watch, `python -m app.accounts link-people` does the
+same job and is safe to re-run.
+
+**Two different things can check a password, and either is enough:**
+
+- **Supabase Auth** (`webusers.auth_id` -> `auth.users`) is what the live
+  website uses. `login/index.html` and `shared/auth.js` talk to it straight
+  from the browser, which is the only kind of login that can work at all on
+  GitHub Pages, where there is no server. Supabase holds that password; this
+  app never sees it.
+- **`webusers.password_hash`** (PBKDF2, `app/auth.py`) is what this app's HTTP
+  Basic auth checks. That path is not what the live site uses.
+
+So `app/config.py` requires *one* of the two, never both: a row created by a
+website signup has an `auth_id` and an empty hash, and one created by the CLI
+has the reverse. Requiring both would lock out whichever was made first. An
+empty hash must never authenticate - `app/main.py` verifies against a decoy
+hash in that case, so it fails exactly like a wrong password, in the same time.
+
+### Public signups create the `applicant` role
+
+Anyone can create an account from the website. They land as `applicant`: a
+real login that can see its own row and nothing else, until an admin promotes
+them. Two consequences worth keeping in mind:
+
+- `app/config.py` **must accept** `applicant` as a valid role. A role the
+  loader rejects is a role that fails startup for every user at once, the
+  moment one stranger signs up - the same shape of outage as the `users.email`
+  incident below.
+- Anything that gates the dashboard has to be an **allow-list** of roles, not
+  "anyone who is not a resident". `require_dashboard_role` in `app/main.py` is
+  that allow-list. The old exclusion phrasing would have admitted every new
+  signup the day this shipped; `tests/test_auth_links.py` locks it down.
+
+### Row level security is the real gate
+
+The browser holds a Supabase **publishable** key (in `shared/auth.js`) - it is
+meant to be public, and carries no privileges of its own. What actually
+protects the data is row level security, in
+`supabase/migrations/001_auth_people_rls.sql`: every table denies the
+anon/authenticated roles by default, and exactly three things are granted
+back - read your own `webusers` row, read your own `people` row, edit your own
+name and phone. No browser policy can change a `role` or a `manager_id`.
+
+**A new table in `app/db.py` is a data leak until it is added to that
+migration's RLS list.** `tests/test_auth_links.py` compares the two and fails
+if a table is missing, so that mistake surfaces immediately rather than after
+someone reads `applications` - which holds every applicant's name, email and
+phone number.
+
+The app's own connection is unaffected by any of this: it connects as
+`postgres`, which has BYPASSRLS, so `app/db.py` and `app/config.py` read and
+write exactly as before.
+
+The `sb_secret_...` key in `.env` is the opposite of the publishable one - it
+bypasses RLS entirely. It must never appear in a file a browser downloads;
+there is a test for that too.
+
+### Applying a migration
+
+    python supabase/apply_migrations.py            # apply, then report
+    python supabase/apply_migrations.py --report   # report only
+
+Every file in `supabase/migrations/` is written to be idempotent, so
+re-running the set is the normal way to bring a drifted database back into
+line. Before applying anything to the live project, run it inside a
+transaction and roll back - that is how the trigger and all fifteen RLS rules
+in 001 were checked against real data without committing a thing.
 
 Role vocabulary was settled on 2026-09-08: the roles are `admin` / `manager` /
-`resident` everywhere — `ROLE_*` in `app/config.py`, the strings stored in
-`users.role`, and `people.role`. The old `landlord` / `tenant` values are mapped
-forward by `normalize_role()` on every load, in both the JSON and Postgres
-paths, and `preload_accounts_from_postgres` also rewrites them in place. **Keep
-that mapping.** It is not redundant with the UPDATE: the only authentication
-this app has is these rows, so a database still holding the old strings — a
-migration that has not run yet, a restored backup — must still log people in
-rather than reject every user at once.
+`resident` / `applicant` everywhere - `ROLE_*` in `app/config.py`, the strings
+stored in `webusers.role`, and `people.role`. The old `landlord` / `tenant` values
+are mapped forward by `normalize_role()` on every load, in both the JSON and
+Postgres paths, and `preload_accounts_from_postgres` also rewrites them in
+place. **Keep that mapping.** It is not redundant with the UPDATE: a database
+still holding the old strings - a migration that has not run yet, a restored
+backup - must still log people in rather than reject every user at once.
+
+On 2026-09-08 the last of it went too: `landlords` became `managers`, every
+`landlord_id` became `manager_id`, and that table's `company` column became
+`name`. `users` became `webusers` in the same pass - Supabase already has a
+`users` table (`auth.users`, where GoTrue keeps identities), and this one is
+joined to it, so two tables one schema apart sharing a name was a trap.
+
+Note the collision this leaves, deliberately: `manager` is both a role a
+person holds (`webusers.role = 'manager'`) and the name of the table of
+management companies, so a row reads `role='manager'`, `manager_id='lgd'`.
+The first is a job, the second is a company. Flagged when the rename was
+requested and accepted as-is.
 
 Deliberately *not* renamed, so that names still match what they describe:
 
-- The `landlords` table, the `landlord_id` columns, and the `Landlord`
-  dataclass. Landlord here is the company a lease is issued under, not the role
-  a person holds, and the dataclass maps one-to-one onto the table row.
-- `Lessor` / `Lessee` and `lessor_name` / `lessor_id` — the legal parties named
+- `Lessor` / `Lessee` and `lessor_name` / `lessor_id` - the legal parties named
   in the executed lease and in Louisiana law.
-- `notices.tenant_username` and `leases.tenants_json`, which are column names;
-  the API fields are kept aligned with the columns they write to.
+- The Python type is still `User`, not `WebUser`. The rename existed to
+  disambiguate from `auth.users`, which has no equivalent in Python.
+
+### Old names in code are data, not vocabulary
+
+Several strings look like the words being renamed but are values sitting in
+databases and files that already exist. A find-and-replace over them is a
+silent breakage, and this happened **five times** during the 2026-09-08
+rename before the tests caught each one:
+
+- `LEGACY_ROLES = {"landlord": ..., "tenant": ...}` in `app/config.py` - the
+  role strings a pre-rename database still stores.
+- `SUPERSEDED_TABLES`' guard columns in `app/db.py` (`("properties",
+  "landlord")`) - the column name that identifies the *old* table shape.
+- `OLD_SCHEMA` in `tests/test_db_schema.py`, for the same reason.
+- `migrate_keys` in `app/accounts.py` and the fallbacks in
+  `_load_accounts` - they read `"landlords"`, `"users"`, `"company"` and
+  `"landlord_id"` out of an `accounts.json` written before the rename. That
+  file is gitignored and holds real password hashes, so it cannot be migrated
+  by editing anything committed.
+- The `column_name = 'company'` guard in the migration, which finds the
+  column as it actually exists in the live database.
+
+`tests/test_config.py::test_an_accounts_file_written_before_the_renames_still_loads`
+is the regression guard.
 
 ## Two storage backends, one call site each
 
@@ -204,6 +306,21 @@ read in full versus only seen via a search tool's summary. Append to it, don't
 replace it, whenever a clause decision draws on outside research — it's meant to
 survive as a reference trail, including for potential litigation.
 
+The manager page links to it as step 3a, and it is read there as an ordinary
+page on this site — not as a raw file on a code host, which is what the link
+used to do. [`manager/legal_research.html`](manager/legal_research.html) is a
+**generated file** — never hand-edit it. Regenerate it after every append to
+the log:
+
+    python manager/generate_legal_research.py
+
+The converter handles only the constructs the log actually uses and raises on
+anything else (a table, a fenced code block, a blockquote) rather than dropping
+it silently — so if a regeneration fails, add the construct there deliberately.
+See `tests/test_generate_legal_research.py`, including the one real bug it
+guards: the log puts a blank line between numbered sources, and treating that
+as the end of the list restarted every entry at "1.".
+
 ## Clause changes changelog
 
 **Entries before 2026-09-08 mention `pandadoc/lease_template_body.md`, which no
@@ -256,7 +373,7 @@ for the research behind any entry that cites outside sources.
   (ADDITIONS OR ALTERATIONS). Also added a checkbox to the section: "[ ]
   Parking not available at this address." - checking it crosses out the
   entire clause. Applied identically to `documents/lease.md`,
-  `pandadoc/lease_template_body.md`, and `print/lease_print.html` - see
+  `pandadoc/lease_template_body.md`, and `documents/print/lease_print.html` - see
   "A blank, printable paper lease" and "Keeping the PandaDoc template body
   in sync" above for how the checkbox and its strikethrough behavior
   actually work in each (a real HTML checkbox + CSS for print; a single
@@ -269,7 +386,7 @@ for the research behind any entry that cites outside sources.
   limited to..." - with whichever one isn't chosen struck through, rather
   than only ever striking the "limited" sentence when the single checkbox
   was checked. Applied identically to `documents/lease.md`,
-  `pandadoc/lease_template_body.md`, and `print/lease_print.html` - see
+  `pandadoc/lease_template_body.md`, and `documents/print/lease_print.html` - see
   "A blank, printable paper lease" and "Keeping the PandaDoc template body
   in sync" above for the updated mechanics in each.
 

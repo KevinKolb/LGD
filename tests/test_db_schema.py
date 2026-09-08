@@ -14,6 +14,10 @@ from app import db
 
 pytestmark = pytest.mark.anyio
 
+# The pre-migration shapes, spelled exactly as they exist in databases
+# created back then. These names are data, not identifiers: renaming them to
+# match today's vocabulary would stop db.SUPERSEDED_TABLES recognising the
+# very tables it exists to clean up.
 OLD_SCHEMA = """
 CREATE TABLE properties (address TEXT PRIMARY KEY, landlord TEXT NOT NULL);
 CREATE TABLE tenants (
@@ -50,10 +54,11 @@ async def test_init_creates_properties_and_people(db_path) -> None:
     await db.init(db_path)
 
     assert columns(db_path, "properties") == [
-        "id", "landlord_id", "address", "apt", "city", "state", "created_at",
+        "id", "manager_id", "address", "apt", "city", "state", "created_at",
     ]
     assert columns(db_path, "people") == [
-        "id", "role", "full_name", "email", "phone", "property_id", "created_at",
+        "id", "role", "full_name", "email", "phone", "property_id",
+        "manager_id", "created_at",
     ]
 
 
@@ -62,7 +67,7 @@ async def test_a_person_links_to_their_property(db_path) -> None:
     connection = sqlite3.connect(db_path)
     try:
         connection.execute(
-            "INSERT INTO properties (id, landlord_id, address, apt, created_at) "
+            "INSERT INTO properties (id, manager_id, address, apt, created_at) "
             "VALUES ('p1', 'lgd', '1556 Camp Street', 'B', '2026-09-07')"
         )
         connection.execute(
@@ -76,7 +81,7 @@ async def test_a_person_links_to_their_property(db_path) -> None:
     finally:
         connection.close()
 
-    # city/state default to the only place this landlord operates.
+    # city/state default to the only place this manager operates.
     assert row == ("Jane Doe", "1556 Camp Street", "B", "New Orleans", "LA")
 
 
@@ -131,8 +136,8 @@ async def test_init_replaces_the_old_shaped_tables(db_path) -> None:
 
     await db.init(db_path)
 
-    assert "landlord_id" in columns(db_path, "properties")
-    assert "landlord" not in columns(db_path, "properties")
+    assert "manager_id" in columns(db_path, "properties")
+    assert "manager" not in columns(db_path, "properties")
     assert columns(db_path, "tenants") == []     # superseded by people
     assert columns(db_path, "residents") == []   # renamed to people
     assert "role" in columns(db_path, "people")
@@ -149,7 +154,7 @@ async def test_the_migration_is_idempotent(db_path) -> None:
     await db.init(db_path)
     await db.init(db_path)
 
-    assert "landlord_id" in columns(db_path, "properties")
+    assert "manager_id" in columns(db_path, "properties")
     assert "property_id" in columns(db_path, "people")
 
 
@@ -157,7 +162,7 @@ async def test_the_migration_leaves_a_populated_new_table_alone(db_path) -> None
     await db.init(db_path)
     connection = sqlite3.connect(db_path)
     connection.execute(
-        "INSERT INTO properties (id, landlord_id, address, created_at) "
+        "INSERT INTO properties (id, manager_id, address, created_at) "
         "VALUES ('p1', 'lgd', '1556 Camp Street', '2026-09-07')"
     )
     connection.commit()

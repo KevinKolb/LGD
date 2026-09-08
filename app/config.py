@@ -1,8 +1,8 @@
 """Configuration: storage paths from the environment, people from a file
 or from Postgres.
 
-Landlords and user logins live in `accounts.json` by default - gitignored,
-same as `.env` - or in a Postgres `landlords`/`users` table when
+Managers and user logins live in `accounts.json` by default - gitignored,
+same as `.env` - or in a Postgres `managers`/`webusers` table when
 `DATABASE_URL` is set (see
 `preload_accounts_from_postgres`). Postgres exists for Render's free tier:
 local files there get wiped on every restart, so a login can't live on local
@@ -25,9 +25,20 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ROLE_ADMIN = "admin"
 ROLE_MANAGER = "manager"
 ROLE_RESIDENT = "resident"
-VALID_ROLES = {ROLE_ADMIN, ROLE_MANAGER, ROLE_RESIDENT}
-# Roles tied to one specific landlord, as opposed to the admin role, which
-# is not. Both need a landlord_id and are checked the same way when loading
+# What a public Supabase Auth signup becomes: a real login that can see its
+# own details and nothing else, until someone with authority changes it.
+# This role has to be *accepted* here even though nothing in this app grants
+# it anything - a role the loader rejects is a role that fails startup for
+# every user at once, the moment one stranger signs up on the website.
+ROLE_APPLICANT = "applicant"
+VALID_ROLES = {ROLE_ADMIN, ROLE_MANAGER, ROLE_RESIDENT, ROLE_APPLICANT}
+# The two roles the manager dashboard and its API are for. Written as an
+# allow-list rather than "not a resident": with `applicant` now arriving from
+# public signups, anything phrased as an exclusion silently admits every new
+# role somebody adds later.
+DASHBOARD_ROLES = {ROLE_ADMIN, ROLE_MANAGER}
+# Roles tied to one specific manager, as opposed to the admin role, which
+# is not. Both need a manager_id and are checked the same way when loading
 # accounts - see _load_accounts and _validate_accounts below.
 MANAGER_SCOPED_ROLES = {ROLE_MANAGER, ROLE_RESIDENT}
 
@@ -50,31 +61,49 @@ class ConfigError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class Landlord:
+class Manager:
     """A Lessor a lease can be issued under.
 
-    `company` fills the Lessor blank on the lease. `signer_name` and `email`
+    `name` fills the Lessor blank on the lease. `signer_name` and `email`
     are the human who signs it - the paper lease's signature line reads
-    "Lessor/Agent", so the company is the Lessor and the person is the agent.
+    "Lessor/Agent", so the manager is the Lessor and the person is the agent.
     """
 
     id: str
-    company: str
+    name: str
     signer_name: str
     email: str
 @dataclass(frozen=True)
 class User:
-    """Someone who can log in to the dashboard."""
+    """Someone who can log in.
+
+    Two different things can authenticate this person, and either is enough:
+
+    - `password_hash`, checked by this app's HTTP Basic auth (app/auth.py).
+    - `auth_id`, the Supabase Auth identity that the live website's login
+      page uses. Supabase holds that password; this app never sees it.
+
+    A row created by a website signup has an `auth_id` and an empty
+    `password_hash`, and one created by `python -m app.accounts` has the
+    reverse. Requiring both would lock out whichever half was created first.
+    """
 
     username: str
     display_name: str
     role: str
     password_hash: str
-    # None for admins, who are not tied to one landlord.
-    landlord_id: str | None = None
-    # This person's own email, separate from a landlord's - optional, since
+    # None for admins, who are not tied to one manager.
+    manager_id: str | None = None
+    # This person's own email, separate from a manager's - optional, since
     # existing accounts predate this field.
     email: str | None = None
+    # The Supabase Auth identity (a uuid, as a string) behind this login.
+    auth_id: str | None = None
+    # This login's row in the `people` directory. Every user has one - see
+    # supabase/migrations/001_auth_people_rls.sql, which enforces it in the
+    # database itself. Optional here only because a local accounts.json
+    # written before that migration will not carry it.
+    person_id: str | None = None
 
     @property
     def is_admin(self) -> bool:
@@ -84,12 +113,17 @@ class User:
     def is_resident(self) -> bool:
         return self.role == ROLE_RESIDENT
 
-    def may_use_landlord(self, landlord_id: str) -> bool:
-        """Admins may act for any landlord; everyone else only for their own."""
-        return self.is_admin or self.landlord_id == landlord_id
+    @property
+    def may_use_dashboard(self) -> bool:
+        """Managers and admins only - not residents, not applicants."""
+        return self.role in DASHBOARD_ROLES
+
+    def may_use_manager(self, manager_id: str) -> bool:
+        """Admins may act for any manager; everyone else only for their own."""
+        return self.is_admin or self.manager_id == manager_id
 
 
-def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
+def _load_accounts(path: Path) -> tuple[tuple[Manager, ...], tuple[User, ...]]:
     if not path.is_file():
         raise ConfigError(
             f"{path} does not exist. Create it with: python -m app.accounts init"
@@ -99,21 +133,27 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
     except json.JSONDecodeError as exc:
         raise ConfigError(f"{path} is not valid JSON: {exc}") from exc
 
-    landlords = tuple(
-        Landlord(
+    # Both key spellings are accepted on the way in. This file predates the
+    # landlords -> managers rename and lives outside the repo (it is
+    # gitignored, and holds real password hashes), so it cannot be migrated
+    # by editing a committed file - and a login that stops working because a
+    # key was renamed is the worst possible failure here.
+    manager_entries = raw.get("managers") or raw.get("landlords") or []
+    managers = tuple(
+        Manager(
             id=str(entry["id"]),
-            company=str(entry["company"]),
+            name=str(entry.get("name") or entry["company"]),
             signer_name=str(entry["signer_name"]),
             email=str(entry["email"]),
         )
-        for entry in raw.get("landlords", [])
+        for entry in manager_entries
     )
-    if not landlords:
-        raise ConfigError(f"{path} lists no landlords.")
+    if not managers:
+        raise ConfigError(f"{path} lists no managers.")
 
-    known_ids = {landlord.id for landlord in landlords}
+    known_ids = {manager.id for manager in managers}
     users: list[User] = []
-    for entry in raw.get("users", []):
+    for entry in raw.get("webusers") or raw.get("users") or []:
         username = str(entry["username"])
         role = normalize_role(str(entry.get("role", ROLE_MANAGER)))
         if role not in VALID_ROLES:
@@ -121,32 +161,36 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
                 f"User {username!r} has role {role!r}; expected one of "
                 f"{sorted(VALID_ROLES)}."
             )
-        landlord_id = entry.get("landlord_id")
-        landlord_id = str(landlord_id) if landlord_id else None
+        manager_id = entry.get("manager_id") or entry.get("landlord_id")
+        manager_id = str(manager_id) if manager_id else None
 
         if role in MANAGER_SCOPED_ROLES:
-            if not landlord_id:
-                raise ConfigError(f"User {username!r} needs a landlord_id.")
-            if landlord_id not in known_ids:
+            if not manager_id:
+                raise ConfigError(f"User {username!r} needs a manager_id.")
+            if manager_id not in known_ids:
                 raise ConfigError(
-                    f"User {username!r} points at unknown landlord {landlord_id!r}."
+                    f"User {username!r} points at unknown manager {manager_id!r}."
                 )
 
         password_hash = str(entry.get("password_hash", ""))
-        if not password_hash:
+        auth_id = entry.get("auth_id")
+        if not password_hash and not auth_id:
             raise ConfigError(
                 f"User {username!r} has no password yet. Set one with: "
                 f"python -m app.accounts set-password {username}"
             )
         email = entry.get("email")
+        person_id = entry.get("person_id")
         users.append(
             User(
                 username=username,
                 display_name=str(entry.get("display_name", username)),
                 role=role,
                 password_hash=password_hash,
-                landlord_id=landlord_id,
+                manager_id=manager_id,
                 email=str(email) if email else None,
+                auth_id=str(auth_id) if auth_id else None,
+                person_id=str(person_id) if person_id else None,
             )
         )
 
@@ -158,7 +202,7 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
     if duplicates:
         raise ConfigError(f"{path} has duplicate usernames: {sorted(duplicates)}")
 
-    return landlords, tuple(users)
+    return managers, tuple(users)
 
 
 # Populated once, by `preload_accounts_from_postgres`, during the app's async
@@ -167,17 +211,17 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
 # other modules - keeps working unchanged; this is the only place accounts
 # ever get queried over the network. When left as `None`, `Settings.load()`
 # falls back to the local JSON file exactly as it always did.
-_accounts_cache: tuple[tuple["Landlord", ...], tuple["User", ...]] | None = None
+_accounts_cache: tuple[tuple["Manager", ...], tuple["User", ...]] | None = None
 
 
 def _validate_accounts(
-    landlords: tuple["Landlord", ...], users: list["User"], *, source: str
-) -> tuple[tuple["Landlord", ...], tuple["User", ...]]:
+    managers: tuple["Manager", ...], users: list["User"], *, source: str
+) -> tuple[tuple["Manager", ...], tuple["User", ...]]:
     """The same checks `_load_accounts` applies to the JSON file, applied
     again here so a Postgres-backed accounts table can't skip them."""
-    if not landlords:
-        raise ConfigError(f"{source} lists no landlords.")
-    known_ids = {landlord.id for landlord in landlords}
+    if not managers:
+        raise ConfigError(f"{source} lists no managers.")
+    known_ids = {manager.id for manager in managers}
     for user in users:
         if user.role not in VALID_ROLES:
             raise ConfigError(
@@ -185,14 +229,14 @@ def _validate_accounts(
                 f"one of {sorted(VALID_ROLES)}."
             )
         if user.role in MANAGER_SCOPED_ROLES:
-            if not user.landlord_id:
-                raise ConfigError(f"User {user.username!r} needs a landlord_id.")
-            if user.landlord_id not in known_ids:
+            if not user.manager_id:
+                raise ConfigError(f"User {user.username!r} needs a manager_id.")
+            if user.manager_id not in known_ids:
                 raise ConfigError(
-                    f"User {user.username!r} points at unknown landlord "
-                    f"{user.landlord_id!r}."
+                    f"User {user.username!r} points at unknown manager "
+                    f"{user.manager_id!r}."
                 )
-        if not user.password_hash:
+        if not user.password_hash and not user.auth_id:
             raise ConfigError(
                 f"User {user.username!r} has no password yet. Set one with: "
                 f"python -m app.accounts set-password {user.username}"
@@ -203,7 +247,7 @@ def _validate_accounts(
                   sum(1 for other in users if other.username == u.username) > 1}
     if duplicates:
         raise ConfigError(f"{source} has duplicate usernames: {sorted(duplicates)}")
-    return landlords, tuple(users)
+    return managers, tuple(users)
 
 
 async def preload_accounts_from_postgres(dsn: str) -> None:
@@ -225,31 +269,43 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
         # so bring it up to date here, idempotently, the same way
         # app/db.py runs CREATE TABLE IF NOT EXISTS on every pool.
         await connection.execute(
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT"
+            "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS email TEXT"
+        )
+        # Same reasoning for the two columns that link a login to Supabase
+        # Auth and to its `people` row. The full version of this migration -
+        # with the triggers and the row level security that go with it -
+        # lives in supabase/migrations/001_auth_people_rls.sql; these two
+        # lines exist so that merely *starting* the app against a database
+        # that has not had it applied yet cannot fail on a missing column.
+        await connection.execute(
+            "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS auth_id UUID"
+        )
+        await connection.execute(
+            "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS person_id TEXT"
         )
         # Roles were renamed landlord -> manager and tenant -> resident.
         # Idempotent, and only a tidy-up: normalize_role already maps the
         # old strings on the way in, so a login works either way.
         for old_role, new_role in LEGACY_ROLES.items():
             await connection.execute(
-                "UPDATE users SET role = $1 WHERE role = $2", new_role, old_role
+                "UPDATE webusers SET role = $1 WHERE role = $2", new_role, old_role
             )
-        landlord_rows = await connection.fetch(
-            "SELECT id, company, signer_name, email FROM landlords"
+        manager_rows = await connection.fetch(
+            "SELECT id, name, signer_name, email FROM managers"
         )
         user_rows = await connection.fetch(
-            "SELECT username, display_name, role, landlord_id, password_hash, "
-            "email FROM users"
+            "SELECT username, display_name, role, manager_id, password_hash, "
+            "email, auth_id, person_id FROM webusers"
         )
     finally:
         await connection.close()
 
-    landlords = tuple(
-        Landlord(
-            id=row["id"], company=row["company"],
+    managers = tuple(
+        Manager(
+            id=row["id"], name=row["name"],
             signer_name=row["signer_name"], email=row["email"],
         )
-        for row in landlord_rows
+        for row in manager_rows
     )
     users = [
         User(
@@ -257,13 +313,15 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
             display_name=row["display_name"] or row["username"],
             role=normalize_role(row["role"]),
             password_hash=row["password_hash"] or "",
-            landlord_id=row["landlord_id"],
+            manager_id=row["manager_id"],
             email=row["email"],
+            auth_id=str(row["auth_id"]) if row["auth_id"] else None,
+            person_id=row["person_id"],
         )
         for row in user_rows
     ]
     _accounts_cache = _validate_accounts(
-        landlords, users, source="The Postgres accounts tables"
+        managers, users, source="The Postgres accounts tables"
     )
 
 
@@ -283,13 +341,13 @@ class Settings:
     # Only used when archive_dir names a supabase: bucket.
     supabase_url: str
     supabase_key: str
-    landlords: tuple[Landlord, ...]
+    managers: tuple[Manager, ...]
     users: tuple[User, ...]
 
-    def landlord_by_id(self, landlord_id: str) -> Landlord | None:
-        for landlord in self.landlords:
-            if landlord.id == landlord_id:
-                return landlord
+    def manager_by_id(self, manager_id: str) -> Manager | None:
+        for manager in self.managers:
+            if manager.id == manager_id:
+                return manager
         return None
 
     def user_by_username(self, username: str) -> User | None:
@@ -298,13 +356,13 @@ class Settings:
                 return user
         return None
 
-    def landlords_for(self, user: User) -> tuple[Landlord, ...]:
+    def managers_for(self, user: User) -> tuple[Manager, ...]:
         """Which Lessors this user may issue a lease under."""
         if user.is_admin:
-            return self.landlords
+            return self.managers
         return tuple(
-            landlord for landlord in self.landlords
-            if landlord.id == user.landlord_id
+            manager for manager in self.managers
+            if manager.id == user.manager_id
         )
 
     @classmethod
@@ -317,12 +375,12 @@ class Settings:
         or the local JSON file, never the network.
         """
         if _accounts_cache is not None:
-            landlords, users = _accounts_cache
+            managers, users = _accounts_cache
         else:
             accounts_path = Path(
                 os.environ.get("LGD_ACCOUNTS_FILE", str(REPO_ROOT / "accounts.json"))
             )
-            landlords, users = _load_accounts(accounts_path)
+            managers, users = _load_accounts(accounts_path)
         # A Postgres DSN if configured (Render's free tier wipes local files
         # on restart), else the local SQLite file exactly as always.
         db_path = os.environ.get("DATABASE_URL", "").strip() or os.environ.get(
@@ -335,7 +393,7 @@ class Settings:
             ),
             supabase_url=os.environ.get("SUPABASE_URL", "").strip(),
             supabase_key=os.environ.get("SUPABASE_KEY", "").strip(),
-            landlords=landlords,
+            managers=managers,
             users=users,
         )
 

@@ -45,26 +45,26 @@ PASSWORDS = {
 ADMIN = ("kevin", PASSWORDS["kevin"])
 STEVE = ("steve", PASSWORDS["steve"])
 GAY = ("gay", PASSWORDS["gay"])
-TENANT1 = ("tenant1", PASSWORDS["tenant1"])  # belongs to LANDLORD_LGD (steve)
+TENANT1 = ("tenant1", PASSWORDS["tenant1"])  # belongs to MANAGER_LGD (steve)
 
-LANDLORD_LGD = {
+MANAGER_LGD = {
     "id": "lgd",
-    "company": "LGD Properties",
-    "signer_name": "Pat Landlord",
-    "email": "steve-landlord@example.com",
+    "name": "LGD Properties",
+    "signer_name": "Pat Manager",
+    "email": "steve-manager@example.com",
 }
-LANDLORD_ROBERTSON = {
+MANAGER_ROBERTSON = {
     "id": "robertson",
-    "company": "Jamie Reyes Properties",
+    "name": "Jamie Reyes Properties",
     "signer_name": "Jamie Reyes",
-    "email": "gay-landlord@example.com",
+    "email": "gay-manager@example.com",
 }
 
 
 def accounts_document() -> dict[str, Any]:
     return {
-        "landlords": [LANDLORD_LGD, LANDLORD_ROBERTSON],
-        "users": [
+        "managers": [MANAGER_LGD, MANAGER_ROBERTSON],
+        "webusers": [
             {
                 "username": "kevin",
                 "display_name": "Kevin Kolb",
@@ -73,23 +73,23 @@ def accounts_document() -> dict[str, Any]:
             },
             {
                 "username": "steve",
-                "display_name": "Pat Landlord",
+                "display_name": "Pat Manager",
                 "role": "manager",
-                "landlord_id": "lgd",
+                "manager_id": "lgd",
                 "password_hash": hash_password(PASSWORDS["steve"], iterations=1_000),
             },
             {
                 "username": "gay",
                 "display_name": "Jamie Reyes",
                 "role": "manager",
-                "landlord_id": "robertson",
+                "manager_id": "robertson",
                 "password_hash": hash_password(PASSWORDS["gay"], iterations=1_000),
             },
             {
                 "username": "tenant1",
                 "display_name": "Tenant One",
                 "role": "resident",
-                "landlord_id": "lgd",
+                "manager_id": "lgd",
                 "password_hash": hash_password(PASSWORDS["tenant1"], iterations=1_000),
             },
         ],
@@ -105,7 +105,11 @@ def archive_dir(tmp_path):
 def make_client(tmp_path, monkeypatch, archive_dir):
     """Builds a TestClient against a throwaway accounts file and database."""
 
-    def build():
+    def build(extra_users: list[dict[str, Any]] | None = None):
+        """`extra_users` adds logins beyond the standard four - used to
+        exercise a role the shared set does not have (see
+        tests/test_auth_links.py). Passing none keeps the fixture exactly as
+        every existing test already expects it."""
         # Explicit, not just relying on the _no_live_credentials autouse
         # fixture's ordering relative to this one: a developer's real
         # DATABASE_URL/SUPABASE_* must be gone *before* the TestClient
@@ -120,8 +124,10 @@ def make_client(tmp_path, monkeypatch, archive_dir):
 
         _reset_accounts_cache_for_tests()
 
+        document = accounts_document()
+        document["webusers"].extend(extra_users or [])
         accounts_path = tmp_path / "accounts.json"
-        accounts_path.write_text(json.dumps(accounts_document()), encoding="utf-8")
+        accounts_path.write_text(json.dumps(document), encoding="utf-8")
 
         monkeypatch.setenv("LGD_ACCOUNTS_FILE", str(accounts_path))
         monkeypatch.setenv("LGD_DB_PATH", str(tmp_path / "test-records.db"))

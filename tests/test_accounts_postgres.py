@@ -29,56 +29,56 @@ class FakeConnection:
     """A tiny in-memory stand-in for the two tables accounts.py touches."""
 
     def __init__(self) -> None:
-        self.landlords: dict[str, dict[str, Any]] = {}
+        self.managers: dict[str, dict[str, Any]] = {}
         self.users: dict[str, dict[str, Any]] = {}
 
     async def execute(self, sql: str, *args: Any) -> None:
         text = " ".join(sql.split())
         if text.startswith("CREATE TABLE"):
             return
-        if text.startswith("DELETE FROM users"):
+        if text.startswith("DELETE FROM webusers"):
             self.users.clear()
             return
-        if text.startswith("DELETE FROM landlords"):
-            self.landlords.clear()
+        if text.startswith("DELETE FROM managers"):
+            self.managers.clear()
             return
-        if text.startswith("INSERT INTO landlords"):
-            id_, company, signer_name, email = args
-            self.landlords[id_] = {
-                "id": id_, "company": company,
+        if text.startswith("INSERT INTO managers"):
+            id_, name, signer_name, email = args
+            self.managers[id_] = {
+                "id": id_, "name": name,
                 "signer_name": signer_name, "email": email,
             }
             return
-        if text.startswith("INSERT INTO users"):
-            username, display_name, role, landlord_id, email = args
+        if text.startswith("INSERT INTO webusers"):
+            username, display_name, role, manager_id, email = args
             self.users[username] = {
                 "username": username, "display_name": display_name,
-                "role": role, "landlord_id": landlord_id, "password_hash": "",
+                "role": role, "manager_id": manager_id, "password_hash": "",
                 "email": email,
             }
             return
-        if text.startswith("UPDATE users SET password_hash"):
+        if text.startswith("UPDATE webusers SET password_hash"):
             password_hash, username = args
             self.users[username]["password_hash"] = password_hash
             return
         raise AssertionError(f"unexpected execute: {sql!r} {args!r}")
 
     async def fetchval(self, sql: str, *args: Any) -> Any:
-        if "count(*) FROM landlords" in sql:
-            return len(self.landlords)
+        if "count(*) FROM managers" in sql:
+            return len(self.managers)
         raise AssertionError(f"unexpected fetchval: {sql!r}")
 
     async def fetch(self, sql: str, *args: Any) -> list[dict[str, Any]]:
-        if "FROM landlords" in sql:
-            return sorted(self.landlords.values(), key=lambda r: r["id"])
-        if "SELECT username FROM users" in sql:
+        if "FROM managers" in sql:
+            return sorted(self.managers.values(), key=lambda r: r["id"])
+        if "SELECT username FROM webusers" in sql:
             return [{"username": u} for u in sorted(self.users)]
-        if "FROM users" in sql:
+        if "FROM webusers" in sql:
             return sorted(self.users.values(), key=lambda r: r["username"])
         raise AssertionError(f"unexpected fetch: {sql!r}")
 
     async def fetchrow(self, sql: str, *args: Any) -> dict[str, Any] | None:
-        if "FROM users WHERE username" in sql:
+        if "FROM webusers WHERE username" in sql:
             return self.users.get(args[0])
         raise AssertionError(f"unexpected fetchrow: {sql!r}")
 
@@ -105,11 +105,11 @@ def fake_connection(monkeypatch) -> FakeConnection:
 DSN = "postgres://user:secret@example.supabase.co:5432/postgres"
 
 
-async def test_init_writes_starter_landlords_and_users(fake_connection) -> None:
+async def test_init_writes_starter_managers_and_users(fake_connection) -> None:
     result = await accounts._pg_init(DSN, force=False)
 
     assert result == 0
-    assert set(fake_connection.landlords) == {"lgd", "robertson"}
+    assert set(fake_connection.managers) == {"lgd", "robertson"}
     assert set(fake_connection.users) == {"kevin", "pam", "gay"}
     assert all(u["password_hash"] == "" for u in fake_connection.users.values())
 
@@ -134,7 +134,7 @@ async def test_init_with_force_overwrites_existing_rows(fake_connection) -> None
     assert fake_connection.users["kevin"]["password_hash"] == ""
 
 
-async def test_list_reports_landlords_and_password_state(
+async def test_list_reports_managers_and_password_state(
     fake_connection, capsys
 ) -> None:
     await accounts._pg_init(DSN, force=False)

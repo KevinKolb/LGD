@@ -1,4 +1,4 @@
-"""Tests for print/generate_print_lease.py.
+"""Tests for documents/print/generate_print_lease.py.
 
 These guard the three real bugs found while building this generator:
 1. Markdown "**bold**" rendered as literal asterisks instead of <strong>.
@@ -19,7 +19,8 @@ from pathlib import Path
 
 import pytest
 
-MODULE_PATH = Path(__file__).resolve().parent.parent / "print" / "generate_print_lease.py"
+MODULE_PATH = (Path(__file__).resolve().parent.parent
+                / "documents" / "print" / "generate_print_lease.py")
 SOURCE_PATH = Path(__file__).resolve().parent.parent / "documents" / "lease.md"
 
 
@@ -90,7 +91,7 @@ def test_signature_lines_carry_no_literal_underscores(real_output):
 # ---------------------------------------------------------------------------
 
 def test_the_lessor_name_blank_is_wide_enough_to_write_a_name_in(real_output):
-    """The very first blank in the document - where the landlord's own
+    """The very first blank in the document - where the manager's own
     name goes - must not fall back to the narrow default. It's "medium"
     rather than "long": the opening sentence packs three blanks (Lessor,
     Lessee, address) together, and three 5.5in "long" blanks in one short
@@ -128,10 +129,10 @@ def test_occupants_blanks_are_long_and_on_their_own_lines(real_output):
 # General structure
 # ---------------------------------------------------------------------------
 
-def test_the_company_name_heads_the_lease(real_output):
+def test_the_manager_name_heads_the_lease(real_output):
     """This was a blank line for a while, so one form could be shared across
-    every landlord in accounts.json. Printing a name here means the form is
-    LGD's; another landlord would need their own copy."""
+    every manager in accounts.json. Printing a name here means the form is
+    LGD's; another manager would need their own copy."""
     body = real_output[real_output.index("<body>") :]
     assert "Lower Garden District Properties LLC" in body
     assert "RESIDENTIAL LEASE" in body
@@ -139,10 +140,10 @@ def test_the_company_name_heads_the_lease(real_output):
     assert body.index("Lower Garden District") < body.index("RESIDENTIAL LEASE")
 
 
-def test_the_browser_tab_title_carries_no_landlord_name(real_output):
+def test_the_browser_tab_title_carries_no_manager_name(real_output):
     """Only the printed page is LGD's - the <title> is what a browser shows
     and what a saved PDF gets named by default, and stays generic. Checked
-    on the tag alone, not the whole <head>: the company name legitimately
+    on the tag alone, not the whole <head>: the manager name legitimately
     appears there too, inside the @page margin boxes."""
     title = real_output[real_output.index("<title>") : real_output.index("</title>")]
     assert title == "<title>Residential Lease"
@@ -159,7 +160,7 @@ def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output)
     assert "@bottom-center" in page_rule
     assert page_rule.count("counter(page)") == 2
     assert page_rule.count("counter(pages)") == 2
-    # The company name leads both, so a loose page is identifiable.
+    # The manager name leads both, so a loose page is identifiable.
     assert page_rule.count("Lower Garden District Properties LLC — Page ") == 2
 
 
@@ -189,7 +190,7 @@ def test_printing_paginates_the_same_on_a_phone_as_on_a_desktop(real_output):
 def test_page_auto_triggers_the_browser_print_dialog(real_output):
     """Opening this page (from the dashboard's "Print blank lease" button)
     is the whole point of it, so it must not sit there waiting for the
-    landlord to find Ctrl+P themselves."""
+    manager to find Ctrl+P themselves."""
     assert "window.print()" in real_output
     assert 'addEventListener("load"' in real_output
 
@@ -289,5 +290,6 @@ def test_generation_is_deterministic(gen):
 
 
 def test_generated_file_on_disk_matches_a_fresh_run(gen, real_output):
-    output_path = Path(__file__).resolve().parent.parent / "print" / "lease_print.html"
+    output_path = (Path(__file__).resolve().parent.parent
+                   / "documents" / "print" / "lease_print.html")
     assert output_path.read_text(encoding="utf-8") == real_output

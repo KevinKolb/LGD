@@ -196,8 +196,9 @@
   document.addEventListener("click", (event) => {
     const link = event.target.closest("a");
     if (!link) return;
-    // The manager area is the one part that still works.
-    if (new URL(link.href, window.location.href).pathname.endsWith("/manager/")) return;
+    // The parts that actually work: the manager area, and signing in.
+    const path = new URL(link.href, window.location.href).pathname;
+    if (path.endsWith("/manager/") || path.endsWith("/login/")) return;
     event.preventDefault();
     modal.hidden = false;
   });

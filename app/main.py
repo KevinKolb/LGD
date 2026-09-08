@@ -2,7 +2,7 @@
 
 Serves the static pages and the printable blank lease, plus a small JSON
 API behind HTTP Basic for the manager and admin areas. Accounts and the
-application/notice/news records live in Supabase Postgres when configured,
+application and news records live in Supabase Postgres when configured,
 and on local disk otherwise - see app/config.py and app/db.py.
 """
 from __future__ import annotations
@@ -24,13 +24,12 @@ from app.accounts import MIN_PASSWORD_LENGTH
 from app.auth import check_credentials, hash_password, verify_password
 from app.config import (
     ConfigError,
-    Landlord,
-    ROLE_RESIDENT,
+    Manager,
     User,
     get_settings,
     preload_accounts_from_postgres,
 )
-from app.tenant_portal import ApplicationRequest, NewsRequest, NoticeRequest
+from app.tenant_portal import ApplicationRequest, NewsRequest
 
 # Verified against when a username does not exist, so that an unknown user and
 # a wrong password are indistinguishable in both answer and timing.
@@ -45,16 +44,17 @@ logger = logging.getLogger("lgd")
 MANAGER_DIR = (Path(__file__).resolve().parent.parent / "manager").resolve()
 ADMIN_DIR = (Path(__file__).resolve().parent.parent / "admin").resolve()
 SHARED_DIR = (Path(__file__).resolve().parent.parent / "shared").resolve()
-PRINT_DIR = (Path(__file__).resolve().parent.parent / "print").resolve()
+PRINT_DIR = (Path(__file__).resolve().parent.parent / "documents" / "print").resolve()
 RESIDENT_DIR = (Path(__file__).resolve().parent.parent / "resident").resolve()
 APPLICANT_DIR = (Path(__file__).resolve().parent.parent / "applicant").resolve()
+LOGIN_DIR = (Path(__file__).resolve().parent.parent / "login").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from documents/lease.md by
-# print/generate_print_lease.py. Served here rather than added to
+# documents/print/generate_print_lease.py. Served here rather than added to
 # MANAGER_DIR so there's still exactly one copy of it on disk.
 BLANK_LEASE_PATH = (
-    Path(__file__).resolve().parent.parent / "print" / "lease_print.html"
+    Path(__file__).resolve().parent.parent / "documents" / "print" / "lease_print.html"
 ).resolve()
 BASIC = HTTPBasic(realm="LGD Lease Maker", auto_error=False)
 
@@ -71,8 +71,8 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     await db.init(settings.db_path)
     logger.info(
-        "LGD service ready (%d landlord(s), %d user(s))",
-        len(settings.landlords),
+        "LGD service ready (%d manager(s), %d user(s))",
+        len(settings.managers),
         len(settings.users),
     )
     try:
@@ -101,9 +101,11 @@ def current_user(
         raise unauthorized
 
     user = settings.user_by_username(credentials.username)
-    # Verify against a decoy hash when the user is unknown, so a missing
-    # username and a wrong password take the same time and give the same answer.
-    expected_hash = user.password_hash if user else DECOY_HASH
+    # Verify against a decoy hash when the user is unknown - or when they
+    # exist but have no PBKDF2 hash at all, which is what a Supabase Auth
+    # signup looks like here. Both take the same time and give the same
+    # answer as a wrong password, rather than failing fast and saying so.
+    expected_hash = user.password_hash if (user and user.password_hash) else DECOY_HASH
     ok = check_credentials(
         credentials.username,
         credentials.password,
@@ -115,10 +117,15 @@ def current_user(
     return user
 
 
-def require_not_resident(user: User) -> None:
-    """Keep resident accounts out of the manager dashboard and its API - a
-    resident only ever needs /api/notices and /api/account/password."""
-    if user.is_resident:
+def require_dashboard_role(user: User) -> None:
+    """Only managers and admins get the dashboard and its API.
+
+    An allow-list, not "anyone who is not a resident": public signups on the
+    website now create `applicant` logins (see app/config.py), and an
+    exclusion list would have let every one of them in here the moment that
+    role appeared.
+    """
+    if not user.may_use_dashboard:
         raise HTTPException(status_code=404, detail="Not found")
 
 
@@ -135,18 +142,18 @@ def resolve_static_file(base_dir: Path, asset: str) -> Path:
     return target
 
 
-def authorize_landlord(user: User, landlord_id: str) -> Landlord:
+def authorize_manager(user: User, manager_id: str) -> Manager:
     """Resolve a lessor id, refusing one this user may not act for."""
     settings = get_settings()
-    landlord = settings.landlord_by_id(landlord_id)
-    if landlord is None:
-        raise HTTPException(status_code=400, detail="Unknown landlord selected.")
-    if not user.may_use_landlord(landlord_id):
+    manager = settings.manager_by_id(manager_id)
+    if manager is None:
+        raise HTTPException(status_code=400, detail="Unknown manager selected.")
+    if not user.may_use_manager(manager_id):
         raise HTTPException(
             status_code=403,
-            detail="You cannot act for that landlord.",
+            detail="You cannot act for that manager.",
         )
-    return landlord
+    return manager
 
 
 # ---------------------------------------------------------------------------
@@ -169,12 +176,12 @@ async def favicon():
     return FileResponse(FAVICON_PATH, media_type="image/vnd.microsoft.icon")
 
 
-@app.get("/print/{asset:path}", include_in_schema=False)
+@app.get("/documents/print/{asset:path}", include_in_schema=False)
 async def print_files(asset: str, user: User = Depends(current_user)):
     """The blank paper lease, at the same relative path it has on GitHub
-    Pages (../print/lease_print.html from the manager page), so one href
+    Pages (../documents/print/lease_print.html from the manager page), so one href
     works on both hosts. /api/blank-lease still serves the same file."""
-    require_not_resident(user)
+    require_dashboard_role(user)
     return FileResponse(
         resolve_static_file(PRINT_DIR, asset),
         media_type="text/html",
@@ -194,7 +201,7 @@ async def shared_files(asset: str):
 @app.get("/manager/", include_in_schema=False)
 @app.get("/manager/{asset:path}", include_in_schema=False)
 async def manager_files(asset: str = "", user: User = Depends(current_user)):
-    require_not_resident(user)
+    require_dashboard_role(user)
     return FileResponse(
         resolve_static_file(MANAGER_DIR, asset), headers={"Cache-Control": "no-store"}
     )
@@ -204,18 +211,22 @@ async def manager_files(asset: str = "", user: User = Depends(current_user)):
 @app.get("/admin/{asset:path}", include_in_schema=False)
 async def admin_files(asset: str = "", user: User = Depends(current_user)):
     # The page itself is loadable by any non-tenant login (so the footer
-    # link always works rather than 404ing for a landlord) - the actual
+    # link always works rather than 404ing for a manager) - the actual
     # admin data behind it (/api/admin/info) stays admin-only, and the page
     # shows "Admins only." to anyone else. See api_admin_info below.
-    require_not_resident(user)
+    require_dashboard_role(user)
     return FileResponse(
         resolve_static_file(ADMIN_DIR, asset), headers={"Cache-Control": "no-store"}
     )
 
 
 @app.get("/api/blank-lease", include_in_schema=False)
-async def api_blank_lease(_: User = Depends(current_user)):
+async def api_blank_lease(user: User = Depends(current_user)):
     """The blank, unsigned lease for printing or downloading.
+
+    Managers and admins only, the same as the /documents/print/ route that
+    serves this very file - it had been left open to any logged-in account,
+    which quietly meant residents too.
 
     One route serves both dashboard buttons: opening it in a new tab is the
     "Print" button (the page has its own print CSS and an on-page Print
@@ -223,11 +234,12 @@ async def api_blank_lease(_: User = Depends(current_user)):
     `download` attribute, which makes the browser save it instead of
     navigating - no server-side distinction needed.
     """
+    require_dashboard_role(user)
     if not BLANK_LEASE_PATH.is_file():
         raise HTTPException(
             status_code=404,
             detail="Blank lease not generated yet - run "
-            "print/generate_print_lease.py.",
+            "documents/print/generate_print_lease.py.",
         )
     return FileResponse(
         BLANK_LEASE_PATH, media_type="text/html", headers={"Cache-Control": "no-store"}
@@ -240,7 +252,7 @@ async def api_blank_lease(_: User = Depends(current_user)):
 
 @app.get("/api/config")
 async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
-    require_not_resident(user)
+    require_dashboard_role(user)
     settings = get_settings()
     return {
         "user": {
@@ -249,17 +261,10 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
             "role": user.role,
             "is_admin": user.is_admin,
         },
-        # Only the landlords this user may act for. Emails stay server-side.
-        "landlords": [
-            {"id": landlord.id, "name": landlord.company}
-            for landlord in settings.landlords_for(user)
-        ],
-        # This user's own tenants, for the "send a notice" form - an admin
-        # sees every tenant, a landlord only those under their own landlord_id.
-        "tenants": [
-            {"username": u.username, "display_name": u.display_name}
-            for u in settings.users
-            if u.role == ROLE_RESIDENT and (user.is_admin or u.landlord_id == user.landlord_id)
+        # Only the managers this user may act for. Emails stay server-side.
+        "managers": [
+            {"id": manager.id, "name": manager.name}
+            for manager in settings.managers_for(user)
         ],
     }
 
@@ -314,17 +319,17 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
     supabase_url = settings.supabase_url
 
     return {
-        "landlords": [
+        "managers": [
             {
-                "id": landlord.id, "company": landlord.company,
-                "signer_name": landlord.signer_name, "email": landlord.email,
+                "id": manager.id, "name": manager.name,
+                "signer_name": manager.signer_name, "email": manager.email,
             }
-            for landlord in settings.landlords
+            for manager in settings.managers
         ],
         "users": [
             {
                 "username": u.username, "display_name": u.display_name,
-                "role": u.role, "landlord_id": u.landlord_id,
+                "role": u.role, "manager_id": u.manager_id,
             }
             for u in settings.users
         ],
@@ -352,8 +357,8 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
 @app.get("/resident/", include_in_schema=False)
 @app.get("/resident/{asset:path}", include_in_schema=False)
 async def resident_files(asset: str = ""):
-    """Public static files - no login. The page's own JS is what gates the
-    notices section, by making an authenticated call to /api/notices."""
+    """Public static files - no login, and nothing on the page needs one
+    now that notices are gone: it is contact details and manager name."""
     return FileResponse(
         resolve_static_file(RESIDENT_DIR, asset), headers={"Cache-Control": "no-store"}
     )
@@ -363,11 +368,21 @@ async def resident_files(asset: str = ""):
 @app.get("/applicant/{asset:path}", include_in_schema=False)
 async def applicant_files(asset: str = ""):
     """Public static files - no login, same as /resident/. The rental
-    application form (POST /api/applications) lives here now, separate
-    from /resident/'s logged-in notices - nobody has a resident login yet
-    before they've applied."""
+    application form (POST /api/applications) lives here now, separate from
+    /resident/ - nobody has a resident login before they have applied."""
     return FileResponse(
         resolve_static_file(APPLICANT_DIR, asset), headers={"Cache-Control": "no-store"}
+    )
+
+
+@app.get("/login/", include_in_schema=False)
+@app.get("/login/{asset:path}", include_in_schema=False)
+async def login_files(asset: str = ""):
+    """The sign-in page. Public by necessity - a login form behind a login
+    is no login form. It talks to Supabase Auth from the browser and never
+    to this app, so it works identically here and on GitHub Pages."""
+    return FileResponse(
+        resolve_static_file(LOGIN_DIR, asset), headers={"Cache-Control": "no-store"}
     )
 
 
@@ -393,8 +408,8 @@ async def api_submit_application(application: ApplicationRequest) -> dict[str, s
 @app.get("/api/applications")
 async def api_list_applications(user: User = Depends(current_user)) -> dict[str, Any]:
     """Admin-only: property_interest is free text the applicant typed, not
-    a landlord id, so there's no way to scope an application to one
-    landlord server-side. Admin reads it and routes manually."""
+    a manager id, so there's no way to scope an application to one
+    manager server-side. Admin reads it and routes manually."""
     if not user.is_admin:
         raise HTTPException(status_code=404, detail="No such page.")
     settings = get_settings()
@@ -402,52 +417,18 @@ async def api_list_applications(user: User = Depends(current_user)) -> dict[str,
     return {"applications": applications}
 
 
-@app.post("/api/notices", status_code=201)
-async def api_send_notice(
-    notice: NoticeRequest,
-    user: User = Depends(current_user),
-) -> dict[str, str]:
-    """A landlord/admin sends one tenant a free-form notice."""
-    require_not_resident(user)
-    settings = get_settings()
-    tenant = settings.user_by_username(notice.tenant_username)
-    if tenant is None or not tenant.is_resident:
-        raise HTTPException(status_code=400, detail="Unknown tenant.")
-    if not user.may_use_landlord(tenant.landlord_id):
-        raise HTTPException(
-            status_code=403, detail="That tenant is not one of yours."
-        )
-    await db.record_notice(
-        settings.db_path,
-        tenant_username=tenant.username,
-        message=notice.message,
-        created_by=user.username,
-    )
-    return {"detail": "Notice sent."}
-
-
-@app.get("/api/notices")
-async def api_list_notices(user: User = Depends(current_user)) -> dict[str, Any]:
-    """A tenant's own notices, newest first."""
-    if not user.is_resident:
-        raise HTTPException(status_code=404, detail="No such page.")
-    settings = get_settings()
-    notices = await db.list_notices(settings.db_path, tenant_username=user.username)
-    return {"notices": notices}
-
-
 @app.post("/api/news", status_code=201)
 async def api_post_news(
     news: NewsRequest,
     user: User = Depends(current_user),
 ) -> dict[str, str]:
-    """A landlord/admin publishes a news post, from the manager dashboard."""
-    require_not_resident(user)
-    authorize_landlord(user, news.landlord_id)
+    """A manager/admin publishes a news post, from the manager dashboard."""
+    require_dashboard_role(user)
+    authorize_manager(user, news.manager_id)
     settings = get_settings()
     await db.record_news(
         settings.db_path,
-        landlord_id=news.landlord_id,
+        manager_id=news.manager_id,
         headline=news.headline,
         article=news.article,
         created_by=user.username,
@@ -457,11 +438,11 @@ async def api_post_news(
 
 @app.get("/api/news")
 async def api_list_news(user: User = Depends(current_user)) -> dict[str, Any]:
-    """News for this user's own landlord, or every landlord's for an admin."""
-    require_not_resident(user)
+    """News for this user's own manager, or every manager's for an admin."""
+    require_dashboard_role(user)
     settings = get_settings()
-    landlord_id = None if user.is_admin else user.landlord_id
-    news = await db.list_news(settings.db_path, landlord_id=landlord_id)
+    manager_id = None if user.is_admin else user.manager_id
+    news = await db.list_news(settings.db_path, manager_id=manager_id)
     return {"news": news}
 
 

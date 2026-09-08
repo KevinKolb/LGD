@@ -1,4 +1,4 @@
-"""Public rental applications and tenant notices."""
+"""Public rental applications, and the news a manager posts."""
 from __future__ import annotations
 
 from tests.conftest import ADMIN, GAY, STEVE, TENANT1
@@ -57,7 +57,7 @@ def test_submit_application_allows_no_property_typed(client) -> None:
 
 
 def test_submit_application_property_interest_is_free_text(client) -> None:
-    """Not validated against known landlords - it's whatever the applicant
+    """Not validated against known managers - it's whatever the applicant
     typed, e.g. an address that isn't in accounts.json at all."""
     payload = {**APPLICATION_PAYLOAD, "property_interest": "some address I saw on Zillow"}
     response = client.post("/api/applications", json=payload, auth=None)
@@ -110,7 +110,7 @@ def test_submit_application_rejects_more_than_ten_roommates(client) -> None:
 
 # ---------------------------------------------------------------------------
 # Reviewing applications (admin-only - property_interest is free text, not a
-# landlord id, so there's no way to scope an application to one landlord)
+# manager id, so there's no way to scope an application to one manager)
 # ---------------------------------------------------------------------------
 
 def test_list_applications_requires_authentication(client) -> None:
@@ -122,7 +122,7 @@ def test_list_applications_is_refused_to_a_tenant(client) -> None:
     assert client.get("/api/applications", auth=TENANT1).status_code == 404
 
 
-def test_list_applications_is_refused_to_a_landlord(client) -> None:
+def test_list_applications_is_refused_to_a_manager(client) -> None:
     for credentials in (STEVE, GAY):
         assert client.get("/api/applications", auth=credentials).status_code == 404
 
@@ -140,127 +140,13 @@ def test_admin_sees_every_application(client) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Sending a notice (admin/landlord)
-# ---------------------------------------------------------------------------
-
-def test_send_notice_requires_authentication(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "hi"},
-        auth=None,
-    )
-    assert response.status_code == 401
-
-
-def test_send_notice_is_refused_to_a_tenant(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "hi"},
-        auth=TENANT1,
-    )
-    assert response.status_code == 404
-
-
-def test_a_landlord_can_notice_their_own_tenant(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "Water off Tuesday."},
-        auth=STEVE,
-    )
-    assert response.status_code == 201
-
-
-def test_a_landlord_cannot_notice_another_landlords_tenant(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "hi"},
-        auth=GAY,
-    )
-    assert response.status_code == 403
-
-
-def test_admin_can_notice_any_tenant(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "hi"},
-        auth=ADMIN,
-    )
-    assert response.status_code == 201
-
-
-def test_send_notice_rejects_an_unknown_username(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "no-such-user", "message": "hi"},
-        auth=ADMIN,
-    )
-    assert response.status_code == 400
-
-
-def test_send_notice_rejects_a_non_tenant_username(client) -> None:
-    response = client.post(
-        "/api/notices",
-        json={"tenant_username": "steve", "message": "hi"},
-        auth=ADMIN,
-    )
-    assert response.status_code == 400
-
-
-# ---------------------------------------------------------------------------
-# Reading notices (tenant only)
-# ---------------------------------------------------------------------------
-
-def test_list_notices_requires_authentication(client) -> None:
-    assert client.get("/api/notices", auth=None).status_code == 401
-
-
-def test_list_notices_is_refused_to_a_landlord(client) -> None:
-    assert client.get("/api/notices", auth=STEVE).status_code == 404
-
-
-def test_list_notices_is_refused_to_an_admin(client) -> None:
-    assert client.get("/api/notices", auth=ADMIN).status_code == 404
-
-
-def test_tenant_sees_their_own_notices_newest_first(client) -> None:
-    client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "First notice"},
-        auth=STEVE,
-    )
-    client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "Second notice"},
-        auth=STEVE,
-    )
-
-    body = client.get("/api/notices", auth=TENANT1).json()
-
-    assert [n["message"] for n in body["notices"]] == ["Second notice", "First notice"]
-
-
-def test_tenant_does_not_see_another_tenants_notices(client) -> None:
-    client.post(
-        "/api/notices",
-        json={"tenant_username": "tenant1", "message": "Not for you"},
-        auth=STEVE,
-    )
-
-    # No second tenant fixture exists, but an empty inbox for a tenant with
-    # no notices addressed to them proves the query is scoped by username,
-    # not returning every notice in the table.
-    body = client.get("/api/notices", auth=TENANT1).json()
-    assert all(n["tenant_username"] == "tenant1" for n in body["notices"])
-
-
-# ---------------------------------------------------------------------------
-# Posting news (landlord/admin)
+# Posting news (manager/admin)
 # ---------------------------------------------------------------------------
 
 def test_post_news_requires_authentication(client) -> None:
     response = client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "Hi", "article": "Details."},
+        json={"manager_id": "lgd", "headline": "Hi", "article": "Details."},
         auth=None,
     )
     assert response.status_code == 401
@@ -269,34 +155,34 @@ def test_post_news_requires_authentication(client) -> None:
 def test_post_news_is_refused_to_a_tenant(client) -> None:
     response = client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "Hi", "article": "Details."},
+        json={"manager_id": "lgd", "headline": "Hi", "article": "Details."},
         auth=TENANT1,
     )
     assert response.status_code == 404
 
 
-def test_a_landlord_can_post_news_for_their_own_landlord(client) -> None:
+def test_a_manager_can_post_news_for_their_own_manager(client) -> None:
     response = client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "Pool closed", "article": "For repairs this week."},
+        json={"manager_id": "lgd", "headline": "Pool closed", "article": "For repairs this week."},
         auth=STEVE,
     )
     assert response.status_code == 201
 
 
-def test_a_landlord_cannot_post_news_for_another_landlord(client) -> None:
+def test_a_manager_cannot_post_news_for_another_manager(client) -> None:
     response = client.post(
         "/api/news",
-        json={"landlord_id": "robertson", "headline": "Hi", "article": "Details."},
+        json={"manager_id": "robertson", "headline": "Hi", "article": "Details."},
         auth=STEVE,
     )
     assert response.status_code == 403
 
 
-def test_admin_can_post_news_for_any_landlord(client) -> None:
+def test_admin_can_post_news_for_any_manager(client) -> None:
     response = client.post(
         "/api/news",
-        json={"landlord_id": "robertson", "headline": "Hi", "article": "Details."},
+        json={"manager_id": "robertson", "headline": "Hi", "article": "Details."},
         auth=ADMIN,
     )
     assert response.status_code == 201
@@ -305,7 +191,7 @@ def test_admin_can_post_news_for_any_landlord(client) -> None:
 def test_post_news_rejects_a_missing_headline(client) -> None:
     response = client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "", "article": "Details."},
+        json={"manager_id": "lgd", "headline": "", "article": "Details."},
         auth=STEVE,
     )
     assert response.status_code == 422
@@ -316,7 +202,7 @@ def test_news_created_at_is_recorded_in_central_time(client) -> None:
     one-off, recorded in Central time (America/Chicago) instead."""
     client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "Hi", "article": "Details."},
+        json={"manager_id": "lgd", "headline": "Hi", "article": "Details."},
         auth=STEVE,
     )
     body = client.get("/api/news", auth=STEVE).json()
@@ -327,7 +213,7 @@ def test_news_created_at_is_recorded_in_central_time(client) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Reading news (landlord/admin)
+# Reading news (manager/admin)
 # ---------------------------------------------------------------------------
 
 def test_list_news_requires_authentication(client) -> None:
@@ -338,15 +224,15 @@ def test_list_news_is_refused_to_a_tenant(client) -> None:
     assert client.get("/api/news", auth=TENANT1).status_code == 404
 
 
-def test_a_landlord_sees_only_their_own_news(client) -> None:
+def test_a_manager_sees_only_their_own_news(client) -> None:
     client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "LGD news", "article": "..."},
+        json={"manager_id": "lgd", "headline": "LGD news", "article": "..."},
         auth=STEVE,
     )
     client.post(
         "/api/news",
-        json={"landlord_id": "robertson", "headline": "Robertson news", "article": "..."},
+        json={"manager_id": "robertson", "headline": "Robertson news", "article": "..."},
         auth=GAY,
     )
 
@@ -355,15 +241,15 @@ def test_a_landlord_sees_only_their_own_news(client) -> None:
     assert [n["headline"] for n in body["news"]] == ["LGD news"]
 
 
-def test_admin_sees_every_landlords_news(client) -> None:
+def test_admin_sees_every_managers_news(client) -> None:
     client.post(
         "/api/news",
-        json={"landlord_id": "lgd", "headline": "LGD news", "article": "..."},
+        json={"manager_id": "lgd", "headline": "LGD news", "article": "..."},
         auth=STEVE,
     )
     client.post(
         "/api/news",
-        json={"landlord_id": "robertson", "headline": "Robertson news", "article": "..."},
+        json={"manager_id": "robertson", "headline": "Robertson news", "article": "..."},
         auth=GAY,
     )
 
@@ -376,7 +262,7 @@ def test_admin_sees_every_landlords_news(client) -> None:
 # Tenant accounts are kept out of the manager dashboard and its API
 # ---------------------------------------------------------------------------
 
-def test_tenant_cannot_reach_the_landlord_dashboard(client) -> None:
+def test_tenant_cannot_reach_the_manager_dashboard(client) -> None:
     assert client.get("/manager/", auth=TENANT1).status_code == 404
 
 
