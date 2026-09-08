@@ -186,7 +186,7 @@ def test_admin_may_act_for_any_landlord() -> None:
 
 
 def test_a_landlord_may_act_only_for_their_own() -> None:
-    steve = make_user("landlord", "lgd")
+    steve = make_user("manager", "lgd")
     assert not steve.is_admin
     assert steve.may_use_landlord("lgd")
     assert not steve.may_use_landlord("robertson")

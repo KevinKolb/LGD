@@ -171,10 +171,25 @@ to just credentials pointing at it — and treat it as a real migration: the liv
 `users` table holds real password hashes, and changing how it is read is what
 took startup down on 2026-09-07 (see the `users.email` note in `app/config.py`).
 
-Role vocabulary also differs and needs settling in the same pass: the code uses
-`admin` / `landlord` / `tenant` (`ROLE_*` in `app/config.py`, and those literal
-strings are stored in `users.role` and in the live database), while the UI and
-`people.role` now say manager / resident / applicant.
+Role vocabulary was settled on 2026-09-08: the roles are `admin` / `manager` /
+`resident` everywhere — `ROLE_*` in `app/config.py`, the strings stored in
+`users.role`, and `people.role`. The old `landlord` / `tenant` values are mapped
+forward by `normalize_role()` on every load, in both the JSON and Postgres
+paths, and `preload_accounts_from_postgres` also rewrites them in place. **Keep
+that mapping.** It is not redundant with the UPDATE: the only authentication
+this app has is these rows, so a database still holding the old strings — a
+migration that has not run yet, a restored backup — must still log people in
+rather than reject every user at once.
+
+Deliberately *not* renamed, so that names still match what they describe:
+
+- The `landlords` table, the `landlord_id` columns, and the `Landlord`
+  dataclass. Landlord here is the company a lease is issued under, not the role
+  a person holds, and the dataclass maps one-to-one onto the table row.
+- `Lessor` / `Lessee` and `lessor_name` / `lessor_id` — the legal parties named
+  in the executed lease and in Louisiana law.
+- `notices.tenant_username` and `leases.tenants_json`, which are column names;
+  the API fields are kept aligned with the columns they write to.
 
 ## Two storage backends, one call site each
 

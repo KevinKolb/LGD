@@ -23,13 +23,27 @@ load_dotenv()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ROLE_ADMIN = "admin"
-ROLE_LANDLORD = "landlord"
-ROLE_TENANT = "tenant"
-VALID_ROLES = {ROLE_ADMIN, ROLE_LANDLORD, ROLE_TENANT}
+ROLE_MANAGER = "manager"
+ROLE_RESIDENT = "resident"
+VALID_ROLES = {ROLE_ADMIN, ROLE_MANAGER, ROLE_RESIDENT}
 # Roles tied to one specific landlord, as opposed to the admin role, which
 # is not. Both need a landlord_id and are checked the same way when loading
 # accounts - see _load_accounts and _validate_accounts below.
-LANDLORD_SCOPED_ROLES = {ROLE_LANDLORD, ROLE_TENANT}
+MANAGER_SCOPED_ROLES = {ROLE_MANAGER, ROLE_RESIDENT}
+
+# These two roles used to be stored as "landlord" and "tenant". The strings
+# live in accounts.json and in the live users.role column, so a database
+# written before the rename still holds the old ones. Every load maps them
+# forward rather than rejecting them: startup must not depend on a
+# migration having already run, or a stale database locks everyone out of
+# an app whose only authentication is these rows.
+LEGACY_ROLES = {"landlord": ROLE_MANAGER, "tenant": ROLE_RESIDENT}
+
+
+def normalize_role(role: str) -> str:
+    """Accept a role by either its current or its pre-rename name."""
+    return LEGACY_ROLES.get(role, role)
+
 
 MODE_SANDBOX = "sandbox"
 MODE_PRODUCTION = "production"
@@ -101,8 +115,8 @@ class User:
         return self.role == ROLE_ADMIN
 
     @property
-    def is_tenant(self) -> bool:
-        return self.role == ROLE_TENANT
+    def is_resident(self) -> bool:
+        return self.role == ROLE_RESIDENT
 
     def may_use_landlord(self, landlord_id: str) -> bool:
         """Admins may act for any landlord; everyone else only for their own."""
@@ -135,7 +149,7 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
     users: list[User] = []
     for entry in raw.get("users", []):
         username = str(entry["username"])
-        role = str(entry.get("role", ROLE_LANDLORD))
+        role = normalize_role(str(entry.get("role", ROLE_MANAGER)))
         if role not in VALID_ROLES:
             raise ConfigError(
                 f"User {username!r} has role {role!r}; expected one of "
@@ -144,7 +158,7 @@ def _load_accounts(path: Path) -> tuple[tuple[Landlord, ...], tuple[User, ...]]:
         landlord_id = entry.get("landlord_id")
         landlord_id = str(landlord_id) if landlord_id else None
 
-        if role in LANDLORD_SCOPED_ROLES:
+        if role in MANAGER_SCOPED_ROLES:
             if not landlord_id:
                 raise ConfigError(f"User {username!r} needs a landlord_id.")
             if landlord_id not in known_ids:
@@ -204,7 +218,7 @@ def _validate_accounts(
                 f"User {user.username!r} has role {user.role!r}; expected "
                 f"one of {sorted(VALID_ROLES)}."
             )
-        if user.role in LANDLORD_SCOPED_ROLES:
+        if user.role in MANAGER_SCOPED_ROLES:
             if not user.landlord_id:
                 raise ConfigError(f"User {user.username!r} needs a landlord_id.")
             if user.landlord_id not in known_ids:
@@ -247,6 +261,13 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
         await connection.execute(
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT"
         )
+        # Roles were renamed landlord -> manager and tenant -> resident.
+        # Idempotent, and only a tidy-up: normalize_role already maps the
+        # old strings on the way in, so a login works either way.
+        for old_role, new_role in LEGACY_ROLES.items():
+            await connection.execute(
+                "UPDATE users SET role = $1 WHERE role = $2", new_role, old_role
+            )
         landlord_rows = await connection.fetch(
             "SELECT id, company, signer_name, email FROM landlords"
         )
@@ -268,7 +289,7 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
         User(
             username=row["username"],
             display_name=row["display_name"] or row["username"],
-            role=row["role"],
+            role=normalize_role(row["role"]),
             password_hash=row["password_hash"] or "",
             landlord_id=row["landlord_id"],
             email=row["email"],

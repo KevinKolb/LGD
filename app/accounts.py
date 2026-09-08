@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from app.auth import hash_password
-from app.config import REPO_ROOT, ROLE_ADMIN, ROLE_LANDLORD
+from app.config import REPO_ROOT, ROLE_ADMIN, ROLE_MANAGER
 
 DEFAULT_PATH = REPO_ROOT / "accounts.json"
 MIN_PASSWORD_LENGTH = 12
@@ -77,7 +77,7 @@ STARTER: dict[str, Any] = {
         {
             "username": "pam",
             "display_name": "REPLACE ME",
-            "role": ROLE_LANDLORD,
+            "role": ROLE_MANAGER,
             "landlord_id": "lgd",
             "password_hash": "",
             "email": "replace-me@example.com",
@@ -85,7 +85,7 @@ STARTER: dict[str, Any] = {
         {
             "username": "gay",
             "display_name": "REPLACE ME",
-            "role": ROLE_LANDLORD,
+            "role": ROLE_MANAGER,
             "landlord_id": "robertson",
             "password_hash": "",
             "email": "replace-me@example.com",

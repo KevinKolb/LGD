@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from app import config
-from app.config import ConfigError, ROLE_ADMIN, ROLE_LANDLORD, Settings
+from app.config import ConfigError, ROLE_ADMIN, ROLE_MANAGER, Settings
 
 pytestmark = pytest.mark.anyio
 
@@ -52,9 +52,12 @@ class FakeConnection:
         self._landlord_rows = landlord_rows
         self._user_rows = user_rows
         self.executed: list[str] = []
+        self.updates: list[tuple[Any, ...]] = []
 
-    async def execute(self, sql: str) -> None:
+    async def execute(self, sql: str, *args: Any) -> None:
         self.executed.append(" ".join(sql.split()))
+        if args:
+            self.updates.append(args)
 
     async def fetch(self, sql: str) -> list[dict[str, Any]]:
         if "FROM landlords" in sql:
@@ -98,6 +101,32 @@ async def test_preload_adds_the_email_column_to_an_older_users_table(monkeypatch
     assert "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT" in connection.executed
 
 
+async def test_preload_migrates_the_old_role_names(monkeypatch) -> None:
+    """landlord -> manager and tenant -> resident, in the stored data."""
+    connection = FakeConnection([LANDLORD_ROW], [USER_ROW])
+    _patch_connect(monkeypatch, connection)
+
+    await config.preload_accounts_from_postgres(DSN)
+
+    assert ("manager", "landlord") in connection.updates
+    assert ("resident", "tenant") in connection.updates
+
+
+async def test_preload_still_accepts_a_pre_rename_role(monkeypatch) -> None:
+    """The only authentication this app has is these rows. If a database
+    still holds "landlord"/"tenant" - because the UPDATE above has not run
+    yet, or was rolled back - the load must map them forward rather than
+    reject the user and lock everyone out."""
+    old_user = {**USER_ROW, "username": "pam", "role": "landlord",
+                "landlord_id": "lgd"}
+    _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [old_user]))
+
+    await config.preload_accounts_from_postgres(DSN)
+
+    _landlords, users = config._accounts_cache
+    assert users[0].role == "manager"
+
+
 async def test_settings_load_reads_the_cache_instead_of_json(
     monkeypatch
 ) -> None:
@@ -134,7 +163,7 @@ async def test_settings_load_prefers_database_url_for_db_path(
 async def test_preload_rejects_a_user_pointing_at_an_unknown_landlord(
     monkeypatch
 ) -> None:
-    bad_user = {**USER_ROW, "role": ROLE_LANDLORD, "landlord_id": "no-such-landlord"}
+    bad_user = {**USER_ROW, "role": ROLE_MANAGER, "landlord_id": "no-such-landlord"}
     _patch_connect(monkeypatch, FakeConnection([LANDLORD_ROW], [bad_user]))
 
     with pytest.raises(ConfigError):

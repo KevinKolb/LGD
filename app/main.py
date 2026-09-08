@@ -31,7 +31,7 @@ from app.auth import check_credentials, hash_password, verify_password
 from app.config import (
     ConfigError,
     Landlord,
-    ROLE_TENANT,
+    ROLE_RESIDENT,
     User,
     VALID_MODES,
     get_settings,
@@ -139,10 +139,10 @@ def current_user(
     return user
 
 
-def require_not_tenant(user: User) -> None:
-    """Keep tenant accounts out of the manager dashboard and its API - a
-    tenant only ever needs /api/notices and /api/account/password."""
-    if user.is_tenant:
+def require_not_resident(user: User) -> None:
+    """Keep resident accounts out of the manager dashboard and its API - a
+    resident only ever needs /api/notices and /api/account/password."""
+    if user.is_resident:
         raise HTTPException(status_code=404, detail="Not found")
 
 
@@ -198,7 +198,7 @@ async def print_files(asset: str, user: User = Depends(current_user)):
     """The blank paper lease, at the same relative path it has on GitHub
     Pages (../print/lease_print.html from the manager page), so one href
     works on both hosts. /api/blank-lease still serves the same file."""
-    require_not_tenant(user)
+    require_not_resident(user)
     return FileResponse(
         resolve_static_file(PRINT_DIR, asset),
         media_type="text/html",
@@ -218,7 +218,7 @@ async def shared_files(asset: str):
 @app.get("/manager/", include_in_schema=False)
 @app.get("/manager/{asset:path}", include_in_schema=False)
 async def manager_files(asset: str = "", user: User = Depends(current_user)):
-    require_not_tenant(user)
+    require_not_resident(user)
     return FileResponse(
         resolve_static_file(MANAGER_DIR, asset), headers={"Cache-Control": "no-store"}
     )
@@ -231,7 +231,7 @@ async def admin_files(asset: str = "", user: User = Depends(current_user)):
     # link always works rather than 404ing for a landlord) - the actual
     # admin data behind it (/api/admin/info) stays admin-only, and the page
     # shows "Admins only." to anyone else. See api_admin_info below.
-    require_not_tenant(user)
+    require_not_resident(user)
     return FileResponse(
         resolve_static_file(ADMIN_DIR, asset), headers={"Cache-Control": "no-store"}
     )
@@ -264,7 +264,7 @@ async def api_blank_lease(_: User = Depends(current_user)):
 
 @app.get("/api/config")
 async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     return {
         "user": {
@@ -283,7 +283,7 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
         "tenants": [
             {"username": u.username, "display_name": u.display_name}
             for u in settings.users
-            if u.role == ROLE_TENANT and (user.is_admin or u.landlord_id == user.landlord_id)
+            if u.role == ROLE_RESIDENT and (user.is_admin or u.landlord_id == user.landlord_id)
         ],
         "mode": settings.mode,
         "is_sandbox": settings.is_sandbox,
@@ -421,7 +421,7 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
 @app.get("/api/leases")
 async def api_list_leases(user: User = Depends(current_user)) -> dict[str, Any]:
     """Admins see every lease; a landlord sees only their own."""
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     leases = await db.list_leases(
         settings.db_path,
@@ -440,7 +440,7 @@ async def api_preview_lease(
     Production has a 60-document annual allowance, so this exists to catch a
     typo before it costs one of them. It is free in either mode.
     """
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     lessor = authorize_landlord(user, lease.lessor_id)
     discount = Decimal(settings.early_payment_discount)
@@ -468,7 +468,7 @@ async def api_create_lease(
     user: User = Depends(current_user),
 ) -> dict[str, Any]:
     """Create the lease in PandaDoc and return a signing link to send out."""
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     client: PandaDocClient = request.app.state.pandadoc
 
@@ -592,7 +592,7 @@ async def api_download_lease(
     user: User = Depends(current_user),
 ):
     """Serve the executed PDF, fetching it from PandaDoc if not yet archived."""
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     lease = await db.get_lease(settings.db_path, document_id)
     if lease is None:
@@ -695,10 +695,10 @@ async def api_send_notice(
     user: User = Depends(current_user),
 ) -> dict[str, str]:
     """A landlord/admin sends one tenant a free-form notice."""
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     tenant = settings.user_by_username(notice.tenant_username)
-    if tenant is None or not tenant.is_tenant:
+    if tenant is None or not tenant.is_resident:
         raise HTTPException(status_code=400, detail="Unknown tenant.")
     if not user.may_use_landlord(tenant.landlord_id):
         raise HTTPException(
@@ -716,7 +716,7 @@ async def api_send_notice(
 @app.get("/api/notices")
 async def api_list_notices(user: User = Depends(current_user)) -> dict[str, Any]:
     """A tenant's own notices, newest first."""
-    if not user.is_tenant:
+    if not user.is_resident:
         raise HTTPException(status_code=404, detail="No such page.")
     settings = get_settings()
     notices = await db.list_notices(settings.db_path, tenant_username=user.username)
@@ -729,7 +729,7 @@ async def api_post_news(
     user: User = Depends(current_user),
 ) -> dict[str, str]:
     """A landlord/admin publishes a news post, from the manager dashboard."""
-    require_not_tenant(user)
+    require_not_resident(user)
     authorize_landlord(user, news.landlord_id)
     settings = get_settings()
     await db.record_news(
@@ -745,7 +745,7 @@ async def api_post_news(
 @app.get("/api/news")
 async def api_list_news(user: User = Depends(current_user)) -> dict[str, Any]:
     """News for this user's own landlord, or every landlord's for an admin."""
-    require_not_tenant(user)
+    require_not_resident(user)
     settings = get_settings()
     landlord_id = None if user.is_admin else user.landlord_id
     news = await db.list_news(settings.db_path, landlord_id=landlord_id)
