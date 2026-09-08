@@ -140,6 +140,23 @@ def test_page_number_counter_is_present(real_output):
     assert "counter(pages)" in real_output
 
 
+def test_printing_paginates_the_same_on_a_phone_as_on_a_desktop(real_output):
+    """This printed 6 pages from a desktop but 9 from a phone. Two device
+    differences cause that, and both have to stay pinned:
+
+    1. Phones inflate the font of long text blocks (text autosizing) and
+       carry that inflation onto paper.
+    2. A phone lays the screen out ~390px wide, so a browser printing from
+       the screen layout instead of re-flowing to paper wraps far more
+       lines per paragraph.
+    """
+    assert "text-size-adjust: 100%" in real_output
+
+    print_block = real_output.split("@media print {")[1].split("@media screen")[0]
+    assert "max-width: none" in print_block
+    assert "width: auto" in print_block
+
+
 def test_page_auto_triggers_the_browser_print_dialog(real_output):
     """Opening this page (from the dashboard's "Print blank lease" button)
     is the whole point of it, so it must not sit there waiting for the

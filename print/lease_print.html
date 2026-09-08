@@ -22,6 +22,14 @@
     background: #fff;
     color: #000;
   }
+  html {
+    /* Phones inflate the font of long text blocks ("text autosizing"),
+       and printing from the phone carries that inflation onto paper -
+       which is why this printed longer from a phone than from a desktop.
+       Pin it so a point is a point on every device. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     font-family: Georgia, "Times New Roman", Times, serif;
     font-size: 11.5pt;
@@ -105,6 +113,18 @@
   @media print {
     .footer-note { display: none; }
     a { color: inherit; text-decoration: none; }
+    /* Let the page box from @page decide the column width, rather than
+       the screen sizing above. A phone lays the screen out ~390px wide,
+       and a browser that prints from that layout rather than re-flowing
+       to paper width would wrap far more lines per paragraph, adding
+       pages. Anchoring the printed width to the paper keeps the
+       pagination identical everywhere. */
+    body {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      padding: 0 0 0.25in;
+    }
   }
   @media screen {
     body { padding: 0.5in 0.75in 1in; box-shadow: 0 0 12px rgba(0,0,0,.15); }
