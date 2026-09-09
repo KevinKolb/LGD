@@ -3,7 +3,15 @@
 
    Colors come from the CSS variables each page defines in its own :root
    (--muted, --accent), so the footer follows whatever theme the page is
-   in, including the ?org=o orange scheme. */
+   in, including the ?org=o orange scheme.
+
+   Every page also defines --accent2, Tulane light blue (#71c5e8), as the
+   secondary: the rule under each green header bar, the top border of the
+   hub and login cards, and what every button and button-shaped link fills
+   with on hover. It is never text or an icon on white, where it is too
+   pale to read - so a button hovering into it turns its own label dark
+   ink rather than keeping white. The orange scheme swaps it for #f4a261
+   the same way it swaps --accent. */
 
 /* Pins the footer to the bottom of the viewport on short pages, while
    still letting it sit below the content on long ones. A page that lays

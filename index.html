@@ -102,9 +102,12 @@
     text-decoration: none;
     font-weight: 600;
   }
+  /* Hover fills with the secondary. The label turns dark ink rather than
+     white, because white does not read on a blue this pale. */
   .links a:hover {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink);
   }
   /* Layout comes from /shared/site.css. Here the title and card are
      centered as one unit by auto margins - one above the title, one below
@@ -151,6 +154,12 @@
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: .03em;
+    font-weight: 600;
+  }
+  .modal-box button:hover {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink);
   }
 </style>
 </head>

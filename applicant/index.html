@@ -32,6 +32,8 @@
     --muted: #6b6a66;
     --line: #dcdad4;
     --accent: #1f5d4c;
+    --accent2: #71c5e8;
+    --accent2-soft: rgba(113, 197, 232, .35);
     --accent-ink: #ffffff;
     --danger: #9b2c2c;
     --ok: #1f5d4c;
@@ -39,6 +41,8 @@
   }
   html.theme-orange {
     --accent: #d2601a;
+    --accent2: #f4a261;
+    --accent2-soft: rgba(244, 162, 97, .35);
     --ok: #d2601a;
   }
   * { box-sizing: border-box; }
@@ -52,6 +56,7 @@
     background: var(--accent);
     color: var(--accent-ink);
     padding: 18px 24px;
+    border-bottom: 4px solid var(--accent2);
   }
   header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
   header p { margin: 4px 0 0; opacity: .8; font-size: 13px; }
@@ -88,6 +93,13 @@
     background: #fff;
     color: var(--ink);
   }
+  /* The secondary color marks the field being typed in. It is only a
+     tint - the browser's own focus ring is left alone, since this blue is
+     too pale to carry the focus indication by itself. */
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px var(--accent2-soft);
+  }
   textarea { min-height: 70px; resize: vertical; }
   .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
@@ -113,12 +125,20 @@
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: .03em;
+    font-weight: 600;
   }
   button:disabled { opacity: .55; cursor: progress; }
   button.secondary { background: transparent; color: var(--accent); }
   button.link {
     background: none; border: none; color: var(--danger);
     padding: 0; font-size: 12px; cursor: pointer; text-decoration: underline;
+  }
+  /* Hover fills with the secondary. The label turns dark ink rather than
+     white, because white does not read on a blue this pale. */
+  button:not(.link):not(:disabled):hover {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink);
   }
   .msg { font-size: 13px; margin-top: 10px; }
   .msg.error { color: var(--danger); }

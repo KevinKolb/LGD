@@ -32,6 +32,7 @@
     --muted: #6b6a66;
     --line: #dcdad4;
     --accent: #1f5d4c;
+    --accent2: #71c5e8;
     --accent-ink: #ffffff;
     --danger: #9b2c2c;
     --ok: #1f5d4c;
@@ -39,6 +40,7 @@
   }
   html.theme-orange {
     --accent: #d2601a;
+    --accent2: #f4a261;
     --ok: #d2601a;
   }
   * { box-sizing: border-box; }
@@ -52,6 +54,7 @@
     background: var(--accent);
     color: var(--accent-ink);
     padding: 18px 24px;
+    border-bottom: 4px solid var(--accent2);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -116,6 +119,7 @@
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: .03em;
+    font-weight: 600;
   }
   .button-link {
     display: inline-block;
@@ -129,6 +133,7 @@
     text-decoration: none;
     text-transform: uppercase;
     letter-spacing: .03em;
+    font-weight: 600;
   }
   .button-link.secondary {
     background: transparent; color: var(--accent) !important;
@@ -169,8 +174,18 @@
     text-decoration: none;
     text-transform: uppercase;
     letter-spacing: .03em;
+    font-weight: 600;
   }
   .gate .gate-button.secondary { background: transparent; color: var(--accent); }
+  /* Hover fills with the secondary. The label turns dark ink rather than
+     white, because white does not read on a blue this pale. */
+  button.secondary:not(:disabled):hover,
+  .button-link:hover,
+  .gate .gate-button:hover {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink) !important;
+  }
 </style>
 </head>
 <body>

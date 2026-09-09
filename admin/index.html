@@ -32,12 +32,14 @@
     --muted: #6b6a66;
     --line: #dcdad4;
     --accent: #1f5d4c;
+    --accent2: #71c5e8;
     --accent-ink: #ffffff;
     --danger: #9b2c2c;
     --radius: 8px;
   }
   html.theme-orange {
     --accent: #d2601a;
+    --accent2: #f4a261;
   }
   * { box-sizing: border-box; }
   body {
@@ -50,6 +52,7 @@
     background: var(--accent);
     color: var(--accent-ink);
     padding: 18px 24px;
+    border-bottom: 4px solid var(--accent2);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -83,6 +86,14 @@
   .links a {
     display: inline-block; padding: 8px 14px; border-radius: 6px;
     border: 1px solid var(--accent); color: var(--accent); text-decoration: none;
+    font-weight: 600;
+  }
+  /* Hover fills with the secondary. The label turns dark ink rather than
+     white, because white does not read on a blue this pale. */
+  .links a:hover {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink);
   }
   .empty { color: var(--muted); font-style: italic; }
   a { color: var(--accent); }

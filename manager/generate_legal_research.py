@@ -181,10 +181,11 @@ PAGE = """<!doctype html>
     --muted: #6b6a66;
     --line: #dcdad4;
     --accent: #1f5d4c;
+    --accent2: #71c5e8;
     --accent-ink: #ffffff;
     --radius: 8px;
   }}
-  html.theme-orange {{ --accent: #d2601a; }}
+  html.theme-orange {{ --accent: #d2601a; --accent2: #f4a261; }}
   * {{ box-sizing: border-box; }}
   body {{
     margin: 0;
@@ -196,6 +197,7 @@ PAGE = """<!doctype html>
     background: var(--accent);
     color: var(--accent-ink);
     padding: 18px 24px;
+    border-bottom: 4px solid var(--accent2);
   }}
   header h1 {{ margin: 0; font-size: 18px; letter-spacing: .01em; }}
   header p {{ margin: 4px 0 0; opacity: .8; font-size: 13px; }}
