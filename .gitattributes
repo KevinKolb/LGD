@@ -1,0 +1,7 @@
+# The printed lease embeds this font, and its bytes are checked byte-for-byte
+# by tests/test_generate_print_lease.py. core.autocrlf is true in this repo,
+# so leaving the type to git's auto-detection is a corrupted font away from a
+# lease that prints in a fallback face - the exact bug embedding it fixed.
+*.woff2 binary
+*.pdf   binary
+*.ico   binary
