@@ -104,5 +104,32 @@ for the research behind any entry that cites outside sources.
   "A blank, printable paper lease" and "Keeping the PandaDoc template body
   in sync" above for the updated mechanics in each.
 
+- **2026-09-19 - §6 SMOKING, opening sentence simplified** (the user's exact
+  wording). "No smoking of any kind, including but not limited to cigarettes,
+  cigars, pipes, e-cigarettes or vaping devices, and marijuana, is permitted at
+  any time inside the leased premises" became "No smoking or vaping of any kind
+  is permitted at any time inside the leased premises". The enumerated list of
+  methods is gone, and with it the express mention of marijuana; vaping is now
+  named alongside smoking rather than as an instance of it. The rest of the
+  section is untouched - cost recovery still tied to the §3 security deposit,
+  violation still ipso facto default with no §9 five-day cure. Note flagged to
+  the user at the time and deliberately left alone: the cost-recovery sentence
+  still reads "made necessary by smoking inside the premises", which the old
+  opening swept vaping into by definition and the new one no longer does.
+  Applied to `documents/lease.md`; `documents/print/lease_print.html`
+  regenerated from it.
+
+- **2026-09-19 - §6 SMOKING, cost-recovery sentence matched to the new opening**
+  (approved by the user, same day, immediately after the entry above). "equipment
+  made necessary by smoking inside the premises" became "equipment made necessary
+  by smoking or vaping inside the premises" - two words, nothing else in the
+  sentence moved. This closes the gap flagged in the entry above: once the opening
+  sentence stopped defining vaping as a kind of smoking and began naming it as a
+  separate activity, the bare word "smoking" here no longer reached vape residue,
+  which is exactly the damage the sentence exists to bill for. The paragraph was
+  re-wrapped to the file's ~87-column body width in the same pass, so the diff
+  touches more lines than the two changed words. Applied to `documents/lease.md`;
+  `documents/print/lease_print.html` regenerated from it.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.

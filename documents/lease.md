@@ -104,18 +104,17 @@ All pets must be crated or securely closed off in a room that will not be entere
 maintenance/repair appointments, apartment showings, or when requested by
 property owner/manager.
 
-6. **SMOKING** No smoking of any kind, including but not limited to cigarettes, cigars,
-pipes, e-cigarettes or vaping devices, and marijuana, is permitted at any time inside
-the leased premises, whether by Lessee, Lessee's family, guests, or invitees.  Lessee
-agrees to pay Lessor when billed the full amount necessary to clean, deodorize,
-repaint, or replace any surfaces, carpeting, fixtures, or equipment made necessary by
-smoking inside the premises, which amount may be deducted from the security deposit
-as provided in Section 3.  Any violation of this provision shall render Lessee ipso
-facto in default, and Lessor shall have the option to demand immediate payment of the
-rent for the whole unexpired term of the lease or to immediately cancel this lease and
+6. **SMOKING** No smoking or vaping of any kind is permitted at any time inside the
+leased premises, whether by Lessee, Lessee's family, guests, or invitees.  Lessee agrees
+to pay Lessor when billed the full amount necessary to clean, deodorize, repaint, or
+replace any surfaces, carpeting, fixtures, or equipment made necessary by smoking or
+vaping inside the premises, which amount may be deducted from the security deposit as
+provided in Section 3.  Any violation of this provision shall render Lessee ipso facto
+in default, and Lessor shall have the option to demand immediate payment of the rent
+for the whole unexpired term of the lease or to immediately cancel this lease and
 obtain possession of the premises in accordance with the provisions of Articles
-4701-4705 of the Louisiana Code of Civil Procedure, without the five (5) day notice
-and cure period provided in Section 9.
+4701-4705 of the Louisiana Code of Civil Procedure, without the five (5) day notice and
+cure period provided in Section 9.
 
 7. **SUBLEASE** Lessee is not permitted to post any "For Rent" signs, rent, sublet or grant use
 of possession of the leased premises without written consent of Lessor and then only in
