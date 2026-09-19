@@ -293,3 +293,66 @@ def test_generated_file_on_disk_matches_a_fresh_run(gen, real_output):
     output_path = (Path(__file__).resolve().parent.parent
                    / "documents" / "print" / "lease_print.html")
     assert output_path.read_text(encoding="utf-8") == real_output
+
+def test_the_font_is_embedded_so_pagination_cannot_depend_on_the_device(gen, real_output):
+    """The lease printed 6 pages from a desktop but put the signatures on a
+    near-empty page of their own from a phone. Root cause: the document asked
+    for Georgia, and a device that does not have Georgia silently substitutes
+    something with different advance widths - different line breaks, different
+    page ends. Measured with headless Chrome, dropping Georgia from the stack
+    moved the per-page character counts from
+    [2838, 2422, 3060, 2923, 3101, 2091] to
+    [2777, 3154, 3682, 3140, 3253, 429] - that last page is the bug.
+
+    Embedding the font removes the substitution entirely: the same two
+    renders now match to the character. So the font has to stay inline, and
+    it has to stay first in the stack.
+    """
+    assert "data:font/woff2;base64," in real_output
+    # First in the stack everywhere it is declared, or the fallback wins.
+    for stack in re.findall(r"font-family:([^;]+);", real_output):
+        assert stack.strip().startswith('"Gelasio"'), stack
+
+    # A weight *range*: one variable file covering regular through bold. A
+    # static face would leave each engine to synthesize its own bold, and
+    # synthesized bold differs per engine - the same class of variance.
+    assert "font-weight: 400 700;" in real_output
+
+    # block, not swap: printing must not start in a fallback face.
+    assert "font-display: block;" in real_output
+
+
+def test_embedded_font_bytes_round_trip(gen, real_output):
+    """The data URI must decode to the font actually committed, so a
+    truncated or re-encoded blob is caught here rather than on paper."""
+    import base64
+
+    encoded = re.search(r"data:font/woff2;base64,([A-Za-z0-9+/=]+)", real_output).group(1)
+    assert base64.b64decode(encoded) == gen.FONT_FILE.read_bytes()
+
+
+def test_printing_waits_for_the_font(real_output):
+    """window.print() on "load" can fire while the document is still laid
+    out in a fallback face, which paginates on the wrong widths - the very
+    thing embedding the font is meant to prevent."""
+    assert "document.fonts" in real_output
+    assert "fontsReady" in real_output
+
+
+def test_signatures_are_bound_to_the_sentence_they_execute(real_output):
+    """A page break between "Executed in duplicate at ___" and the signature
+    lines leaves a bare signature page. Verified with headless Chrome across
+    Letter and A4 at six margin settings: 12 of 12 keep them together.
+
+    This is deliberately a relative constraint rather than a fixed page
+    position - that is what makes it survive a different paper size, a
+    different margin, or a different printer.
+    """
+    block = real_output[real_output.index('<div class="execution-block">'):]
+    block = block[:block.index("</div>", block.index("signature-block"))]
+    assert "Executed in duplicate at" in block
+    assert "Lessor/Agent" in block
+
+    css = real_output[real_output.index(".execution-block {"):real_output.index(".signature-block {")]
+    assert "page-break-inside: avoid;" in css
+    assert "break-inside: avoid;" in css

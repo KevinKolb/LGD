@@ -73,6 +73,52 @@ correctly in Chrome, Edge, and Safari (18.2+), but Firefox does not support it a
 early 2026; printing from Firefox just omits that line rather than showing something
 wrong.
 
+### The font is embedded, and that is load-bearing
+
+The printed lease carries **Gelasio** inline as a base64 data URI
+(`documents/print/fonts/Gelasio-Variable.woff2`, SIL OFL, license beside it).
+This is not decoration — it is what makes the print device-agnostic.
+
+The document used to ask for Georgia. A device that doesn't have Georgia
+substitutes something else, the substitute has different advance widths, so
+lines break differently and every page ends somewhere else. Measured with
+headless Chrome, per-page character counts went from
+`[2838, 2422, 3060, 2923, 3101, 2091]` with Georgia to
+`[2777, 3154, 3682, 3140, 3253, 429]` without it — that 429-character last
+page is a signature page with almost nothing else on it, which is exactly
+what printing from a phone produced. With the font embedded the two renders
+match to the character.
+
+Three details that all matter, each with a test in
+`tests/test_generate_print_lease.py`:
+
+- **Gelasio is metric-compatible with Georgia**, so embedding it did *not*
+  re-paginate the desktop output that was already correct — verified by
+  rendering before and after (2838 → 2837 characters on page 1).
+- **It is a variable font, declared `font-weight: 400 700`.** A static
+  regular would leave each browser to synthesize its own bold, and
+  synthesized bold differs per engine — reintroducing the same variance.
+- **`font-display: block`, and the auto-print waits on `document.fonts.ready`.**
+  `window.print()` on `load` can fire while the page is still in a fallback
+  face, which paginates on the wrong widths.
+
+Don't add a font-family anywhere in that generator without putting
+`"Gelasio"` first, and don't drop the font file thinking it's an asset the
+page merely prefers.
+
+### The signature lines are bound to the sentence they execute
+
+`.execution-block` wraps the "Executed in duplicate at ___" paragraph and the
+four signature lines in one `break-inside: avoid` unit, so a page break can
+never fall between them and leave a bare signature page. `generate()` raises
+if the last body paragraph stops being the execution sentence, rather than
+silently binding the wrong thing.
+
+This is deliberately a *relative* constraint rather than a fixed page
+position — that is what makes it survive a different paper size, margin or
+printer. Verified with headless Chrome across Letter and A4 at six margin
+settings: 12 of 12 keep them together at 6 pages.
+
 §20 PARKING is the one section with two real, mutually exclusive radio
 buttons instead of fill-in blanks: `mark_parking_radios` in the generator
 recognizes the two literal sentences "( ) Parking not available at this

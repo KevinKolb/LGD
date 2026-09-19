@@ -11,12 +11,13 @@ underscore lines: this is meant to be filled in and signed by hand.
 Usage:
     python documents/print/generate_print_lease.py
 
-No third-party dependencies: the output is one HTML file with its CSS
-inline, so it prints correctly offline, from any browser, on any machine -
-nothing to install.
+No third-party dependencies: the output is one HTML file with its CSS and
+its font inline, so it prints correctly offline, from any browser, on any
+machine - nothing to install.
 """
 from __future__ import annotations
 
+import base64
 import html
 import re
 from pathlib import Path
@@ -25,6 +26,46 @@ from typing import Iterator
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SOURCE = REPO_ROOT / "documents" / "lease.md"
 OUTPUT = REPO_ROOT / "documents" / "print" / "lease_print.html"
+
+# Gelasio, embedded in the output as base64 rather than linked, so the printed
+# lease never depends on which fonts the printing device happens to have.
+# Android ships no Georgia at all, and even where Georgia exists an engine can
+# substitute; any substitution changes advance widths, which changes line
+# breaks, which changes where every page ends. Gelasio is metric-compatible
+# with Georgia, so this is the same document, pinned.
+# It is a variable font (wght 400-700), and that matters: a static regular
+# would leave each browser to synthesize its own bold, and synthesized bold
+# differs per engine - reintroducing the variance this exists to remove.
+# SIL Open Font License 1.1; the license ships beside it in fonts/OFL.txt.
+FONT_FILE = Path(__file__).resolve().parent / "fonts" / "Gelasio-Variable.woff2"
+
+# HTML_HEAD is CSS full of braces, so it cannot be str.format()-ed - the font
+# rule is spliced in at this marker instead.
+FONT_FACE_MARKER = "  /* @font-face spliced in by font_face_rule() */"
+
+FONT_FACE_TEMPLATE = """  @font-face {
+    font-family: "Gelasio";
+    font-style: normal;
+    /* A range, not one value: a single variable file covers regular to bold. */
+    font-weight: 400 700;
+    /* block, not swap: a lease that begins printing in a fallback face and
+       re-flows mid-print is precisely the bug this is here to prevent. The
+       font is a data URI, so nothing is waiting on a network. */
+    font-display: block;
+    src: url(data:font/woff2;base64,__FONT_DATA__) format("woff2");
+  }"""
+
+
+def font_face_rule() -> str:
+    """The @font-face rule with the font file itself inlined as a data URI."""
+    if not FONT_FILE.is_file():
+        raise SystemExit(
+            f"{FONT_FILE} is missing - the printed lease depends on it for "
+            "device-independent pagination. Restore it from git."
+        )
+    encoded = base64.b64encode(FONT_FILE.read_bytes()).decode("ascii")
+    return FONT_FACE_TEMPLATE.replace("__FONT_DATA__", encoded)
+
 
 # A blank line in lease.md is not reliably a real paragraph break (the scanned
 # document's page cuts sometimes fall mid-sentence), so a block that doesn't
@@ -46,20 +87,21 @@ HTML_HEAD = """<!doctype html>
 <link rel="icon" href="/favicon.ico">
 <title>Residential Lease</title>
 <style>
+  /* @font-face spliced in by font_face_rule() */
   @page {
     size: letter;
     margin: 0.85in;
     @top-center {
       content: "Lower Garden District Properties LLC — Page " counter(page)
                " of " counter(pages);
-      font-family: Georgia, "Times New Roman", Times, serif;
+      font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-size: 9pt;
       color: #444;
     }
     @bottom-center {
       content: "Lower Garden District Properties LLC — Page " counter(page)
                " of " counter(pages);
-      font-family: Georgia, "Times New Roman", Times, serif;
+      font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-size: 9pt;
       color: #444;
     }
@@ -79,7 +121,7 @@ HTML_HEAD = """<!doctype html>
     text-size-adjust: 100%;
   }
   body {
-    font-family: Georgia, "Times New Roman", Times, serif;
+    font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
     font-size: 11.5pt;
     line-height: 1.4;
     max-width: 7.5in;
@@ -110,6 +152,7 @@ HTML_HEAD = """<!doctype html>
   }
   p.section {
     page-break-after: avoid;
+    break-after: avoid;
   }
   .blank {
     display: inline-block;
@@ -137,12 +180,31 @@ HTML_HEAD = """<!doctype html>
     text-decoration: line-through;
     color: #555;
   }
-  .signature-block {
+  .execution-block {
+    /* "Executed in duplicate at ___ this ___ day of ___" and the four
+       signature lines are one unit: those signatures execute that sentence.
+       A break between them leaves a bare signature page - odd to read, and
+       poor practice on a document that gets signed.
+       This is a relative constraint, not a fixed position, which is why it
+       survives a different paper size, different margins or a different
+       font - the things that actually vary between a desktop and a phone. */
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .signature-block {
+    /* Both spellings: page-break-* is what older WebKit honours, break-* is
+       the current spec. They are not reliably aliased to each other. */
+    page-break-inside: avoid;
+    break-inside: avoid;
     page-break-before: avoid;
+    break-before: avoid;
     margin-top: 0.3in;
   }
   .sig-line {
+    /* A single signature line must never be split across a page boundary,
+       whatever happens to the block as a whole. */
+    page-break-inside: avoid;
+    break-inside: avoid;
     margin-top: 0.3in;
     border-top: 1px solid #000;
     max-width: 4.2in;
@@ -203,8 +265,20 @@ HTML_FOOTER = """
   // Opening this page (from the dashboard's "Print blank lease" button) is
   // the whole point of the page, so bring up the browser's print dialog
   // automatically rather than making the manager find Ctrl+P themselves.
-  // The small delay lets layout settle first so the print preview is right.
-  window.addEventListener("load", () => setTimeout(() => window.print(), 150));
+  //
+  // Wait for the embedded font before opening it. "load" can fire while the
+  // document is still laid out in a fallback face, and printing at that
+  // moment paginates on the wrong advance widths - the exact class of bug
+  // this page keeps regressing into. The small delay after that lets layout
+  // settle so the preview is right.
+  window.addEventListener("load", function () {
+    var fontsReady = (document.fonts && document.fonts.ready)
+      ? document.fonts.ready
+      : Promise.resolve();
+    fontsReady.then(function () {
+      setTimeout(function () { window.print(); }, 150);
+    });
+  });
 
   // Pick one of the two PARKING radio buttons first (cancel the print
   // dialog above if it beat you to it, then print again with Ctrl+P/
@@ -515,11 +589,27 @@ def generate(source_text: str) -> str:
         )
     signature_html = render_signature_lines(labels)
 
-    return (
-        HTML_HEAD
-        + "\n".join(paragraphs)
+    # The execution sentence is the last body paragraph, and it belongs with
+    # the signature lines - see .execution-block in the CSS for why.
+    if "Executed in duplicate at" not in paragraphs[-1]:
+        raise SystemExit(
+            "The last body paragraph is no longer the execution sentence, so "
+            "it cannot be bound to the signature lines. Has the tail of "
+            "documents/lease.md moved?"
+        )
+    tail_html = (
+        '<div class="execution-block">\n'
+        + paragraphs[-1]
         + "\n"
         + signature_html
+        + "\n</div>"
+    )
+
+    return (
+        HTML_HEAD.replace(FONT_FACE_MARKER, font_face_rule())
+        + "\n".join(paragraphs[:-1])
+        + "\n"
+        + tail_html
         + HTML_FOOTER
     )
 
