@@ -58,14 +58,46 @@ OFFICE_FIELDS = (
 # address with parking needs its vehicles listed (lease §21).
 CONDITION = re.compile(r"^\((\w+)=([\w-]+)\) ")
 
+# A block this short (not counting its underscores) is a row of form
+# fields, laid out full width; a longer one is prose that happens to hold a
+# blank, like the holding deposit's "$____".
+ROW_MAX_TEXT = 110
+
 EXTRA_CSS = """
-  p.field {
-    margin: 0 0 0.62em;
+  /* A row of form fields: full page width, the blanks stretching to fill
+     it in proportion to their underscores in application.md, and 3/8in
+     tall - room to write, without spreading the form over extra pages. */
+  p.field.row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.07in;
+    min-height: 0.375in;
+    margin: 0;
+    line-height: 1.2;
     text-align: left;
-    line-height: 1.9;
     page-break-inside: avoid;
     break-inside: avoid;
   }
+  p.field.row .label { flex: 0 0 auto; white-space: nowrap; }
+  p.field.row .blank + .label { margin-left: 0.12in; }
+  p.field.row .blank.fixed {
+    flex-basis: 0;
+    flex-shrink: 1;
+    min-width: 0.35in;
+    height: 1.2em;
+  }
+  p.field.row .blank.fixed.filled {
+    border-bottom: 1px solid #000;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  p.field {
+    text-align: left;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  p.label-line { margin: 0.9em 0 0; }
   .blank.fixed { min-width: 0; }
   /* The form's labels run straight into their blanks; a filled-in address
      needs a gap the empty line did not. */
@@ -126,6 +158,36 @@ def render_text(text: str) -> str:
     return BLANK.sub(blank, escaped)
 
 
+def blank_id(label: str) -> str:
+    """The id for the blank after this label, if the picker fills it."""
+    if label.endswith(PREMISES_LEAD):
+        return ' id="premises"'
+    for lead, _, target in OFFICE_FIELDS:
+        if label.endswith(lead):
+            return f' id="{target}"'
+    return ""
+
+
+def is_row(block: str) -> bool:
+    flat = flatten(block)
+    return bool(BLANK.search(flat)) and len(BLANK.sub("", flat)) <= ROW_MAX_TEXT
+
+
+def render_row(block: str) -> str:
+    """A row of fields: each label a fixed box, each blank a flexible one
+    whose share of the leftover width is its underscore count."""
+    cells = []
+    label = ""
+    for piece in re.split(r"(_{2,})", flatten(block)):
+        if BLANK.fullmatch(piece):
+            cells.append(f'<span class="blank fixed"{blank_id(label)} '
+                         f'style="flex-grow: {len(piece)}"></span>')
+        elif piece.strip():
+            label = piece.strip()
+            cells.append(f'<span class="label">{lease.convert_bold(html.escape(label))}</span>')
+    return "".join(cells)
+
+
 def render_list(block: str) -> str:
     items = re.split(r"\n(?=- )", block)
     rows = "\n".join(f"  <li>{render_text(item[2:])}</li>" for item in items)
@@ -145,8 +207,14 @@ def generate(source_text: str) -> str:
             block = block[condition.end():]
         if block.startswith("- "):
             parts.append(render_list(block))
+        elif is_row(block):
+            parts.append(f'<p{tag} class="field row">{render_row(block)}</p>')
         elif BLANK.search(block) or CHECKBOX in block:
             parts.append(f'<p{tag} class="field">{render_text(block)}</p>')
+        elif flatten(block).endswith(":") and len(flatten(block)) <= ROW_MAX_TEXT:
+            # A short lead-in to the rows below it, like "Other persons who
+            # will occupy this apartment with you:".
+            parts.append(f'<p{tag} class="label-line">{render_text(block)}</p>')
         else:
             parts.append(f"<p{tag}>{render_text(block)}</p>")
     body = "\n".join(parts)
