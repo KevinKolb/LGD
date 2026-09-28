@@ -1,8 +1,4 @@
-# Lower Garden District Properties LLC
-
-Application for Apartment
-
-{contact info}
+# Application for Apartment
 
 Address of property____________________  Desired Date of occupancy____________
 

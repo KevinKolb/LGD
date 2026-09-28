@@ -35,3 +35,19 @@ when a change is made; nothing already written down gets edited.
     condition does not apply."
   Drafted to match the lease sections they point to; not reviewed by an
   attorney.
+
+- **2026-09-28 - Condition 6 (B), plaster, reworded** (requested by the user:
+  word it better, name excessive weight and the like, and include everything
+  the standard walls rule covers). Was "No damage to the plaster walls or
+  ceilings, and no hardware, adhesives, weight, or repairs other than as
+  permitted by Section 20 of the lease." Now: "No stickers, scratches, or
+  holes, other than small nail holes made as permitted by the lease, and no
+  adhesive hooks (such as Command Strips), mounting tape, or poster putty used
+  on any wall or ceiling. No cracking, crumbling, or other damage to the
+  plaster walls or ceilings from large nails, screws, anchors, or heavy-duty
+  mounting hardware; from excessive weight, including any item over eight (8)
+  pounds hung without Lessor's prior written consent; or from patching,
+  spackling, or painting by Lessee." Its first sentence is (A) word for word
+  but for "made as permitted by the lease". It no longer cites "Section 20",
+  since the lease at 1523 may be one signed before §20 existed, whose plaster
+  rules come from the Plaster Walls Addendum.

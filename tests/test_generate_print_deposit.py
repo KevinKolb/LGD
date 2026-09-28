@@ -94,7 +94,9 @@ def test_walls_and_yard_conditions_have_the_leases_versions(gen, real_output):
     for number, group in gen.ITEM_OPTIONS.items():
         for value in gen.lease.OPTION_GROUPS[group]:
             assert f'data-option="{group}={value}"' in items[number - 1]
-    assert "Section 20 of the lease" in items[5]
+    # Plaster (B) repeats everything standard (A) forbids, then adds its own.
+    assert items[5].count("No stickers, scratches, or holes") == 2
+    assert "eight (8) pounds" in items[5]
     assert "Section 17 of the lease" in items[8]
 
 

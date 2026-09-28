@@ -34,8 +34,12 @@ Lessee_______________________________________
 5. No damage to property beyond fair wear and tear.
 6. (A) No stickers, scratches, or holes, other than small nail holes, and no adhesive hooks
    (such as Command Strips), mounting tape, or poster putty used on any wall or ceiling.
-   (B) No damage to the plaster walls or ceilings, and no hardware, adhesives, weight, or
-   repairs other than as permitted by Section 20 of the lease.
+   (B) No stickers, scratches, or holes, other than small nail holes made as permitted by the
+   lease, and no adhesive hooks (such as Command Strips), mounting tape, or poster putty used
+   on any wall or ceiling.  No cracking, crumbling, or other damage to the plaster walls or
+   ceilings from large nails, screws, anchors, or heavy-duty mounting hardware; from
+   excessive weight, including any item over eight (8) pounds hung without Lessor's prior
+   written consent; or from patching, spackling, or painting by Lessee.
 7. All burned out light bulbs have been replaced.
 8. Air conditioning filters have been cleaned or replaced.
 9. (A) Patio/yard and alley up to the gate have been cleaned; including, but not limited to,
