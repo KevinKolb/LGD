@@ -61,7 +61,7 @@ def test_child_checkboxes_are_boxes_not_brackets(real_output):
 def test_the_arbitration_steps_are_a_list(real_output):
     steps = re.search(r'<ul class="steps">(.*?)</ul>', real_output, re.S).group(1)
     assert steps.count("<li>") == 5
-    assert "La.R.S. 9:4201" in steps.replace(" ", "")
+    assert "La. R.S. 9:4201" in steps
 
 
 def test_the_font_is_embedded(real_output):
