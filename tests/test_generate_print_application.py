@@ -44,7 +44,7 @@ def test_the_original_letterhead_is_not_on_the_live_form(real_output):
 
 def test_address_of_property_is_filled_by_the_picker(real_output):
     assert real_output.count('id="premises"') == 1
-    assert re.search(r'Address of property<span class="blank fixed" id="premises"', real_output)
+    assert re.search(r'Address of property</span><span class="blank fixed" id="premises"', real_output)
     assert "Which apartment is this application for?" in real_output
 
 
@@ -61,6 +61,19 @@ def test_fields_the_user_removed_stay_removed(real_output):
         assert gone not in body
 
 
+def test_field_rows_run_the_full_page_width(real_output):
+    """Every short row of fields is a flex row whose blanks share the width
+    left over by their labels, so each line ends at the right margin."""
+    rows = re.findall(r'<p[^>]*class="field row">(.*?)</p>', real_output)
+    assert len(rows) >= 20
+    for row in rows:
+        assert '<span class="blank fixed"' in row
+        assert "flex-grow:" in row
+    css = real_output[real_output.index("p.field.row {"):]
+    assert "display: flex;" in css[:css.index("}")]
+    assert "min-height: 0.375in;" in css[:css.index("}")]
+
+
 def test_the_vehicles_section_shows_only_where_there_is_parking(real_output):
     """Lease §21 limits parking to vehicles listed on the application, and
     only 1364 Camp has parking - so the rows are tagged parking=limited and
@@ -74,7 +87,7 @@ def test_the_vehicles_section_shows_only_where_there_is_parking(real_output):
 
 def test_the_office_fills_rent_term_and_deposit_from_the_popup(gen, real_output):
     for lead, label, target in gen.OFFICE_FIELDS:
-        assert re.search(re.escape(lead) + rf'<span class="blank fixed" id="{target}"', real_output)
+        assert re.search(re.escape(lead) + rf'</span><span class="blank fixed" id="{target}"', real_output)
         assert f'data-fills="{target}"' in real_output
     assert real_output.count("(optional)") == 3
 

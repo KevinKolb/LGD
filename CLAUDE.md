@@ -221,8 +221,12 @@ Same treatment as the lease and deposit, since 2026-09-28.
 application fee, a holding deposit, plain-language arbitration).
 `documents/print/generate_print_application.py` builds
 `application_print.html` with the shared header, font and apartment popup,
-which fills "Address of property". Blanks are drawn proportional to their
-underscores in `application.md`, so the form's layout is edited there.
+which fills "Address of property". A short block with blanks is a **row of
+fields**: a full-width flex row, 3/8in tall, whose blanks stretch to the right
+margin and share the leftover width in proportion to their underscore counts
+in `application.md` - so the form's layout is still edited there, by the
+relative length of each blank. A long block with a blank (the holding
+deposit's "$____") stays prose with an inline blank (`ROW_MAX_TEXT`).
 Manager page step 1. Changes are logged in
 [`documents/application_history.md`](documents/application_history.md).
 
