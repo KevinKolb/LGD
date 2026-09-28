@@ -234,3 +234,56 @@ provision analogous to California Civil Code §1953; whether HUD or DOJ take an
 enforcement position on pre-dispute arbitration of FHA claims; and whether
 Louisiana courts have addressed an arbitration clause signed at the rental
 application stage. Any of the three could change the analysis.
+
+---
+
+## Lease, security deposit, application and addendum changes, and the checklist update — 2026-09-28
+
+**Question:** A day of drafting across four documents — lease §13 UTILITIES
+(no exception), §17 PATIO/YARD (versions A and B), a new §20 WALLS (standard
+and plaster versions); the security deposit agreement's live master and its
+address-specific conditions 6 and 9; the Plaster Walls Addendum; the
+application's credit-check authorization and removed fields — followed by an
+update of the legal checklist (`manager/legal_review.html`) to cover all four
+documents.
+
+**Conclusion reached:** No clause decision on 2026-09-28 was based on outside
+research. The wording was drafted to the user's instructions, and the plaster
+walls text from a ChatGPT draft the user supplied. Every 2026-09-06 finding was
+re-checked against the current lease text and found still open; the checklist
+now carries them under the current section numbers, plus new items.
+
+**Searches run:** None. No web search was run and no source was fetched on
+2026-09-28.
+
+**Sources cited for the first time in the checklist, from Claude's general
+knowledge only:**
+
+1. 15 U.S.C. § 1681m (Fair Credit Reporting Act) — the adverse action notice
+   owed to an applicant turned down, or approved on worse terms, because of a
+   consumer report. **Verification: none** — not searched, not fetched.
+2. La. R.S. 51:3071 et seq. (Louisiana Database Security Breach Notification
+   Law) — cited for the handling of Social Security numbers kept on paper
+   applications. **Verification: none** — not searched, not fetched; the
+   checklist marks it "verify".
+
+**Findings that come from reading the documents, not from outside sources:**
+
+- The security deposit agreement's "NO portion of the deposit will be
+  refunded" if the lease is broken contradicts the lease's own §3 forfeiture
+  clause, which excepts the last month with notice given. Its tension with La.
+  R.S. 9:3251 relies on the 2026-09-06 reading of that statute, not a new one.
+- The deposit agreement says "fair wear and tear" where the lease says "normal
+  wear and tear".
+- Deposit condition 9 (B) cites "Section 17 of the lease", which may point at
+  the wrong section in a lease signed before the 2026-09-28 renumbering.
+- The documents now name "Lower Garden District Properties, Inc." — the
+  entity's registration with the Louisiana Secretary of State was **not
+  checked**.
+
+**Not researched, and deliberately left open:** whether the application's
+arbitration clause and holding deposit are enforceable (deferred to an
+attorney by the user's decision); whether a mid-lease addendum binds an
+existing tenant who signs it without anything in return; whether a fixed
+$40.00 hourly labor rate is a permissible deposit deduction under La. R.S.
+9:3251.

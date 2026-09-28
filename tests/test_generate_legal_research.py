@@ -113,10 +113,12 @@ def test_the_h1_becomes_the_page_title_and_is_not_repeated_in_the_body(gen):
     assert "<h1>" not in body
 
 
-def test_the_real_log_renders_its_four_source_lists(real_output):
-    """A regression guard tied to the actual document: 4 numbered lists,
-    not the 13 the blank-line bug produced."""
-    assert real_output.count("<ol>") == 4
+def test_the_real_log_renders_its_five_source_lists(real_output):
+    """A regression guard tied to the actual document: one numbered list per
+    entry's sources - 4 until the 2026-09-28 entry added a fifth - not the
+    13 the blank-line bug produced. Update the count when an entry with a
+    numbered source list is appended."""
+    assert real_output.count("<ol>") == 5
 
 
 def test_the_page_carries_the_shared_stylesheet_and_footer(real_output):
