@@ -212,6 +212,19 @@ adhesives) everywhere else; yard "A" (Lessee maintains patio/yard and
 alley) at 1534 and 1536 Camp and 1428 and 1430 Melpomene, "B" (Lessor
 maintains all) everywhere else.
 
+### The Plaster Walls Addendum
+
+[`documents/print/generate_print_addendum.py`](documents/print/generate_print_addendum.py)
+builds `plaster_walls_addendum_print.html`, for a lease at 1523 St. Andrew
+signed before §20 WALLS existed (added 2026-09-28). Its rules are **read out
+of `lease.md`** - §20 WALLS, version (B), found by title - never copied, so
+it and the lease cannot disagree. **Regenerate it after any `lease.md` edit**,
+alongside the lease. The premises come from the one `properties.json` entry
+with walls "B" (it raises if there are zero or several). Its own wording is
+only the opening "made part of and incorporated into..." paragraph and the
+closing acknowledgement, in the generator. Signature and date lines for the
+Lessor/Agent and three Lessees. Manager page step 2c.
+
 `HTML_FOOTER` is an ordinary Python string, so a `\"` in its JavaScript
 loses its backslash and breaks the entire script - it did, once, while the
 picker was being built. `test_the_page_script_parses` runs every script
