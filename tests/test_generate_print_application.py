@@ -53,9 +53,43 @@ def test_every_blank_in_the_source_is_drawn(real_output):
     assert real_output.count('<span class="blank fixed"') == len(re.findall(r"_{2,}", source))
 
 
-def test_child_checkboxes_are_boxes_not_brackets(real_output):
-    assert real_output.count('<span class="box"></span>') == 3
-    assert "[ ]" not in real_output
+def test_fields_the_user_removed_stay_removed(real_output):
+    """2026-09-28, the user: no marital status, no bank account number, no
+    "Child" box (and no age) for other occupants."""
+    body = real_output[real_output.index("<body>"):real_output.index('<div class="footer-note">')]
+    for gone in ("Marital status", "Account #", "Child", "[ ]"):
+        assert gone not in body
+
+
+def test_the_vehicles_section_shows_only_where_there_is_parking(real_output):
+    """Lease §21 limits parking to vehicles listed on the application, and
+    only 1364 Camp has parking - so the rows are tagged parking=limited and
+    the picker hides them everywhere else."""
+    rows = re.findall(r'<p data-option="parking=limited"[^>]*>(.*?)</p>', real_output, re.S)
+    assert len(rows) == 3
+    assert "Vehicles to be parked at the property" in rows[0]
+    assert all("Plate #" in row for row in rows[1:])
+    assert "(parking=limited)" not in real_output
+
+
+def test_the_office_fills_rent_term_and_deposit_from_the_popup(gen, real_output):
+    for lead, label, target in gen.OFFICE_FIELDS:
+        assert re.search(re.escape(lead) + rf'<span class="blank fixed" id="{target}"', real_output)
+        assert f'data-fills="{target}"' in real_output
+    assert real_output.count("(optional)") == 3
+
+
+def test_lessor_not_owner_and_its_agent_not_his(real_output):
+    body = real_output[real_output.index("<body>"):real_output.index('<div class="footer-note">')]
+    assert "owner" not in body.lower()
+    assert "his agent" not in body
+    assert "prospective Lessor and/or its agent" in body
+
+
+def test_there_is_a_credit_check_authorization_with_initials(real_output):
+    assert "CREDIT CHECK AUTHORIZATION:" in real_output
+    assert "obtain a consumer credit report" in real_output
+    assert re.search(r"Applicant&#x27;s initials<span class=\"blank fixed\"", real_output)
 
 
 def test_the_arbitration_steps_are_a_list(real_output):

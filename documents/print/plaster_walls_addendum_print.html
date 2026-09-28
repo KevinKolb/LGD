@@ -153,8 +153,10 @@
   .picker-box h2 { margin: 0 0 14px; font-size: 14pt; }
   .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
   .picker-box label[hidden] { display: none; }
-  .picker-box select {
+  .picker-box .optional { color: #777; font-size: 9.5pt; }
+  .picker-box select, .picker-box input[type=text] {
     display: block;
+    box-sizing: border-box;
     width: 100%;
     margin-top: 4px;
     padding: 6px;

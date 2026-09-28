@@ -223,7 +223,15 @@ application fee, a holding deposit, plain-language arbitration).
 `application_print.html` with the shared header, font and apartment popup,
 which fills "Address of property". Blanks are drawn proportional to their
 underscores in `application.md`, so the form's layout is edited there.
-Manager page step 1.
+Manager page step 1. Changes are logged in
+[`documents/application_history.md`](documents/application_history.md).
+
+- A block beginning `(parking=limited)` in `application.md` is tagged like
+  the lease's versions and shows only where that option applies - the
+  vehicles section, for addresses with parking.
+- `OFFICE_FIELDS` (rent, term, deposit) become optional boxes in the popup
+  via `render_picker_footer(..., fields)`, which any document can use; typed
+  values fill the blank with that id, empty ones stay blank.
 
 Two originals, both never edited: `application_original.pdf` (with the
 handwritten edit notes, transcribed in `application_original.ocr`) and

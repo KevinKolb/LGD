@@ -44,6 +44,20 @@ lease = _load_lease_generator()
 BLANK = re.compile(r"_{2,}")
 CHECKBOX = "[ ]"
 
+# Blanks the office fills in, offered as optional boxes in the popup: the
+# label printed before each blank, the popup's label, and the blank's id.
+OFFICE_FIELDS = (
+    ("Monthly rental rate", "Monthly rental rate", "field-rent"),
+    ("Term of lease", "Term of lease", "field-term"),
+    ("Security deposit $", "Security deposit $", "field-deposit"),
+)
+
+# A block beginning "(parking=limited) " prints on every blank application
+# but, once an apartment is picked, only where that option applies - the
+# same data-option tag the lease uses. The vehicles section is one: only an
+# address with parking needs its vehicles listed (lease §21).
+CONDITION = re.compile(r"^\((\w+)=([\w-]+)\) ")
+
 EXTRA_CSS = """
   p.field {
     margin: 0 0 0.62em;
@@ -55,7 +69,7 @@ EXTRA_CSS = """
   .blank.fixed { min-width: 0; }
   /* The form's labels run straight into their blanks; a filled-in address
      needs a gap the empty line did not. */
-  #premises.filled { margin-left: 0.3em; }
+  .blank.fixed.filled { margin-left: 0.3em; margin-right: 0.6em; }
   .box {
     display: inline-block;
     width: 0.8em;
@@ -100,8 +114,14 @@ def render_text(text: str) -> str:
 
     def blank(match: re.Match) -> str:
         width = f"{len(match.group(0)) * INCHES_PER_UNDERSCORE:.2f}in"
-        premises = ' id="premises"' if escaped[:match.start()].endswith(PREMISES_LEAD) else ""
-        return f'<span class="blank fixed"{premises} style="min-width: {width}"></span>'
+        before = escaped[:match.start()]
+        ident = ""
+        if before.endswith(PREMISES_LEAD):
+            ident = ' id="premises"'
+        for lead, _, target in OFFICE_FIELDS:
+            if before.endswith(html.escape(lead)):
+                ident = f' id="{target}"'
+        return f'<span class="blank fixed"{ident} style="min-width: {width}"></span>'
 
     return BLANK.sub(blank, escaped)
 
@@ -115,17 +135,29 @@ def render_list(block: str) -> str:
 def generate(source_text: str) -> str:
     parts = []
     for block in body_blocks(source_text):
+        tag = ""
+        condition = CONDITION.match(block)
+        if condition:
+            group, value = condition.groups()
+            if value not in lease.OPTION_GROUPS.get(group, ()):
+                raise SystemExit(f"{SOURCE.name}: unknown condition ({group}={value}).")
+            tag = f' data-option="{group}={value}"'
+            block = block[condition.end():]
         if block.startswith("- "):
             parts.append(render_list(block))
         elif BLANK.search(block) or CHECKBOX in block:
-            parts.append(f'<p class="field">{render_text(block)}</p>')
+            parts.append(f'<p{tag} class="field">{render_text(block)}</p>')
         else:
-            parts.append(f"<p>{render_text(block)}</p>")
+            parts.append(f"<p{tag}>{render_text(block)}</p>")
     body = "\n".join(parts)
     if body.count('id="premises"') != 1:
         raise SystemExit(f'{SOURCE.name} needs exactly one "{PREMISES_LEAD}___" blank for the picker.')
+    for lead, _, target in OFFICE_FIELDS:
+        if body.count(f'id="{target}"') != 1:
+            raise SystemExit(f'{SOURCE.name} needs exactly one "{lead}___" blank.')
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
-    return head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("application")
+    fields = tuple((label, target) for _, label, target in OFFICE_FIELDS)
+    return head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("application", fields)
 
 
 def main() -> None:

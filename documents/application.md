@@ -6,7 +6,7 @@ Monthly rental rate__________  Term of lease__________  Security deposit $______
 
 Name of Applicant_____________________________________
 
-Date of birth____________  Social Security #______________  Marital status_______
+Date of birth____________  Social Security #______________
 
 Telephone #________________  Email_________________________
 
@@ -26,13 +26,13 @@ Name of supervisor__________________  Supervisor phone #_______________
 
 Other persons who will occupy this apartment with you:
 
-Full name_______________________  Email______________________  [ ] Child
+Full name_______________________  Email______________________
 
-Full name_______________________  Email______________________  [ ] Child
+Full name_______________________  Email______________________
 
-Full name_______________________  Email______________________  [ ] Child
+Full name_______________________  Email______________________
 
-Bank reference__________________  Account #_____________________
+Bank reference__________________
 
 Personal reference name______________________  Phone #______________
 
@@ -40,19 +40,30 @@ Address_______________________________  Relationship______________
 
 Do you have pets? Yes______  NO______  Small_____  Large_____  Comments___________
 
+(parking=limited) Vehicles to be parked at the property (parking is limited to vehicles
+listed here):
+
+(parking=limited) Make______________  Model______________  Color__________  Plate #____________  State_____
+
+(parking=limited) Make______________  Model______________  Color__________  Plate #____________  State_____
+
 In case of emergency please notify____________________________________
 
 Telephone#______________  Address_________________________  Relationship__________
 
-**PLEASE READ CAREFULLY:** I hereby give prospective lessor and/or his agent
+**PLEASE READ CAREFULLY:** I hereby give prospective Lessor and/or its agent
 permission to check information on this application and my credit history in
-general.  I hereby release any liability on the part of the prospective lessor,
-his agent and/or above references in acquiring information concerning rental,
+general.  I hereby release any liability on the part of the prospective Lessor,
+its agent and/or above references in acquiring information concerning rental,
 employment or credit history.  This application is made with the understanding
-that it is subject to acceptance by the owner and subject to execution by a
+that it is subject to acceptance by Lessor and subject to execution by a
 representative of said company and delivery of a lease covering said premises.
 Please allow a minimum of 5 days to process your application for both credit and
 character references.
+
+**CREDIT CHECK AUTHORIZATION:** I authorize Lessor and its agent to obtain a consumer
+credit report on me and to verify the information in this application, including my
+rental and employment history.  Applicant's initials________
 
 **HOLDING DEPOSIT — THERE IS NO APPLICATION FEE.**  There is no fee to apply.
 However, a holding deposit is submitted with this application.  Applicant has
@@ -62,22 +73,22 @@ application fee and it is not a rental payment.  If this application is
 approved, the deposit holds the apartment for applicant.  If this application is
 not approved, the deposit will be returned to applicant in full.  If this
 application is approved and applicant then fails or refuses to enter into the
-contemplated lease, owner shall retain said deposit as liquidated damages to
+contemplated lease, Lessor shall retain said deposit as liquidated damages to
 cover the cost of taking and processing the application and removing the
 premises from the market and holding same for applicant.
 
 Signature of applicant_______________________________  Date______________
 
 **BINDING ARBITRATION — PLEASE READ BEFORE SIGNING.**  **By signing below, you
-and the Owner both give up the right to have any dispute about this application
+and Lessor both give up the right to have any dispute about this application
 decided by a court or a jury.  Disputes go to a private arbitrator instead.
 This applies to both of you equally.**
 
-In exchange for the Owner reviewing this application, checking the references and
+In exchange for Lessor reviewing this application, checking the references and
 credit history described above, and holding the apartment on the terms described
-under HOLDING DEPOSIT, Applicant and Owner agree as follows.
+under HOLDING DEPOSIT, Applicant and Lessor agree as follows.
 
-Any dispute between Applicant and Owner — including Owner's agents and employees
+Any dispute between Applicant and Lessor — including Lessor's agents and employees
 — arising out of this application or the handling of it will be resolved by
 binding arbitration rather than in court.  This includes any claim about how the
 application was processed, about a decision to approve or deny it, and about the

@@ -318,8 +318,10 @@ HTML_HEAD = """<!doctype html>
   .picker-box h2 { margin: 0 0 14px; font-size: 14pt; }
   .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
   .picker-box label[hidden] { display: none; }
-  .picker-box select {
+  .picker-box .optional { color: #777; font-size: 9.5pt; }
+  .picker-box select, .picker-box input[type=text] {
     display: block;
+    box-sizing: border-box;
     width: 100%;
     margin-top: 4px;
     padding: 6px;
@@ -446,6 +448,7 @@ PICKER_FOOTER = """
     <label>Unit
       <select id="picker-unit"></select>
     </label>
+__EXTRA_FIELDS__
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>
@@ -563,6 +566,16 @@ __PROPERTIES_JSON__
     event.preventDefault();
     // Parking, walls and yard all come from documents/properties.json.
     applyProperty(chosenProperty(), unitSelect.value);
+    // Optional boxes (a document's own, e.g. the application's rent): each
+    // fills the blank it names; left empty, the blank stays to write in.
+    document.querySelectorAll("input[data-fills]").forEach(function (input) {
+      var target = document.getElementById(input.getAttribute("data-fills"));
+      var value = input.value.trim();
+      if (target && value) {
+        target.textContent = value;
+        target.classList.add("filled");
+      }
+    });
     finish();
   });
   document.getElementById("picker-blank").addEventListener("click", finish);
@@ -587,10 +600,20 @@ __PROPERTIES_JSON__
 """
 
 
-def render_picker_footer(document_name: str) -> str:
+def render_picker_footer(document_name: str, fields: tuple[tuple[str, str], ...] = ()) -> str:
     """The apartment picker, its script and the inlined apartment table -
-    shared by every printable document that names the premises."""
+    shared by every printable document that names the premises.
+
+    `fields` adds optional text boxes to the popup, as (label, blank id)
+    pairs: whatever is typed fills the element with that id."""
+    extra = "\n".join(
+        f'    <label>{html.escape(label)} <span class="optional">(optional)</span>\n'
+        f'      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}">\n'
+        f"    </label>"
+        for label, target in fields
+    )
     return (PICKER_FOOTER.replace("__DOCUMENT__", html.escape(document_name))
+            .replace("__EXTRA_FIELDS__", extra)
             .replace(PROPERTIES_MARKER, properties_json(load_properties())))
 
 def flatten_paragraph(text: str) -> str:

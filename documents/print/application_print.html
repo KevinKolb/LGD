@@ -153,8 +153,10 @@
   .picker-box h2 { margin: 0 0 14px; font-size: 14pt; }
   .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
   .picker-box label[hidden] { display: none; }
-  .picker-box select {
+  .picker-box .optional { color: #777; font-size: 9.5pt; }
+  .picker-box select, .picker-box input[type=text] {
     display: block;
+    box-sizing: border-box;
     width: 100%;
     margin-top: 4px;
     padding: 6px;
@@ -253,7 +255,7 @@
   .blank.fixed { min-width: 0; }
   /* The form's labels run straight into their blanks; a filled-in address
      needs a gap the empty line did not. */
-  #premises.filled { margin-left: 0.3em; }
+  .blank.fixed.filled { margin-left: 0.3em; margin-right: 0.6em; }
   .box {
     display: inline-block;
     width: 0.8em;
@@ -269,9 +271,9 @@
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">APPLICATION FOR APARTMENT</p>
 <p class="field">Address of property<span class="blank fixed" id="premises" style="min-width: 1.40in"></span>  Desired Date of occupancy<span class="blank fixed" style="min-width: 0.84in"></span></p>
-<p class="field">Monthly rental rate<span class="blank fixed" style="min-width: 0.70in"></span>  Term of lease<span class="blank fixed" style="min-width: 0.70in"></span>  Security deposit $<span class="blank fixed" style="min-width: 0.42in"></span></p>
+<p class="field">Monthly rental rate<span class="blank fixed" id="field-rent" style="min-width: 0.70in"></span>  Term of lease<span class="blank fixed" id="field-term" style="min-width: 0.70in"></span>  Security deposit $<span class="blank fixed" id="field-deposit" style="min-width: 0.42in"></span></p>
 <p class="field">Name of Applicant<span class="blank fixed" style="min-width: 2.59in"></span></p>
-<p class="field">Date of birth<span class="blank fixed" style="min-width: 0.84in"></span>  Social Security #<span class="blank fixed" style="min-width: 0.98in"></span>  Marital status<span class="blank fixed" style="min-width: 0.49in"></span></p>
+<p class="field">Date of birth<span class="blank fixed" style="min-width: 0.84in"></span>  Social Security #<span class="blank fixed" style="min-width: 0.98in"></span></p>
 <p class="field">Telephone #<span class="blank fixed" style="min-width: 1.12in"></span>  Email<span class="blank fixed" style="min-width: 1.75in"></span></p>
 <p class="field">Present address<span class="blank fixed" style="min-width: 1.89in"></span>  City, State, Zip<span class="blank fixed" style="min-width: 0.98in"></span></p>
 <p class="field">Monthly rent<span class="blank fixed" style="min-width: 0.84in"></span>  How long<span class="blank fixed" style="min-width: 0.84in"></span></p>
@@ -281,21 +283,25 @@
 <p class="field">Position<span class="blank fixed" style="min-width: 1.61in"></span>  Monthly salary<span class="blank fixed" style="min-width: 1.54in"></span></p>
 <p class="field">Name of supervisor<span class="blank fixed" style="min-width: 1.26in"></span>  Supervisor phone #<span class="blank fixed" style="min-width: 1.05in"></span></p>
 <p>Other persons who will occupy this apartment with you:</p>
-<p class="field">Full name<span class="blank fixed" style="min-width: 1.61in"></span>  Email<span class="blank fixed" style="min-width: 1.54in"></span>  <span class="box"></span> Child</p>
-<p class="field">Full name<span class="blank fixed" style="min-width: 1.61in"></span>  Email<span class="blank fixed" style="min-width: 1.54in"></span>  <span class="box"></span> Child</p>
-<p class="field">Full name<span class="blank fixed" style="min-width: 1.61in"></span>  Email<span class="blank fixed" style="min-width: 1.54in"></span>  <span class="box"></span> Child</p>
-<p class="field">Bank reference<span class="blank fixed" style="min-width: 1.26in"></span>  Account #<span class="blank fixed" style="min-width: 1.47in"></span></p>
+<p class="field">Full name<span class="blank fixed" style="min-width: 1.61in"></span>  Email<span class="blank fixed" style="min-width: 1.54in"></span></p>
+<p class="field">Full name<span class="blank fixed" style="min-width: 1.61in"></span>  Email<span class="blank fixed" style="min-width: 1.54in"></span></p>
+<p class="field">Full name<span class="blank fixed" style="min-width: 1.61in"></span>  Email<span class="blank fixed" style="min-width: 1.54in"></span></p>
+<p class="field">Bank reference<span class="blank fixed" style="min-width: 1.26in"></span></p>
 <p class="field">Personal reference name<span class="blank fixed" style="min-width: 1.54in"></span>  Phone #<span class="blank fixed" style="min-width: 0.98in"></span></p>
 <p class="field">Address<span class="blank fixed" style="min-width: 2.17in"></span>  Relationship<span class="blank fixed" style="min-width: 0.98in"></span></p>
 <p class="field">Do you have pets? Yes<span class="blank fixed" style="min-width: 0.42in"></span>  NO<span class="blank fixed" style="min-width: 0.42in"></span>  Small<span class="blank fixed" style="min-width: 0.35in"></span>  Large<span class="blank fixed" style="min-width: 0.35in"></span>  Comments<span class="blank fixed" style="min-width: 0.77in"></span></p>
+<p data-option="parking=limited">Vehicles to be parked at the property (parking is limited to vehicles listed here):</p>
+<p data-option="parking=limited" class="field">Make<span class="blank fixed" style="min-width: 0.98in"></span>  Model<span class="blank fixed" style="min-width: 0.98in"></span>  Color<span class="blank fixed" style="min-width: 0.70in"></span>  Plate #<span class="blank fixed" style="min-width: 0.84in"></span>  State<span class="blank fixed" style="min-width: 0.35in"></span></p>
+<p data-option="parking=limited" class="field">Make<span class="blank fixed" style="min-width: 0.98in"></span>  Model<span class="blank fixed" style="min-width: 0.98in"></span>  Color<span class="blank fixed" style="min-width: 0.70in"></span>  Plate #<span class="blank fixed" style="min-width: 0.84in"></span>  State<span class="blank fixed" style="min-width: 0.35in"></span></p>
 <p class="field">In case of emergency please notify<span class="blank fixed" style="min-width: 2.52in"></span></p>
 <p class="field">Telephone#<span class="blank fixed" style="min-width: 0.98in"></span>  Address<span class="blank fixed" style="min-width: 1.75in"></span>  Relationship<span class="blank fixed" style="min-width: 0.70in"></span></p>
-<p><strong>PLEASE READ CAREFULLY:</strong> I hereby give prospective lessor and/or his agent permission to check information on this application and my credit history in general.  I hereby release any liability on the part of the prospective lessor, his agent and/or above references in acquiring information concerning rental, employment or credit history.  This application is made with the understanding that it is subject to acceptance by the owner and subject to execution by a representative of said company and delivery of a lease covering said premises. Please allow a minimum of 5 days to process your application for both credit and character references.</p>
-<p class="field"><strong>HOLDING DEPOSIT — THERE IS NO APPLICATION FEE.</strong>  There is no fee to apply. However, a holding deposit is submitted with this application.  Applicant has deposited herewith the sum of $<span class="blank fixed" style="min-width: 0.70in"></span>, receipt of which is hereby acknowledged, as a non-interest bearing holding deposit.  It is not an application fee and it is not a rental payment.  If this application is approved, the deposit holds the apartment for applicant.  If this application is not approved, the deposit will be returned to applicant in full.  If this application is approved and applicant then fails or refuses to enter into the contemplated lease, owner shall retain said deposit as liquidated damages to cover the cost of taking and processing the application and removing the premises from the market and holding same for applicant.</p>
+<p><strong>PLEASE READ CAREFULLY:</strong> I hereby give prospective Lessor and/or its agent permission to check information on this application and my credit history in general.  I hereby release any liability on the part of the prospective Lessor, its agent and/or above references in acquiring information concerning rental, employment or credit history.  This application is made with the understanding that it is subject to acceptance by Lessor and subject to execution by a representative of said company and delivery of a lease covering said premises. Please allow a minimum of 5 days to process your application for both credit and character references.</p>
+<p class="field"><strong>CREDIT CHECK AUTHORIZATION:</strong> I authorize Lessor and its agent to obtain a consumer credit report on me and to verify the information in this application, including my rental and employment history.  Applicant&#x27;s initials<span class="blank fixed" style="min-width: 0.56in"></span></p>
+<p class="field"><strong>HOLDING DEPOSIT — THERE IS NO APPLICATION FEE.</strong>  There is no fee to apply. However, a holding deposit is submitted with this application.  Applicant has deposited herewith the sum of $<span class="blank fixed" style="min-width: 0.70in"></span>, receipt of which is hereby acknowledged, as a non-interest bearing holding deposit.  It is not an application fee and it is not a rental payment.  If this application is approved, the deposit holds the apartment for applicant.  If this application is not approved, the deposit will be returned to applicant in full.  If this application is approved and applicant then fails or refuses to enter into the contemplated lease, Lessor shall retain said deposit as liquidated damages to cover the cost of taking and processing the application and removing the premises from the market and holding same for applicant.</p>
 <p class="field">Signature of applicant<span class="blank fixed" style="min-width: 2.17in"></span>  Date<span class="blank fixed" style="min-width: 0.98in"></span></p>
-<p><strong>BINDING ARBITRATION — PLEASE READ BEFORE SIGNING.</strong>  <strong>By signing below, you and the Owner both give up the right to have any dispute about this application decided by a court or a jury.  Disputes go to a private arbitrator instead. This applies to both of you equally.</strong></p>
-<p>In exchange for the Owner reviewing this application, checking the references and credit history described above, and holding the apartment on the terms described under HOLDING DEPOSIT, Applicant and Owner agree as follows.</p>
-<p>Any dispute between Applicant and Owner — including Owner&#x27;s agents and employees — arising out of this application or the handling of it will be resolved by binding arbitration rather than in court.  This includes any claim about how the application was processed, about a decision to approve or deny it, and about the handling or return of the holding deposit.  It includes claims under the Fair Housing Act, the Americans with Disabilities Act, and any other federal or Louisiana law prohibiting discrimination.</p>
+<p><strong>BINDING ARBITRATION — PLEASE READ BEFORE SIGNING.</strong>  <strong>By signing below, you and Lessor both give up the right to have any dispute about this application decided by a court or a jury.  Disputes go to a private arbitrator instead. This applies to both of you equally.</strong></p>
+<p>In exchange for Lessor reviewing this application, checking the references and credit history described above, and holding the apartment on the terms described under HOLDING DEPOSIT, Applicant and Lessor agree as follows.</p>
+<p>Any dispute between Applicant and Lessor — including Lessor&#x27;s agents and employees — arising out of this application or the handling of it will be resolved by binding arbitration rather than in court.  This includes any claim about how the application was processed, about a decision to approve or deny it, and about the handling or return of the holding deposit.  It includes claims under the Fair Housing Act, the Americans with Disabilities Act, and any other federal or Louisiana law prohibiting discrimination.</p>
 <p>How the arbitration works:</p>
 <ul class="steps">
   <li>Either party starts it by giving the other written notice demanding arbitration.  Within fifteen (15) days of that notice, each party names one arbitrator and tells the other party who it named.</li>
@@ -322,6 +328,15 @@
     </label>
     <label>Unit
       <select id="picker-unit"></select>
+    </label>
+    <label>Monthly rental rate <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-rent" data-fills="field-rent">
+    </label>
+    <label>Term of lease <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-term" data-fills="field-term">
+    </label>
+    <label>Security deposit $ <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-deposit" data-fills="field-deposit">
     </label>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
@@ -567,6 +582,16 @@
     event.preventDefault();
     // Parking, walls and yard all come from documents/properties.json.
     applyProperty(chosenProperty(), unitSelect.value);
+    // Optional boxes (a document's own, e.g. the application's rent): each
+    // fills the blank it names; left empty, the blank stays to write in.
+    document.querySelectorAll("input[data-fills]").forEach(function (input) {
+      var target = document.getElementById(input.getAttribute("data-fills"));
+      var value = input.value.trim();
+      if (target && value) {
+        target.textContent = value;
+        target.classList.add("filled");
+      }
+    });
     finish();
   });
   document.getElementById("picker-blank").addEventListener("click", finish);
