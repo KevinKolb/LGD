@@ -315,12 +315,6 @@
     <label>Unit
       <select id="picker-unit"></select>
     </label>
-    <label>Parking
-      <select id="picker-parking">
-        <option value="limited">Parking spaces limited</option>
-        <option value="not-available">Parking not available at this address</option>
-      </select>
-    </label>
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>
       <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
@@ -468,7 +462,6 @@
   var picker = document.getElementById("picker");
   var propertySelect = document.getElementById("picker-property");
   var unitSelect = document.getElementById("picker-unit");
-  var parkingSelect = document.getElementById("picker-parking");
 
   var pageLoaded = new Promise(function (resolve) {
     window.addEventListener("load", resolve);
@@ -488,8 +481,6 @@
     unitSelect.length = 0;
     property.units.forEach(function (unit) { unitSelect.add(new Option(unit, unit)); });
     unitSelect.parentNode.hidden = property.units.length === 0;
-    // The address's own setting is the default; the manager can change it.
-    parkingSelect.value = property.lease_options.parking;
   }
 
   function applyProperty(property, unit) {
@@ -548,9 +539,8 @@
   propertySelect.addEventListener("change", showUnits);
   document.getElementById("picker-form").addEventListener("submit", function (event) {
     event.preventDefault();
-    var property = chosenProperty();
-    var options = Object.assign({}, property.lease_options, { parking: parkingSelect.value });
-    applyProperty(Object.assign({}, property, { lease_options: options }), unitSelect.value);
+    // Parking, walls and yard all come from documents/properties.json.
+    applyProperty(chosenProperty(), unitSelect.value);
     finish();
   });
   document.getElementById("picker-blank").addEventListener("click", finish);

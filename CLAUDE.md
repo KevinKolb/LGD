@@ -37,6 +37,15 @@ server-side. That is the spine 2.0 grows from.
   of its own, so a human can open and edit it as a clean document — all of that
   lives here instead.
 
+The security deposit agreement follows the same rule. Its scan,
+[`documents/originals/security_deposit_original.pdf`](documents/originals/security_deposit_original.pdf),
+and its character-for-character transcript,
+[`documents/originals/security_deposit_transcript_verbatim.md`](documents/originals/security_deposit_transcript_verbatim.md),
+were added on 2026-09-28 and are historical record. **Never edit either.**
+It is Steve A. Hartnett's form (his name, 1556 Camp Street address and phone
+head page 1), not LGD's. Any working version of it gets its own live master in
+`documents/`, the way `lease.md` relates to the lease transcript.
+
 Everything document-related now sits under `documents/`, and the split
 inside it is the point: `documents/originals/` is frozen source material —
 scans and their verbatim transcripts, never edited (it also holds the
@@ -143,8 +152,9 @@ one file that works offline and from `file://`. **Regenerate the lease after
 editing it**, exactly as after editing `lease.md`.
 
 Opening the lease - View or Print - first shows an opaque popup (screen
-only, never printed) asking for the address, the unit, and the parking
-choice (defaulted from the address, changeable). Nothing of the lease shows
+only, never printed) asking for the address and the unit. Parking, walls and
+yard come from `properties.json` alone - the popup had a parking override,
+removed on 2026-09-28 at the user's request. Nothing of the lease shows
 until one is picked, and the print dialog only opens after. Picking fills
 in the premises blank, bold and underlined, and applies the options.
 "Leave it blank" gives the old fully blank form.
