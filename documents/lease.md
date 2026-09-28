@@ -265,8 +265,8 @@ solidarily liable for all of the obligations contained in this rental agreement.
 
 20. **WALLS** (A) Lessee shall not put stickers on, scratch, or make holes in any wall or
 ceiling, other than small nail holes for hanging pictures.  Lessee shall not use adhesive
-hooks, mounting tape, Command strips, or poster putty on any wall or ceiling.  Adhesives
-frequently pull away the paint and the wall surface beneath it.
+hooks (such as Command Strips), mounting tape, or poster putty on any wall or ceiling.
+Adhesives frequently pull away the paint and the wall surface beneath it.
 
 (B) The walls and ceilings of the leased premises are historical or delicate plaster, not
 modern drywall.  Plaster is brittle, prone to cracking, and easily damaged by improper hanging
@@ -281,8 +281,8 @@ Lessee shall not use any of the following on any plaster wall or ceiling:
 
 • Heavy-duty mounting hardware, such as television wall mounts or heavy shelving brackets.
 
-• Adhesive hooks, mounting tape, Command strips, or poster putty.  Adhesives frequently
-pull away the paint and the delicate skim coat of plaster beneath it.
+• Adhesive hooks (such as Command Strips), mounting tape, or poster putty.  Adhesives
+frequently pull away the paint and the delicate skim coat of plaster beneath it.
 
 Lessee may hang only lightweight decorative items, such as small framed pictures,
 posters, or light mirrors, and only with:

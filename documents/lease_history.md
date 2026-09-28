@@ -193,5 +193,11 @@ for the research behind any entry that cites outside sources.
   both. Applied to `documents/lease.md`; `documents/print/lease_print.html`
   regenerated from it.
 
+- **2026-09-28 - Command Strips named as an example, in both §20 versions**
+  (requested by the user). "adhesive hooks, mounting tape, Command strips,
+  or poster putty" became "adhesive hooks (such as Command Strips), mounting
+  tape, or poster putty" in (A), and the same in (B)'s bullet - Command
+  Strips now an example of an adhesive hook rather than an item of its own.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.
