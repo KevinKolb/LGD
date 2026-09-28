@@ -251,6 +251,9 @@
     break-inside: avoid;
   }
   .blank.fixed { min-width: 0; }
+  /* The form's labels run straight into their blanks; a filled-in address
+     needs a gap the empty line did not. */
+  #premises.filled { margin-left: 0.3em; }
   .box {
     display: inline-block;
     width: 0.8em;

@@ -212,6 +212,23 @@ adhesives) everywhere else; yard "A" (Lessee maintains patio/yard and
 alley) at 1534 and 1536 Camp and 1428 and 1430 Melpomene, "B" (Lessor
 maintains all) everywhere else.
 
+### The rental application
+
+Same treatment as the lease and deposit, since 2026-09-28.
+[`documents/application.md`](documents/application.md) is the live master
+(already reworked from the handwritten notes on the annotated scan: no
+application fee, a holding deposit, plain-language arbitration).
+`documents/print/generate_print_application.py` builds
+`application_print.html` with the shared header, font and apartment popup,
+which fills "Address of property". Blanks are drawn proportional to their
+underscores in `application.md`, so the form's layout is edited there.
+Manager page step 1.
+
+Two originals, both never edited: `application_original.pdf` (with the
+handwritten edit notes, transcribed in `application_original.ocr`) and
+`application_original_clean.pdf` (the same printed form without them - its
+printed text is what that `.ocr` transcribes).
+
 ### The Plaster Walls Addendum
 
 [`documents/print/generate_print_addendum.py`](documents/print/generate_print_addendum.py)
