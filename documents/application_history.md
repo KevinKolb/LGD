@@ -42,3 +42,5 @@ in git history.
     wording are left for a later legal review.
   - **Popup:** optional boxes for monthly rental rate, term of lease and
     security deposit, which fill those blanks when typed in.
+
+- **2026-09-28 - Pets question: "NO" became "No"** (the user), to match "Yes".

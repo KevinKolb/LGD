@@ -38,7 +38,7 @@ Personal reference name______________________  Phone #______________
 
 Address_______________________________  Relationship______________
 
-Do you have pets? Yes______  NO______  Small_____  Large_____  Comments___________
+Do you have pets? Yes______  No______  Small_____  Large_____  Comments___________
 
 (parking=limited) Vehicles to be parked at the property (parking is limited to vehicles
 listed here):
