@@ -271,7 +271,11 @@ HTML_FOOTER = """
   // moment paginates on the wrong advance widths - the exact class of bug
   // this page keeps regressing into. The small delay after that lets layout
   // settle so the preview is right.
+  //
+  // The dashboard's "View paper lease" button opens this page with #view,
+  // which skips the dialog so the lease can just be read on screen.
   window.addEventListener("load", function () {
+    if (window.location.hash === "#view") { return; }
     var fontsReady = (document.fonts && document.fonts.ready)
       ? document.fonts.ready
       : Promise.resolve();
