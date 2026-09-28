@@ -61,7 +61,12 @@ own initiative, and log every change. Regenerate the printable copy with:
 `render_head` (header, font, page counters) and `render_picker_footer` (the
 apartment popup and inlined `properties.json`), so the two documents cannot
 drift apart in look or behaviour. The popup fills "As Security Deposit for
-___"; the deposit has no address-dependent sections. The manager page links
+___", and picks the version of conditions 6 (walls) and 9 (yard) that
+matches the lease's §20 and §17 for the same apartment - `ITEM_OPTIONS` in
+the generator, "(A) ... (B) ..." in the text, the same `data-option` tags as
+the lease. A build error if either document lacks a version the other has.
+Wording changes are logged in
+[`documents/security_deposit_history.md`](documents/security_deposit_history.md). The manager page links
 it as step 2b, beside the lease (2a). Tests:
 `tests/test_generate_print_deposit.py`.
 

@@ -699,7 +699,6 @@ BLANK_WIDTHS_IN_ORDER = [
     "word",    # Rent.Monthly
     "word",    # Rent.Discounted
     "word",    # Deposit.Amount
-    "medium",  # Utilities.Excluded
     "word",    # Execution.City
     "tiny",    # Execution.Day
     "word",    # Execution.Month
@@ -725,7 +724,7 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
         if width is None:
             raise SystemExit(
                 "Found more fill-in blanks than BLANK_WIDTHS_IN_ORDER expects "
-                f"(16) - a blank was added to documents/lease.md without "
+                f"({len(BLANK_WIDTHS_IN_ORDER)}) - a blank was added to documents/lease.md without "
                 "adding a matching entry here."
             )
         return render_blank(width)

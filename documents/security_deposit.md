@@ -32,10 +32,16 @@ Lessee_______________________________________
 4. Entire apartment has been cleaned.  That includes, but not limited to, appliances,
    cabinets, doors, baseboards, fans, light fixtures, bathroom fixtures, floors.
 5. No damage to property beyond fair wear and tear.
-6. No stickers, scratches, or holes, other than small nail holes.
+6. (A) No stickers, scratches, or holes, other than small nail holes, and no adhesive hooks
+   (such as Command Strips), mounting tape, or poster putty used on any wall or ceiling.
+   (B) No damage to the plaster walls or ceilings, and no hardware, adhesives, weight, or
+   repairs other than as permitted by Section 20 of the lease.
 7. All burned out light bulbs have been replaced.
 8. Air conditioning filters have been cleaned or replaced.
-9. Patio/yard has been cleaned; including, but not limited to, pet waste and vegetation.
+9. (A) Patio/yard and alley up to the gate have been cleaned; including, but not limited to,
+   pet waste and vegetation.
+   (B) Patio/yard maintenance is Lessor's responsibility under Section 17 of the lease; this
+   condition does not apply.
 10. No unpaid late charges or delinquent rents.
 11. All keys have been returned.
 12. All debris, rubbish, and discards have been removed.

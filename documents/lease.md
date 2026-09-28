@@ -180,7 +180,7 @@ However, Lessee shall not be entitled to a reduction of the monthly rent or canc
 of this lease because of a temporary failure of utilities, heat, air conditioning or
 temporary closing of parking lot.
 
-13. **UTILITIES** Lessee agrees to pay all utilities furnished to the property, except __________.
+13. **UTILITIES** Lessee agrees to pay all utilities furnished to the property.
 Lessee also agrees to turn all utilities on in his/her name as of the date of occupancy, or
 to pay $10 per day per utility until such time as utilities are transferred to Lessee's name.
 

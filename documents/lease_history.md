@@ -206,5 +206,14 @@ for the research behind any entry that cites outside sources.
   only `documents/print/generate_print_lease.py` changed;
   `documents/print/lease_print.html` regenerated.
 
+- **2026-09-28 - §13 UTILITIES: no exception** (requested by the user).
+  "Lessee agrees to pay all utilities furnished to the property, except
+  __________." became "Lessee agrees to pay all utilities furnished to the
+  property." The fill-in blank for excepted utilities is gone, so Lessee pays
+  every utility with none carved out. The rest of the section (transfer into
+  Lessee's name, $10 per day per utility until then) is unchanged. Applied to
+  `documents/lease.md`; the generator's blank-width list lost its entry for
+  that blank; `documents/print/lease_print.html` regenerated.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.

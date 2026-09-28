@@ -72,14 +72,36 @@ def test_the_font_is_embedded(real_output):
     assert "data:font/woff2;base64," in real_output
 
 
-def test_the_wording_starts_identical_to_the_transcript():
+def test_unversioned_conditions_still_match_the_transcript(gen):
     """The live master started as the transcript minus its letterhead and
-    title; every condition must still be there word for word until a
-    wording change is deliberately made and logged."""
+    title. Conditions 6 and 9 became address-dependent on 2026-09-28 (see
+    documents/security_deposit_history.md); every other one must still be
+    there word for word until a change is deliberately made and logged."""
     transcript = TRANSCRIPT_PATH.read_text(encoding="utf-8")
     source = SOURCE_PATH.read_text(encoding="utf-8")
-    for line in re.findall(r"^\d+\. .+$", transcript, re.M):
-        assert line in source
+    for match in re.finditer(r"^(\d+)\. (.+)$", transcript, re.M):
+        if int(match.group(1)) in gen.ITEM_OPTIONS:
+            continue
+        assert match.group(0) in source
+
+
+def test_walls_and_yard_conditions_have_the_leases_versions(gen, real_output):
+    """Conditions 6 and 9 carry one version per lease option, tagged like
+    the lease's, so the shared picker shows the deposit that matches the
+    lease for the same apartment."""
+    assert gen.ITEM_OPTIONS == {6: "walls", 9: "yard"}
+    items = re.findall(r"<li>(.*?)</li>", real_output, re.S)
+    for number, group in gen.ITEM_OPTIONS.items():
+        for value in gen.lease.OPTION_GROUPS[group]:
+            assert f'data-option="{group}={value}"' in items[number - 1]
+    assert "Section 20 of the lease" in items[5]
+    assert "Section 17 of the lease" in items[8]
+
+
+def test_a_versioned_condition_that_moves_fails_the_build(gen):
+    broken = SOURCE_PATH.read_text(encoding="utf-8").replace("6. (A) No stickers", "6. No stickers")
+    with pytest.raises(SystemExit, match="Condition 6"):
+        gen.generate(broken)
 
 
 def test_a_skipped_condition_number_fails_the_build(gen):

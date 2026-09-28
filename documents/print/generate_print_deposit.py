@@ -105,13 +105,47 @@ def render_text(text: str) -> str:
     return BLANK.sub(blank, escaped)
 
 
-def render_list(block: str) -> str:
+# Conditions whose wording depends on the address, keyed by number, and the
+# lease option group that picks their version - the same groups, values and
+# picker as the lease, so a deposit always matches its lease. In
+# security_deposit.md such a condition reads "6. (A) ... (B) ...".
+ITEM_OPTIONS = {
+    6: "walls",   # matches lease §20 WALLS
+    9: "yard",    # matches lease §17 PATIO/YARD
+}
+VERSION_SPLIT = re.compile(r"(?:^|\s)\(([A-Z])\) ")
+
+
+def render_item(number: int, text: str) -> str:
+    """One condition. A versioned one becomes one span per version, tagged
+    like the lease's, so the picker shows only the address's version."""
+    text = flatten(text)
+    group = ITEM_OPTIONS.get(number)
+    has_versions = text.startswith("(A) ")
+    if bool(group) != has_versions:
+        raise SystemExit(
+            f"Condition {number} in {SOURCE.name}: ITEM_OPTIONS and its (A)/(B) "
+            "versions disagree - has a condition been renumbered?"
+        )
+    if not group:
+        return render_text(text)
+    pieces = VERSION_SPLIT.split(text)[1:]  # [letter, text, letter, text, ...]
+    return " ".join(
+        f'<span data-option="{group}={letter}">{lease.version_label(letter)}{render_text(body)}</span>'
+        for letter, body in zip(pieces[::2], pieces[1::2])
+    )
+
+
+def render_list(block: str) -> tuple[str, list[int]]:
     starts = [m.start() for m in LIST_ITEM.finditer(block)]
     items = [block[a:b] for a, b in zip(starts, starts[1:] + [len(block)])]
     numbers = [int(LIST_ITEM.match(item).group(1)) for item in items]
     if numbers != list(range(numbers[0], numbers[0] + len(numbers))):
         raise SystemExit(f"Numbered list in {SOURCE.name} skips or repeats: {numbers}")
-    rows = "\n".join(f"  <li>{render_text(LIST_ITEM.sub('', item, count=1))}</li>" for item in items)
+    rows = "\n".join(
+        f"  <li>{render_item(number, LIST_ITEM.sub('', item, count=1))}</li>"
+        for number, item in zip(numbers, items)
+    )
     return f'<ol class="conditions" start="{numbers[0]}">\n{rows}\n</ol>', numbers
 
 
@@ -160,6 +194,10 @@ def generate(source_text: str) -> str:
         raise SystemExit(f"The conditions in {SOURCE.name} do not run 1..N: {list_numbers}")
     if "signature-block" not in body:
         raise SystemExit(f"No signature lines found in {SOURCE.name}.")
+    for group in ITEM_OPTIONS.values():
+        for value in sorted(lease.OPTION_GROUPS[group]):
+            if f'data-option="{group}={value}"' not in body:
+                raise SystemExit(f"{SOURCE.name} has no {group} version {value}, which the lease has.")
 
     head = lease.render_head(COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
     return head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("security deposit")
