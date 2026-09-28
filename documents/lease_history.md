@@ -215,5 +215,15 @@ for the research behind any entry that cites outside sources.
   `documents/lease.md`; the generator's blank-width list lost its entry for
   that blank; `documents/print/lease_print.html` regenerated.
 
+- **2026-09-28 - §20 WALLS (B) plaster now includes everything (A) forbids**
+  (requested by the user: nothing may be done to a plaster wall that may not
+  be done to a regular one). (B) already banned adhesives and limited nails,
+  but not stickers or scratches. Added as its own paragraph after the
+  opening: "Lessee shall not put stickers on, scratch, or make holes in any
+  wall or ceiling, other than small nail holes made as permitted below." -
+  (A)'s first sentence, pointed at (B)'s own permitted hanging methods.
+  Applied to `documents/lease.md`; `documents/print/lease_print.html`
+  regenerated.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.

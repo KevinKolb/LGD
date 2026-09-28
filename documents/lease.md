@@ -273,6 +273,9 @@ modern drywall.  Plaster is brittle, prone to cracking, and easily damaged by im
 methods, excessive weight, or inadequate hardware.  To preserve the plaster walls, Lessee
 agrees to the following.
 
+Lessee shall not put stickers on, scratch, or make holes in any wall or ceiling, other than
+small nail holes made as permitted below.
+
 Lessee shall not use any of the following on any plaster wall or ceiling:
 
 • Large nails, framing nails, or spikes.
