@@ -245,7 +245,7 @@ PAGE = """<!doctype html>
 <body>
 <header>
   <h1>{title}</h1>
-  <p>Lower Garden District Properties LLC</p>
+  <p>Lower Garden District Properties, Inc.</p>
 </header>
 
 <main>

@@ -24,9 +24,6 @@ REPO_ROOT = HERE.parent.parent
 SOURCE = REPO_ROOT / "documents" / "security_deposit.md"
 OUTPUT = HERE / "security_deposit_print.html"
 
-# Hardcoded LGD: a 2.0 migration (see CLAUDE.md). The user's wording for this
-# header, 2026-09-28 - note it differs from the lease's COMPANY_NAME.
-COMPANY_NAME = "LGD PROPERTIES, INC"
 TITLE = "Security Deposit Agreement"
 SUBTITLE = "SECURITY DEPOSIT AGREEMENT"
 
@@ -199,7 +196,7 @@ def generate(source_text: str) -> str:
             if f'data-option="{group}={value}"' not in body:
                 raise SystemExit(f"{SOURCE.name} has no {group} version {value}, which the lease has.")
 
-    head = lease.render_head(COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
+    head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
     return head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("security deposit")
 
 

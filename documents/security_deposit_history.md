@@ -51,3 +51,8 @@ when a change is made; nothing already written down gets edited.
   but for "made as permitted by the lease". It no longer cites "Section 20",
   since the lease at 1523 may be one signed before §20 existed, whose plaster
   rules come from the Plaster Walls Addendum.
+
+- **2026-09-28 - Header company name** changed from "LGD PROPERTIES, INC" to
+  "Lower Garden District Properties, Inc.", the name the user set for every
+  document. The deposit now takes it from the lease generator's COMPANY_NAME,
+  so the two cannot differ again.

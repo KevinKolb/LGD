@@ -225,5 +225,12 @@ for the research behind any entry that cites outside sources.
   Applied to `documents/lease.md`; `documents/print/lease_print.html`
   regenerated.
 
+- **2026-09-28 - Company name settled: "Lower Garden District Properties,
+  Inc."** (the user, for everything). The printed lease header and "Page X
+  of Y" lines changed from "Lower Garden District Properties Inc" (the entry
+  above) to this exact form, with comma and period. Applied in
+  `generate_print_lease.py`'s `COMPANY_NAME`, which the deposit, application
+  and addendum now all share; every printed document regenerated.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.

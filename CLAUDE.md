@@ -6,9 +6,11 @@ are kept out of the human-facing document files on purpose.
 
 ## Versions: 1.0 is one company on purpose
 
-**1.0 is Lower Garden District Properties Inc (LLC until 2026-09-28; the lease
-header changed then, the home, login, application and legal research pages
-still say LLC). 2.0 is this same site sold to
+**1.0 is Lower Garden District Properties, Inc.** - that exact form, comma
+and period, set by the user on 2026-09-28 for everything (it was LLC before,
+and briefly "LGD PROPERTIES, INC" on the deposit). Every printed document
+takes it from `COMPANY_NAME` in `generate_print_lease.py`; the home, login,
+resident, applicant and legal research pages carry it as text. **2.0 is this same site sold to
 other property management companies.** The version line at the bottom of the
 home page tracks it; "we are at version 1 because we can print a lease" is how
 the bar was set.
@@ -18,9 +20,8 @@ say so when doing it, because every instance is a 2.0 migration. As of
 2026-09-08 those are: the printed lease's heading and the hub page heading, the
 resident page's contact block, the applicant page's company map, and
 "New Orleans" as a default in the `properties` table and throughout the lease
-text itself. Since 2026-09-28, also the security deposit's header ("LGD
-PROPERTIES, INC", `COMPANY_NAME` in its generator - worded differently from
-the lease's, as the user gave it), and LGD's own buildings in
+text itself. Since 2026-09-28, also the company name in every printed
+document's header (one `COMPANY_NAME`), and LGD's own buildings in
 `documents/properties.json` (each file carries a `manager_id`, so 2.0 is one
 file per company, or a move into the database).
 

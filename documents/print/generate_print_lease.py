@@ -166,8 +166,9 @@ BLANK = re.compile(r"_{2,}")
 # while, so one form could be shared across every manager in accounts.json -
 # printing a name here means this lease is LGD's, and another manager would
 # need their own copy. Hardcoded LGD: a 2.0 migration (see CLAUDE.md).
-# LLC became Inc on 2026-09-28, at the user's request.
-COMPANY_NAME = "Lower Garden District Properties Inc"
+# LLC became Inc on 2026-09-28, at the user's request, and the user set
+# this exact form - comma and period - for every document the same day.
+COMPANY_NAME = "Lower Garden District Properties, Inc."
 
 # HTML_HEAD and PICKER_FOOTER are shared with the security deposit's
 # generator, which fills the same placeholders with its own values - see
