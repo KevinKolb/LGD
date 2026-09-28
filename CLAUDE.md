@@ -6,7 +6,9 @@ are kept out of the human-facing document files on purpose.
 
 ## Versions: 1.0 is one company on purpose
 
-**1.0 is Lower Garden District Properties LLC. 2.0 is this same site sold to
+**1.0 is Lower Garden District Properties Inc (LLC until 2026-09-28; the lease
+header changed then, the home, login, application and legal research pages
+still say LLC). 2.0 is this same site sold to
 other property management companies.** The version line at the bottom of the
 home page tracks it; "we are at version 1 because we can print a lease" is how
 the bar was set.
@@ -16,7 +18,9 @@ say so when doing it, because every instance is a 2.0 migration. As of
 2026-09-08 those are: the printed lease's heading and the hub page heading, the
 resident page's contact block, the applicant page's company map, and
 "New Orleans" as a default in the `properties` table and throughout the lease
-text itself. Since 2026-09-28, also LGD's own buildings in
+text itself. Since 2026-09-28, also the security deposit's header ("LGD
+PROPERTIES, INC", `COMPANY_NAME` in its generator - worded differently from
+the lease's, as the user gave it), and LGD's own buildings in
 `documents/properties.json` (each file carries a `manager_id`, so 2.0 is one
 file per company, or a move into the database).
 
@@ -43,8 +47,23 @@ and its character-for-character transcript,
 [`documents/originals/security_deposit_transcript_verbatim.md`](documents/originals/security_deposit_transcript_verbatim.md),
 were added on 2026-09-28 and are historical record. **Never edit either.**
 It is Steve A. Hartnett's form (his name, 1556 Camp Street address and phone
-head page 1), not LGD's. Any working version of it gets its own live master in
-`documents/`, the way `lease.md` relates to the lease transcript.
+head page 1), not LGD's.
+
+Its live master is [`documents/security_deposit.md`](documents/security_deposit.md),
+started 2026-09-28 as the transcript word for word, minus the letterhead and
+title (the generator prints LGD's header in their place). Wording changes go
+there, and the same rules as the lease apply: never "fix" wording on your
+own initiative, and log every change. Regenerate the printable copy with:
+
+    python documents/print/generate_print_deposit.py
+
+`generate_print_deposit.py` imports the lease generator and reuses its
+`render_head` (header, font, page counters) and `render_picker_footer` (the
+apartment popup and inlined `properties.json`), so the two documents cannot
+drift apart in look or behaviour. The popup fills "As Security Deposit for
+___"; the deposit has no address-dependent sections. The manager page links
+it as step 2b, beside the lease (2a). Tests:
+`tests/test_generate_print_deposit.py`.
 
 Everything document-related now sits under `documents/`, and the split
 inside it is the point: `documents/originals/` is frozen source material —
@@ -152,7 +171,9 @@ one file that works offline and from `file://`. **Regenerate the lease after
 editing it**, exactly as after editing `lease.md`.
 
 Opening the lease - View or Print - first shows an opaque popup (screen
-only, never printed) asking for the address and the unit. Parking, walls and
+only, never printed) asking for the address and the unit, with a short
+summary of that address's parking, walls and yard beneath (`SUMMARY` in the
+script - a new option value needs a line there too). Parking, walls and
 yard come from `properties.json` alone - the popup had a parking override,
 removed on 2026-09-28 at the user's request. Nothing of the lease shows
 until one is picked, and the print dialog only opens after. Picking fills

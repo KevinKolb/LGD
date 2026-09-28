@@ -165,29 +165,34 @@ BLANK = re.compile(r"_{2,}")
 # The company name heads the printed lease. This was a blank line for a
 # while, so one form could be shared across every manager in accounts.json -
 # printing a name here means this lease is LGD's, and another manager would
-# need their own copy.
+# need their own copy. Hardcoded LGD: a 2.0 migration (see CLAUDE.md).
+# LLC became Inc on 2026-09-28, at the user's request.
+COMPANY_NAME = "Lower Garden District Properties Inc"
 
+# HTML_HEAD and PICKER_FOOTER are shared with the security deposit's
+# generator, which fills the same placeholders with its own values - see
+# render_head and render_picker_footer.
 HTML_HEAD = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico">
-<title>Residential Lease</title>
+<title>__TITLE__</title>
 <style>
   /* @font-face spliced in by font_face_rule() */
   @page {
     size: letter;
     margin: 0.85in;
     @top-center {
-      content: "Lower Garden District Properties LLC — Page " counter(page)
+      content: "__COMPANY__ — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-size: 9pt;
       color: #444;
     }
     @bottom-center {
-      content: "Lower Garden District Properties LLC — Page " counter(page)
+      content: "__COMPANY__ — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-size: 9pt;
@@ -319,6 +324,13 @@ HTML_HEAD = """<!doctype html>
     padding: 6px;
     font: inherit;
   }
+  .picker-summary {
+    margin: 4px 0 0;
+    padding-left: 1.2em;
+    font-size: 10.5pt;
+    color: #333;
+  }
+  .picker-summary li { margin-bottom: 2px; }
   .picker-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
   .picker-actions button {
     padding: 8px 14px;
@@ -397,11 +409,20 @@ HTML_HEAD = """<!doctype html>
 </style>
 </head>
 <body>
-<h1 class="company">Lower Garden District Properties LLC</h1>
-<p class="subtitle">RESIDENTIAL LEASE</p>
+<h1 class="company">__COMPANY__</h1>
+<p class="subtitle">__SUBTITLE__</p>
 """
 
-HTML_FOOTER = """
+
+def render_head(company: str, title: str, subtitle: str) -> str:
+    """HTML_HEAD with its placeholders filled and the font spliced in."""
+    return (HTML_HEAD.replace(FONT_FACE_MARKER, font_face_rule())
+            .replace("__COMPANY__", html.escape(company))
+            .replace("__TITLE__", html.escape(title))
+            .replace("__SUBTITLE__", html.escape(subtitle)))
+
+
+LEASE_FOOTER_NOTE = """
 <div class="footer-note">
   This is a blank lease generated from <code>documents/lease.md</code> by
   <code>documents/print/generate_print_lease.py</code> for printing and hand-filling on
@@ -412,16 +433,19 @@ HTML_FOOTER = """
   from Firefox, which does not yet support this CSS feature as of early 2026 -
   if you print from Firefox, those lines will simply be missing rather than
   wrong.
-</div>
+</div>"""
+
+PICKER_FOOTER = """
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
   <form class="picker-box" id="picker-form">
-    <h2 id="picker-title">Which apartment is this lease for?</h2>
+    <h2 id="picker-title">Which apartment is this __DOCUMENT__ for?</h2>
     <label>Address
       <select id="picker-property"></select>
     </label>
     <label>Unit
       <select id="picker-unit"></select>
     </label>
+    <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>
       <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
@@ -439,6 +463,7 @@ __PROPERTIES_JSON__
   // title - always show, so section numbers are the same on every lease.
   // "Leave it blank" prints every version, labelled, as a blank form.
   var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties;
+  var baseTitle = document.title;
   var picker = document.getElementById("picker");
   var propertySelect = document.getElementById("picker-property");
   var unitSelect = document.getElementById("picker-unit");
@@ -456,11 +481,27 @@ __PROPERTIES_JSON__
     return properties[Number(propertySelect.value)];
   }
 
+  // One line per address-dependent setting, so the manager can see what
+  // this lease will say before printing it.
+  var SUMMARY = {
+    parking: { "limited": "Parking (limited spaces)", "not-available": "No parking" },
+    walls: { A: "No plaster (standard walls)", B: "Plaster walls" },
+    yard: { A: "Yard A: Lessee maintains patio/yard and alley",
+            B: "Yard B: Lessor maintains all" }
+  };
+
   function showUnits() {
     var property = chosenProperty();
     unitSelect.length = 0;
     property.units.forEach(function (unit) { unitSelect.add(new Option(unit, unit)); });
     unitSelect.parentNode.hidden = property.units.length === 0;
+    var summary = document.getElementById("picker-summary");
+    summary.textContent = "";
+    ["parking", "walls", "yard"].forEach(function (group) {
+      var item = document.createElement("li");
+      item.textContent = SUMMARY[group][property.lease_options[group]];
+      summary.appendChild(item);
+    });
   }
 
   function applyProperty(property, unit) {
@@ -468,7 +509,7 @@ __PROPERTIES_JSON__
     var place = property.units.length ? property.address + ", Unit " + unit : property.address;
     premises.textContent = place;
     premises.classList.add("filled");
-    document.title = "Residential Lease - " + place;
+    document.title = baseTitle + " - " + place;
     document.querySelectorAll("[data-option]").forEach(function (element) {
       var option = optionParts(element);
       if (option.value === "any") { return; }  // the section itself always shows
@@ -526,20 +567,30 @@ __PROPERTIES_JSON__
   document.getElementById("picker-blank").addEventListener("click", finish);
 
   // On a blank lease the PARKING radio buttons work by hand: picking one
-  // crosses out the other.
+  // crosses out the other. (The security deposit shares this script and
+  // has no parking section, hence the check.)
+  var notAvailable = document.getElementById("parking-not-available");
+  var limited = document.getElementById("parking-limited");
   function updateParkingStrikes() {
-    var notAvailable = document.getElementById("parking-not-available");
-    var limited = document.getElementById("parking-limited");
     document.getElementById("parking-label-not-available").classList.toggle("struck", limited.checked);
     document.getElementById("parking-label-limited").classList.toggle("struck", notAvailable.checked);
   }
-  document.getElementById("parking-not-available").addEventListener("change", updateParkingStrikes);
-  document.getElementById("parking-limited").addEventListener("change", updateParkingStrikes);
+  if (notAvailable && limited) {
+    notAvailable.addEventListener("change", updateParkingStrikes);
+    limited.addEventListener("change", updateParkingStrikes);
+  }
 
 </script>
 </body>
 </html>
 """
+
+
+def render_picker_footer(document_name: str) -> str:
+    """The apartment picker, its script and the inlined apartment table -
+    shared by every printable document that names the premises."""
+    return (PICKER_FOOTER.replace("__DOCUMENT__", html.escape(document_name))
+            .replace(PROPERTIES_MARKER, properties_json(load_properties())))
 
 def flatten_paragraph(text: str) -> str:
     return re.sub(r"[ \t]*\n[ \t]*", " ", text).strip()
@@ -973,11 +1024,12 @@ def generate(source_text: str) -> str:
     )
 
     return (
-        HTML_HEAD.replace(FONT_FACE_MARKER, font_face_rule())
+        render_head(COMPANY_NAME, "Residential Lease", "RESIDENTIAL LEASE")
         + "\n".join(paragraphs[:-1])
         + "\n"
         + tail_html
-        + HTML_FOOTER.replace(PROPERTIES_MARKER, properties_json(load_properties()))
+        + LEASE_FOOTER_NOTE
+        + render_picker_footer("lease")
     )
 
 

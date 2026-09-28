@@ -68,6 +68,7 @@ def test_signature_labels_are_not_merged_together(real_output):
     """The actual bug: all four entries ended up concatenated into one
     div, e.g. "_____ Lessor/Agent _____ Lessee _____ Lessee _____ Lessee"."""
     signature_area = real_output[real_output.index('<div class="signature-block">') :]
+    signature_area = signature_area[: signature_area.index("</div>\n</div>")]
     assert "Lessor/Agent" in signature_area
     assert signature_area.count("Lessee") == 3
     # None of the four lines should contain more than one role label.
@@ -134,7 +135,8 @@ def test_the_manager_name_heads_the_lease(real_output):
     every manager in accounts.json. Printing a name here means the form is
     LGD's; another manager would need their own copy."""
     body = real_output[real_output.index("<body>") :]
-    assert "Lower Garden District Properties LLC" in body
+    assert "Lower Garden District Properties Inc" in body
+    assert "LLC" not in real_output
     assert "RESIDENTIAL LEASE" in body
     # The name comes first, above the document type.
     assert body.index("Lower Garden District") < body.index("RESIDENTIAL LEASE")
@@ -161,7 +163,7 @@ def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output)
     assert page_rule.count("counter(page)") == 2
     assert page_rule.count("counter(pages)") == 2
     # The manager name leads both, so a loose page is identifiable.
-    assert page_rule.count("Lower Garden District Properties LLC — Page ") == 2
+    assert page_rule.count("Lower Garden District Properties Inc — Page ") == 2
 
 
 def test_printing_paginates_the_same_on_a_phone_as_on_a_desktop(real_output):
@@ -393,6 +395,17 @@ def test_the_patio_yard_section_holds_both_yard_versions(real_output):
                      real_output)
     assert re.search(r'<p data-option="yard=B">' + re.escape(LABEL) + r'\(B\) </span>The patio/yard, '
                      r'alley, front yard', real_output)
+
+
+def test_the_popup_summarises_every_option_value(gen, real_output):
+    """The popup lists parking, walls and yard for the chosen address; a
+    value added to OPTION_GROUPS without a summary line would show blank."""
+    summary = real_output[real_output.index("var SUMMARY = {"):real_output.index("function showUnits")]
+    for group, values in gen.OPTION_GROUPS.items():
+        line = summary[summary.index(f"{group}: {{"):]
+        line = line[:line.index("}")]
+        for value in values:
+            assert re.search(rf'"?{re.escape(value)}"?: "', line), (group, value)
 
 
 def test_parking_radios_are_not_mistaken_for_versions(gen):

@@ -199,5 +199,12 @@ for the research behind any entry that cites outside sources.
   tape, or poster putty" in (A), and the same in (B)'s bullet - Command
   Strips now an example of an adhesive hook rather than an item of its own.
 
+- **2026-09-28 - Printed lease header: LLC became Inc** (requested by the
+  user). The company name heading the printed lease and its "Page X of Y"
+  lines changed from "Lower Garden District Properties LLC" to "Lower Garden
+  District Properties Inc". `lease.md` itself does not name the company, so
+  only `documents/print/generate_print_lease.py` changed;
+  `documents/print/lease_print.html` regenerated.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.
