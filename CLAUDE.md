@@ -16,7 +16,9 @@ say so when doing it, because every instance is a 2.0 migration. As of
 2026-09-08 those are: the printed lease's heading and the hub page heading, the
 resident page's contact block, the applicant page's company map, and
 "New Orleans" as a default in the `properties` table and throughout the lease
-text itself.
+text itself. Since 2026-09-28, also LGD's own buildings in
+`documents/properties.json` (each file carries a `manager_id`, so 2.0 is one
+file per company, or a move into the database).
 
 The multi-company scaffolding that already exists should **not** be torn out to
 simplify 1.0: `accounts.json` (and its Postgres equivalent) already hold a
@@ -49,6 +51,8 @@ Numbering in the lease originally ran 1–19 continuously across its six pages, 
 section 20 — that was the original scanned document's own numbering, nothing was
 missing. A new §6 SMOKING was added on 2026-09-06 (see the changelog below), which
 renumbered everything from old §6 onward up by one; the lease now runs 1–20.
+A new §20 PLASTER WALLS was added on 2026-09-28, inserted before PARKING so
+that PARKING stays the last section; the lease now runs 1–21.
 
 ## A blank, printable paper lease
 
@@ -119,16 +123,63 @@ position — that is what makes it survive a different paper size, margin or
 printer. Verified with headless Chrome across Letter and A4 at six margin
 settings: 12 of 12 keep them together at 6 pages.
 
-§20 PARKING is the one section with two real, mutually exclusive radio
+§21 PARKING is the one section with two real, mutually exclusive radio
 buttons instead of fill-in blanks: `mark_parking_radios` in the generator
 recognizes the two literal sentences "( ) Parking not available at this
 address." and "( ) Parking spaces are limited to..." in
 `documents/lease.md`, and swaps each for a real `<input type="radio"
-name="parking">` inside its own `<label class="checkbox-line">`. JS toggles
-a `.struck` (CSS `text-decoration: line-through`) class on whichever
-label's radio is *not* checked - the chosen option stays plain, the other
-is crossed out. Auto-print still fires on page load - picking one first
-means cancelling that dialog once, then printing again manually.
+name="parking">` inside its own `<label class="checkbox-line">`. On a
+blank lease, JS toggles a `.struck` (CSS `text-decoration: line-through`)
+class on whichever label's radio is *not* checked. For a chosen address,
+the popup sets it and hides the other (see below).
+
+### The apartment picker, and sections that vary by address
+
+[`documents/properties.json`](documents/properties.json) is the table of
+apartments: one entry per building, with its `units` (an empty list for a
+single house) and its `lease_options`. The generator validates it and
+inlines it into the lease page - inlined, like the font, so the page stays
+one file that works offline and from `file://`. **Regenerate the lease after
+editing it**, exactly as after editing `lease.md`.
+
+Opening the lease - View or Print - first shows an opaque popup (screen
+only, never printed) asking for the address, the unit, and the parking
+choice (defaulted from the address, changeable). Nothing of the lease shows
+until one is picked, and the print dialog only opens after. Picking fills
+in the premises blank, bold and underlined, and applies the options.
+"Leave it blank" gives the old fully blank form.
+
+The rule, settled by the user on 2026-09-28: **every lease has the same
+sections with the same numbers; only the wording inside §17 PATIO/YARD,
+§20 WALLS and §21 PARKING varies by address.** A lease shows only its own
+version - the others are hidden, not crossed out (crossing out was the
+first design, and was dropped). So leases now differ in length by address;
+section numbers are what stays constant.
+
+- `SECTION_OPTIONS` names the three sections by bold title (not number,
+  since numbers shift). Each heading is tagged `group=any` and always shows.
+- In `lease.md`, "(A) ", "(B) " begins a version, which runs until the next
+  letter or the end of the section - so a version can be many paragraphs
+  and bullets (walls B is). `paragraph_options` tags them; `mark_versions`
+  wraps the "(A) " labels, which show only on a blank lease.
+- PARKING's two versions are its radio sentences instead
+  (`mark_parking_radios`); for a chosen address the radio is hidden and
+  the applicable sentence reads as plain text.
+- Every property must set all three groups to a value in `OPTION_GROUPS`
+  (`"none"` is gone), and every value there must be tagged in the lease -
+  both are build errors.
+
+As of 2026-09-28: parking is "limited" only at 1364 Camp, "not-available"
+everywhere else; walls are "B" (plaster) only at 1523 St. Andrew, "A"
+(standard: no stickers, scratches or holes beyond small nail holes, no
+adhesives) everywhere else; yard "A" (Lessee maintains patio/yard and
+alley) at 1534 and 1536 Camp and 1428 and 1430 Melpomene, "B" (Lessor
+maintains all) everywhere else.
+
+`HTML_FOOTER` is an ordinary Python string, so a `\"` in its JavaScript
+loses its backslash and breaks the entire script - it did, once, while the
+picker was being built. `test_the_page_script_parses` runs every script
+through `node --check` when node is installed.
 
 ## Wording is a legal decision, not a typo to autocorrect
 

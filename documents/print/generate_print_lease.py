@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 import re
 from pathlib import Path
 from typing import Iterator
@@ -26,6 +27,93 @@ from typing import Iterator
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SOURCE = REPO_ROOT / "documents" / "lease.md"
 OUTPUT = REPO_ROOT / "documents" / "print" / "lease_print.html"
+
+# The table of apartments a lease can be printed for. Inlined into the output
+# (like the font) rather than fetched, so the page stays one self-contained
+# file that works offline and from file:// - a fetch would do neither.
+#
+# Each property's lease_options pick, per group, which version of an
+# address-dependent section its lease shows. The other versions are hidden,
+# not crossed out - but the section itself, number and title, is on every
+# lease, so section numbers are the same for every address. See
+# OPTION_GROUPS and the picker script in HTML_FOOTER.
+PROPERTIES_FILE = REPO_ROOT / "documents" / "properties.json"
+PROPERTIES_MARKER = "__PROPERTIES_JSON__"
+
+# Every lease option group and its versions. Every property must set every
+# group to one of these. Walls: A is the standard wording, B plaster.
+OPTION_GROUPS = {
+    "parking": {"not-available", "limited"},
+    "walls": {"A", "B"},
+    "yard": {"A", "B"},
+}
+
+# The sections holding each group's versions, keyed by their bold title
+# rather than their number, since numbers shift when a section is inserted.
+# The section itself always shows. Inside it, "(A) ", "(B) " ... begins a
+# version, which runs until the next letter or the end of the section - so a
+# version can be several paragraphs, bullets included. See
+# paragraph_options and mark_versions. PARKING's versions are its two radio
+# sentences instead (mark_parking_radios).
+SECTION_OPTIONS = {
+    "PATIO/YARD": "yard=any",
+    "WALLS": "walls=any",
+    "PARKING": "parking=any",
+}
+
+
+def load_properties() -> dict:
+    """documents/properties.json, checked hard enough that a typo fails the
+    build rather than printing a lease with the wrong clauses."""
+    if not PROPERTIES_FILE.is_file():
+        raise SystemExit(f"{PROPERTIES_FILE} does not exist.")
+    data = json.loads(PROPERTIES_FILE.read_text(encoding="utf-8"))
+    validate_properties(data)
+    return data
+
+
+def validate_properties(data: dict) -> None:
+    properties = data.get("properties")
+    if not isinstance(properties, list):
+        raise SystemExit("properties.json needs a \"properties\" list.")
+    seen_ids: set[str] = set()
+    for prop in properties:
+        where = f"properties.json entry {prop.get('id')!r}"
+        for field in ("id", "address"):
+            if not prop.get(field):
+                raise SystemExit(f"{where} is missing {field!r}.")
+        if prop["id"] in seen_ids:
+            raise SystemExit(f"{where}: id is used twice.")
+        seen_ids.add(prop["id"])
+        # An empty list is a single house: the lease names the address alone.
+        units = prop.get("units")
+        if not isinstance(units, list):
+            raise SystemExit(f"{where}: units must be a list (empty for a single house).")
+        if not all(isinstance(u, str) and u for u in units) or len(set(units)) != len(units):
+            raise SystemExit(f"{where}: units must be distinct, non-empty strings.")
+        options = prop.get("lease_options")
+        if not isinstance(options, dict):
+            raise SystemExit(f"{where}: lease_options must be an object.")
+        for group in options:
+            if group not in OPTION_GROUPS:
+                raise SystemExit(
+                    f"{where}: unknown lease option {group!r} "
+                    f"(known: {', '.join(sorted(OPTION_GROUPS))})."
+                )
+        # Every group, every time: a lease always has each of these sections,
+        # so each needs a version to show.
+        for group, allowed in OPTION_GROUPS.items():
+            if options.get(group) not in allowed:
+                raise SystemExit(
+                    f"{where}: {group} must be one of {', '.join(sorted(allowed))}, "
+                    f"not {options.get(group)!r}."
+                )
+
+
+def properties_json(data: dict) -> str:
+    """JSON safe to sit inside a <script> element: a "</" in any value would
+    otherwise close the element early."""
+    return json.dumps(data, ensure_ascii=False, indent=1).replace("</", "<\\/")
 
 # Gelasio, embedded in the output as base64 rather than linked, so the printed
 # lease never depends on which fonts the printing device happens to have.
@@ -154,6 +242,13 @@ HTML_HEAD = """<!doctype html>
     page-break-after: avoid;
     break-after: avoid;
   }
+  p.bullet {
+    /* A list item written in lease.md as its own "• " paragraph: hanging
+       indent so wrapped lines align with the text, not the bullet. */
+    margin: 0 0 0.4em 1.2em;
+    text-indent: -0.9em;
+    text-align: left;
+  }
   .blank {
     display: inline-block;
     min-width: 2.4em;
@@ -176,10 +271,66 @@ HTML_HEAD = """<!doctype html>
   label.checkbox-line input {
     margin-right: 0.35em;
   }
-  .checkbox-line.struck {
+  /* A version that does not apply to the chosen apartment. Several rules
+     here set display (the picker is flex), so one override covers them. */
+  [hidden] { display: none !important; }
+  /* On a blank lease, the PARKING radio not picked by hand. */
+  .struck {
     text-decoration: line-through;
     color: #555;
   }
+  /* Keeps the blank's own min-width: a filled-in address takes the same
+     space as the empty blank, so every address paginates identically. */
+  .blank.filled {
+    border-bottom: none;
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  /* The apartment picker is screen-only: it never reaches paper. It sets no
+     font-family of its own, so it inherits Gelasio from body. */
+  .picker {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    /* Opaque, not a dimmed overlay: the lease is not shown at all until an
+       apartment is picked, so nobody reads or prints the wrong one. */
+    background: #e9e7e2;
+  }
+  .picker[hidden] { display: none; }
+  .picker-box {
+    width: 100%;
+    max-width: 380px;
+    padding: 22px 24px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .15);
+  }
+  .picker-box h2 { margin: 0 0 14px; font-size: 14pt; }
+  .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
+  .picker-box label[hidden] { display: none; }
+  .picker-box select {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 6px;
+    font: inherit;
+  }
+  .picker-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .picker-actions button {
+    padding: 8px 14px;
+    border: 1px solid #1f5d4c;
+    border-radius: 6px;
+    background: #1f5d4c;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+  .picker-actions button.secondary { background: transparent; color: #1f5d4c; }
+  .picker-actions button:disabled { opacity: .45; cursor: not-allowed; }
   .execution-block {
     /* "Executed in duplicate at ___ this ___ day of ___" and the four
        signature lines are one unit: those signatures execute that sentence.
@@ -222,6 +373,7 @@ HTML_HEAD = """<!doctype html>
   }
   @media print {
     .footer-note { display: none; }
+    .picker { display: none !important; }
     a { color: inherit; text-decoration: none; }
     /* Pin the printed column to the paper, in absolute units.
        A phone lays the screen out about 390px wide, and mobile browsers
@@ -261,10 +413,88 @@ HTML_FOOTER = """
   if you print from Firefox, those lines will simply be missing rather than
   wrong.
 </div>
+<div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+  <form class="picker-box" id="picker-form">
+    <h2 id="picker-title">Which apartment is this lease for?</h2>
+    <label>Address
+      <select id="picker-property"></select>
+    </label>
+    <label>Unit
+      <select id="picker-unit"></select>
+    </label>
+    <label>Parking
+      <select id="picker-parking">
+        <option value="limited">Parking spaces limited</option>
+        <option value="not-available">Parking not available at this address</option>
+      </select>
+    </label>
+    <div class="picker-actions">
+      <button type="submit" id="picker-fill">Fill in this apartment</button>
+      <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
+    </div>
+  </form>
+</div>
+<script type="application/json" id="lease-properties">
+__PROPERTIES_JSON__
+</script>
 <script>
-  // Opening this page (from the dashboard's "Print blank lease" button) is
-  // the whole point of the page, so bring up the browser's print dialog
-  // automatically rather than making the manager find Ctrl+P themselves.
+  // Before anything prints, the manager picks the apartment this lease is
+  // for (from documents/properties.json, inlined above). That fills in the
+  // premises line and, in each address-dependent section, hides every
+  // version that does not apply. The sections themselves - number and
+  // title - always show, so section numbers are the same on every lease.
+  // "Leave it blank" prints every version, labelled, as a blank form.
+  var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties;
+  var picker = document.getElementById("picker");
+  var propertySelect = document.getElementById("picker-property");
+  var unitSelect = document.getElementById("picker-unit");
+  var parkingSelect = document.getElementById("picker-parking");
+
+  var pageLoaded = new Promise(function (resolve) {
+    window.addEventListener("load", resolve);
+  });
+
+  function optionParts(element) {
+    var parts = element.getAttribute("data-option").split("=");
+    return { group: parts[0], value: parts[1] };
+  }
+
+  function chosenProperty() {
+    return properties[Number(propertySelect.value)];
+  }
+
+  function showUnits() {
+    var property = chosenProperty();
+    unitSelect.length = 0;
+    property.units.forEach(function (unit) { unitSelect.add(new Option(unit, unit)); });
+    unitSelect.parentNode.hidden = property.units.length === 0;
+    // The address's own setting is the default; the manager can change it.
+    parkingSelect.value = property.lease_options.parking;
+  }
+
+  function applyProperty(property, unit) {
+    var premises = document.getElementById("premises");
+    var place = property.units.length ? property.address + ", Unit " + unit : property.address;
+    premises.textContent = place;
+    premises.classList.add("filled");
+    document.title = "Residential Lease - " + place;
+    document.querySelectorAll("[data-option]").forEach(function (element) {
+      var option = optionParts(element);
+      if (option.value === "any") { return; }  // the section itself always shows
+      var applies = option.value === property.lease_options[option.group];
+      element.hidden = !applies;
+      // A parking sentence reads as plain text once it is the only one.
+      var radio = element.querySelector("input[type=radio]");
+      if (radio) { radio.checked = applies; radio.hidden = true; }
+    });
+    document.querySelectorAll(".version-label").forEach(function (label) {
+      label.hidden = true;
+    });
+  }
+
+  // Opening this page (from the dashboard's "Print paper lease" button) is
+  // the whole point of the page, so once an apartment is picked, bring up
+  // the browser's print dialog rather than making the manager find Ctrl+P.
   //
   // Wait for the embedded font before opening it. "load" can fire while the
   // document is still laid out in a fallback face, and printing at that
@@ -274,19 +504,39 @@ HTML_FOOTER = """
   //
   // The dashboard's "View paper lease" button opens this page with #view,
   // which skips the dialog so the lease can just be read on screen.
-  window.addEventListener("load", function () {
+  function finish() {
+    picker.hidden = true;
     if (window.location.hash === "#view") { return; }
-    var fontsReady = (document.fonts && document.fonts.ready)
-      ? document.fonts.ready
-      : Promise.resolve();
-    fontsReady.then(function () {
+    pageLoaded.then(function () {
+      var fontsReady = (document.fonts && document.fonts.ready)
+        ? document.fonts.ready
+        : Promise.resolve();
+      return fontsReady;
+    }).then(function () {
       setTimeout(function () { window.print(); }, 150);
     });
-  });
+  }
 
-  // Pick one of the two PARKING radio buttons first (cancel the print
-  // dialog above if it beat you to it, then print again with Ctrl+P/
-  // Cmd+P) to cross out whichever option doesn't apply.
+  properties.forEach(function (property, index) {
+    propertySelect.add(new Option(property.address, String(index)));
+  });
+  if (properties.length) {
+    showUnits();
+  } else {
+    document.getElementById("picker-fill").disabled = true;
+  }
+  propertySelect.addEventListener("change", showUnits);
+  document.getElementById("picker-form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var property = chosenProperty();
+    var options = Object.assign({}, property.lease_options, { parking: parkingSelect.value });
+    applyProperty(Object.assign({}, property, { lease_options: options }), unitSelect.value);
+    finish();
+  });
+  document.getElementById("picker-blank").addEventListener("click", finish);
+
+  // On a blank lease the PARKING radio buttons work by hand: picking one
+  // crosses out the other.
   function updateParkingStrikes() {
     var notAvailable = document.getElementById("parking-not-available");
     var limited = document.getElementById("parking-limited");
@@ -444,7 +694,8 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
     marked = marked.replace(OCCUPANTS_BLANK_SENTINEL, render_blank("long"))
     marked = marked.replace(
         PARKING_LABEL_A_START_SENTINEL,
-        '<label class="checkbox-line" id="parking-label-not-available">',
+        '<label class="checkbox-line" id="parking-label-not-available"'
+        ' data-option="parking=not-available">',
     )
     marked = marked.replace(
         PARKING_RADIO_A_SENTINEL,
@@ -453,7 +704,8 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
     marked = marked.replace(PARKING_LABEL_A_END_SENTINEL, "</label>")
     marked = marked.replace(
         PARKING_LABEL_B_START_SENTINEL,
-        '<label class="checkbox-line" id="parking-label-limited">',
+        '<label class="checkbox-line" id="parking-label-limited"'
+        ' data-option="parking=limited">',
     )
     marked = marked.replace(
         PARKING_RADIO_B_SENTINEL,
@@ -564,14 +816,122 @@ def spread_occupants_blanks(paragraph: str) -> str:
     return OCCUPANTS_BLANKS.sub(expand, paragraph)
 
 
-def render_paragraph_tag(block: str, marked_html: str, *, is_preamble: bool) -> str:
+SECTION_TITLE = re.compile(r"^\d+\.\s*\*\*(.+?)\*\*")
+
+
+def section_option(block: str) -> str | None:
+    """The data-option tag for a whole section that is one lease option
+    (see SECTION_OPTIONS), or None."""
+    title = SECTION_TITLE.match(block)
+    return SECTION_OPTIONS.get(title.group(1)) if title else None
+
+
+VERSION_START = re.compile(r"^\(([A-Z])\) ")
+HEADING_VERSION = re.compile(r"^\d+\.\s*\*\*.+?\*\*\s*\(([A-Z])\) ")
+
+
+def paragraph_options(blocks: list[str]) -> list[str | None]:
+    """The data-option tag for each body paragraph.
+
+    A version-holding section's heading paragraph is tagged "group=any" -
+    it always shows (a "(A) " version inside it is wrapped separately, by
+    mark_versions). Every later paragraph of the section belongs to the
+    version most recently started with "(A) ", "(B) " ..., so a version can
+    run over several paragraphs. The preamble comes before any section and
+    the execution sentence closes the lease, so neither is ever tagged."""
+    options: list[str | None] = []
+    current = None
+    version = None
+    for index, block in enumerate(blocks):
+        if STARTS_NEW_SECTION.match(block):
+            current = section_option(block)
+            heading = HEADING_VERSION.match(block)
+            version = heading.group(1) if heading else None
+            tag = current
+        elif current and current.endswith("=any"):
+            start = VERSION_START.match(block)
+            if start:
+                version = start.group(1)
+            group = current.split("=")[0]
+            tag = f"{group}={version}" if version else current
+        else:
+            tag = current
+        in_a_section = 0 < index < len(blocks) - 1
+        options.append(tag if in_a_section else None)
+    return options
+
+
+def render_paragraph_tag(block: str, marked_html: str, *, is_preamble: bool,
+                         option: str | None = None) -> str:
+    tag = f' data-option="{option}"' if option else ""
     if is_preamble:
         attrs = ' class="preamble"'
     elif STARTS_NEW_SECTION.match(block):
-        attrs = ' class="section"'
+        attrs = f'{tag} class="section"'
+    elif block.startswith("• "):
+        attrs = f'{tag} class="bullet"'
     else:
-        attrs = ""
+        attrs = tag
     return f"<p{attrs}>{marked_html}</p>"
+
+
+# The premises blank is the one the apartment picker fills in.
+PREMISES_BLANK = 'the premises known as <span class="blank medium"></span>'
+PREMISES_BLANK_WITH_ID = 'the premises known as <span class="blank medium" id="premises"></span>'
+
+
+HEADING_VERSION_HTML = re.compile(r"\(([A-Z])\) (.*)</p>$")
+VERSION_LABEL_HTML = re.compile(r"^(<p[^>]*>)\(([A-Z])\) ")
+
+
+def version_label(letter: str) -> str:
+    # The "(A) " label only means something on a blank lease, where every
+    # version shows; for a chosen apartment the script hides it.
+    return f'<span class="version-label">({letter}) </span>'
+
+
+def mark_versions(paragraph: str, option: str | None) -> str:
+    """Wrap a version's "(A) " label so it can be hidden, and - in a
+    section's heading paragraph, tagged "group=any" - wrap the version's
+    text in a span tagged "group=A", so it can be hidden without hiding the
+    section number and title. PARKING's "( )" radios never match: a letter
+    is required."""
+    if not option:
+        return paragraph
+    if option.endswith("=any"):
+        group = option.split("=")[0]
+        return HEADING_VERSION_HTML.sub(
+            lambda m: (f'<span data-option="{group}={m.group(1)}">'
+                       f'{version_label(m.group(1))}{m.group(2)}</span></p>'),
+            paragraph,
+            count=1,
+        )
+    return VERSION_LABEL_HTML.sub(lambda m: m.group(1) + version_label(m.group(2)),
+                                  paragraph, count=1)
+
+
+def check_option_wording(paragraphs: list[str]) -> None:
+    """Every value OPTION_GROUPS says has wording must actually be tagged
+    somewhere in the lease - otherwise it would silently never show or hide."""
+    body = "\n".join(paragraphs)
+    for group, values in OPTION_GROUPS.items():
+        for value in sorted(values):
+            if f'data-option="{group}={value}"' not in body:
+                raise SystemExit(
+                    f"OPTION_GROUPS says {group}={value} has wording, but nothing in "
+                    "documents/lease.md is tagged with it. Has its text moved or changed?"
+                )
+
+
+def check_section_options(paragraphs: list[str]) -> None:
+    """Every SECTION_OPTIONS title must still name a real section - a
+    renamed one would otherwise quietly stop being crossed out."""
+    for title, option in SECTION_OPTIONS.items():
+        if not any(f'data-option="{option}"' in p for p in paragraphs):
+            raise SystemExit(
+                f"No section titled {title!r} in documents/lease.md, so it "
+                f"cannot be tagged {option!r}. Has it been renamed?"
+            )
 
 
 def generate(source_text: str) -> str:
@@ -580,8 +940,13 @@ def generate(source_text: str) -> str:
     labels = parse_signature_labels(signature_source)
 
     widths = iter(BLANK_WIDTHS_IN_ORDER)
+    options = paragraph_options(body_blocks)
     paragraphs = [
-        render_paragraph_tag(block, markup_blanks(block, widths), is_preamble=index == 0)
+        mark_versions(
+            render_paragraph_tag(block, markup_blanks(block, widths), is_preamble=index == 0,
+                                 option=options[index]),
+            options[index],
+        )
         for index, block in enumerate(body_blocks)
     ]
     leftover = list(widths)
@@ -591,6 +956,14 @@ def generate(source_text: str) -> str:
             "used - fewer blanks were found in documents/lease.md than "
             "expected. Has a blank been removed?"
         )
+    if PREMISES_BLANK not in paragraphs[0]:
+        raise SystemExit(
+            "Could not find the premises blank in the lease's opening "
+            "paragraph, so the apartment picker has nothing to fill in."
+        )
+    paragraphs[0] = paragraphs[0].replace(PREMISES_BLANK, PREMISES_BLANK_WITH_ID)
+    check_section_options(paragraphs)
+    check_option_wording(paragraphs)
     signature_html = render_signature_lines(labels)
 
     # The execution sentence is the last body paragraph, and it belongs with
@@ -614,7 +987,7 @@ def generate(source_text: str) -> str:
         + "\n".join(paragraphs[:-1])
         + "\n"
         + tail_html
-        + HTML_FOOTER
+        + HTML_FOOTER.replace(PROPERTIES_MARKER, properties_json(load_properties()))
     )
 
 

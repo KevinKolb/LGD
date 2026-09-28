@@ -131,5 +131,67 @@ for the research behind any entry that cites outside sources.
   touches more lines than the two changed words. Applied to `documents/lease.md`;
   `documents/print/lease_print.html` regenerated from it.
 
+- **2026-09-28 - New §20 PLASTER WALLS; PARKING renumbered §20 -> §21**
+  (requested by the user). The user supplied a ChatGPT-drafted "Plaster Wall
+  Protection Addendum" and asked for it as a lease section in the lease's own
+  terms rather than an addendum. Drafted from its points: the addendum's own
+  header (date, parties and premises blanks) and "By signing below"
+  acknowledgement were dropped, since the lease already carries all of that;
+  "Landlord/Tenant" became "Lessor/Lessee"; its sub-headings became lead-in
+  sentences. The opening keeps the draft's "historical or delicate plaster"
+  and "modern drywall" (restored at the user's request after a shorter
+  "plaster, not drywall"). Kept from the original, at the user's direction after a first,
+  shorter prose draft: both hardware lists as bullet lists, item for item,
+  with "Floreat-style hangers" as the example plaster hook; the 3d
+  finish-nail limit; a weight limit without Lessor's written consent - the
+  draft's five (5) pounds, raised by the user to **eight (8) pounds** - with
+  any heavier item installed or supervised by Lessor so it is anchored into
+  the lath or studs. The draft's last two parts, "No Unauthorized Wall
+  Repairs" and "Damages and Security Deposit", are its own wording verbatim
+  (the user's instruction), with only Tenant/Landlord changed to
+  Lessee/Lessor - so repair costs "will be deducted from the Lessee's
+  security deposit", not the "may be deducted ... as provided in Section 3"
+  of §6 SMOKING, and the patching ban reads "upon move-out". One addition
+  inside the verbatim text, at the user's earlier request: "keys breaking"
+  is followed by "(the plaster behind the wall that grips the wooden lath
+  and holds the wall in place)". The bullets are the first list in the lease; the generator
+  renders each "• " paragraph with a hanging indent.
+  Inserted before PARKING so PARKING stays the last section, renumbering it
+  to §21; nothing in the lease referred to §20 by number. Not reviewed by an
+  attorney. The section prints on every lease and is crossed out for every
+  address except 1523 St. Andrew (see `documents/properties.json`). Applied
+  to `documents/lease.md`; `documents/print/lease_print.html` regenerated
+  from it.
+
+- **2026-09-28 - §17 PATIO/YARD split into versions (A) and (B)** (requested
+  by the user). The existing wording, unchanged, became "(A)": Lessee
+  maintains the patio/yard and alley up to the gate, Lessor the front yard
+  and side walk. A new "(B)", drafted to the user's instruction that Lessor
+  maintains all and approved by them: "The patio/yard, alley, front yard and
+  side walk maintenance is the Lessor's responsibility. This includes, but
+  is not limited to, keeping it clean and weed/vegetation control." A's
+  "pet waste" was deliberately left out of B - flagged, and the user
+  confirmed B properties will not have pets. Both print on every lease and
+  the one not applying to the address is crossed out: A for 1534 and 1536
+  Camp and 1428 and 1430 Melpomene, B for the rest (see
+  `documents/properties.json`). Applied to `documents/lease.md`;
+  `documents/print/lease_print.html` regenerated from it.
+
+- **2026-09-28 - §20 PLASTER WALLS became §20 WALLS, with a standard
+  version (A) for every lease** (requested by the user, same day). The user
+  wanted §17, §20 and §21 on every lease with consistent numbers, each
+  lease showing only its own version rather than crossing out the others.
+  So §20 is now on every lease: "(A)" is new, drafted from the user's
+  points ("No stickers, scratches, or nail holes other than small nail
+  holes", and no adhesives as in the plaster wording): "Lessee shall not
+  put stickers on, scratch, or make holes in any wall or ceiling, other than
+  small nail holes for hanging pictures. Lessee shall not use adhesive
+  hooks, mounting tape, Command strips, or poster putty on any wall or
+  ceiling. Adhesives frequently pull away the paint and the wall surface
+  beneath it." "(B)" is the plaster wording above, unchanged; only 1523 St.
+  Andrew gets it. The heading changed from PLASTER WALLS to WALLS to cover
+  both. Applied to `documents/lease.md`; `documents/print/lease_print.html`
+  regenerated from it.
+
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.

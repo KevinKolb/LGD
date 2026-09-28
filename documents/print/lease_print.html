@@ -83,6 +83,13 @@
     page-break-after: avoid;
     break-after: avoid;
   }
+  p.bullet {
+    /* A list item written in lease.md as its own "• " paragraph: hanging
+       indent so wrapped lines align with the text, not the bullet. */
+    margin: 0 0 0.4em 1.2em;
+    text-indent: -0.9em;
+    text-align: left;
+  }
   .blank {
     display: inline-block;
     min-width: 2.4em;
@@ -105,10 +112,66 @@
   label.checkbox-line input {
     margin-right: 0.35em;
   }
-  .checkbox-line.struck {
+  /* A version that does not apply to the chosen apartment. Several rules
+     here set display (the picker is flex), so one override covers them. */
+  [hidden] { display: none !important; }
+  /* On a blank lease, the PARKING radio not picked by hand. */
+  .struck {
     text-decoration: line-through;
     color: #555;
   }
+  /* Keeps the blank's own min-width: a filled-in address takes the same
+     space as the empty blank, so every address paginates identically. */
+  .blank.filled {
+    border-bottom: none;
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  /* The apartment picker is screen-only: it never reaches paper. It sets no
+     font-family of its own, so it inherits Gelasio from body. */
+  .picker {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    /* Opaque, not a dimmed overlay: the lease is not shown at all until an
+       apartment is picked, so nobody reads or prints the wrong one. */
+    background: #e9e7e2;
+  }
+  .picker[hidden] { display: none; }
+  .picker-box {
+    width: 100%;
+    max-width: 380px;
+    padding: 22px 24px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .15);
+  }
+  .picker-box h2 { margin: 0 0 14px; font-size: 14pt; }
+  .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
+  .picker-box label[hidden] { display: none; }
+  .picker-box select {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 6px;
+    font: inherit;
+  }
+  .picker-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .picker-actions button {
+    padding: 8px 14px;
+    border: 1px solid #1f5d4c;
+    border-radius: 6px;
+    background: #1f5d4c;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+  .picker-actions button.secondary { background: transparent; color: #1f5d4c; }
+  .picker-actions button:disabled { opacity: .45; cursor: not-allowed; }
   .execution-block {
     /* "Executed in duplicate at ___ this ___ day of ___" and the four
        signature lines are one unit: those signatures execute that sentence.
@@ -151,6 +214,7 @@
   }
   @media print {
     .footer-note { display: none; }
+    .picker { display: none !important; }
     a { color: inherit; text-decoration: none; }
     /* Pin the printed column to the paper, in absolute units.
        A phone lays the screen out about 390px wide, and mobile browsers
@@ -176,7 +240,7 @@
 <body>
 <h1 class="company">Lower Garden District Properties LLC</h1>
 <p class="subtitle">RESIDENTIAL LEASE</p>
-<p class="preamble"><span class="blank medium"></span>(hereinafter referred to as Lessor) hereby leases to <span class="blank medium"></span> (hereinafter referred to as Lessee) the premises known as <span class="blank medium"></span> in New Orleans, Louisiana for use as a private residence only.</p>
+<p class="preamble"><span class="blank medium"></span>(hereinafter referred to as Lessor) hereby leases to <span class="blank medium"></span> (hereinafter referred to as Lessee) the premises known as <span class="blank medium" id="premises"></span> in New Orleans, Louisiana for use as a private residence only.</p>
 <p class="section">1. <strong>TERM</strong> This lease is for a term commencing on the <span class="blank tiny"></span> day of <span class="blank word"></span> 20<span class="blank tiny"></span>, and ending on the last day of <span class="blank word"></span> 20 <span class="blank tiny"></span>.  If Lessee, or Lessor, desires that this lease terminate at the expiration of its term, written notice must be given to the other party at least 30 days prior to that date to be effective only on the first day of the month. Failure of either party to give this required notice will automatically renew this lease and all of the terms thereof except that the term of the lease will be one month. This provision is a continuing one and will apply at the expiration of the original term and at the expiration of each subsequent term. All other notices required to or by Lessor, or Lessee, will be in accordance with the law.  If Lessee and Lessor desire to renew this lease at the end of one year, there will be an automatic five percent (5%) increase in the rent.  Failure to give proper moving notice will result in forfeiture of any deposits.</p>
 <p class="section">2. <strong>RENT</strong> This lease is made for and in consideration of a monthly rental of<span class="blank word"></span>dollars per month payable in advance on or before 9:00 AM on the FIRST of each month at 1556 Camp Street, New Orleans, Louisiana.  If the rent is received on or prior to date due, Lessee shall be entitled to a deduction of $50 per month or net rental of <span class="blank word"></span> dollars per month.  If Lessee pays by check and said check is not honored on presentation for any reason whatsoever, Lessee agrees to pay an additional sum of $50 as penalty.  This penalty provision is not to be considered a waiver or relinquishment of any of the rights or remedies of a Lessor.  Rents received after the first of the month must be accompanied by a $10 per day late fee.  If rent is not received by 9:00AM on the third, an eviction notice will be served.  If Lessee wants to continue leasing the premises, the rent, late fees, and all costs associated with the eviction process must be paid to Lessor within twenty-four (24) hours of revocation of the eviction notice.</p>
 <p class="section">3. <strong>SECURITY DEPOSIT</strong> Upon execution of this lease contract, Lessee agrees to deposit with Lessor, the sum of <span class="blank word"></span> dollars. This deposit, which is non-interest bearing, is to be held by Lessor as security for the full and faithful performance of all the terms and conditions of this lease.  This security deposit is not an advance rental and Lessor may not deduct any portion of the deposit from rent due to Lessor.  This security deposit is not an advance rental and Lessee&#x27;s failure to fully and faithfully perform all of the terms and conditions of the lease, Lessor retains all of his other rights and remedies.  Lessee does not have the right to cancel this lease and avoid his obligations thereunder by forfeiting the said security deposit.  SECURITY DEPOSIT CANNOT BE USED AS LAST MONTH&#x27;S RENT.</p>
@@ -203,11 +267,25 @@
 <p class="section">16. <strong>SIGNS AND ACCESS</strong> Lessor reserves the right to post on the premises &quot;For Sale&quot; or &quot;For Rent&quot; signs at all times.  Lessee will allow parties authorized by Lessor to visit the premises at reasonable hours in view of buying the entire property and in view of renting for forty-five (45) days prior to the expiration of this lease.</p>
 <p>Lessee shall not post, display, or affix any sign, banner, flag, or placard of any kind — including political, campaign, or advocacy signs — on the exterior of the premises, in any window visible from outside, or anywhere on the property, without Lessor&#x27;s prior written consent.  This restriction does not limit Lessor&#x27;s right to post signs as provided above.</p>
 <p>Reasonable, temporary seasonal or holiday decorations — including but not limited to string lights, wreaths, and similar seasonal items — are permitted without Lessor&#x27;s prior written consent, provided such decorations do not damage the premises, comply with Section 14 (Additions or Alterations), and are removed within fourteen (14) days after the applicable holiday or season.  Lessor may require immediate removal of any decoration that creates a safety hazard or nuisance.</p>
-<p class="section">17. <strong>PATIO/YARD</strong> The patio/yard and alley maintenance up to the gate is the Lessee&#x27;s responsibility.  This includes, but is not limited to, keeping it clean, pet waste, and weed/vegetation control.  Lessor will maintain front yard and side walk.</p>
+<p data-option="yard=any" class="section">17. <strong>PATIO/YARD</strong> <span data-option="yard=A"><span class="version-label">(A) </span>The patio/yard and alley maintenance up to the gate is the Lessee&#x27;s responsibility.  This includes, but is not limited to, keeping it clean, pet waste, and weed/vegetation control.  Lessor will maintain front yard and side walk.</span></p>
+<p data-option="yard=B"><span class="version-label">(B) </span>The patio/yard, alley, front yard and side walk maintenance is the Lessor&#x27;s responsibility.  This includes, but is not limited to, keeping it clean and weed/vegetation control.</p>
 <p class="section">18. <strong>ATTORNEY&#x27;S FEES</strong> Lessee further agrees that if an attorney is employed to protect any rights of the Lessor hereunder, Lessee will pay the fee of such attorney.  Such fee is hereby fixed at twenty-five percent (25%) of the amount claimed or a minimum of $500 whichever is greater.  Lessee further agrees to pay all court costs and sheriff&#x27;s or constable&#x27;s charges if any.</p>
 <p class="section">19. <strong>OTHER</strong> The failure of Lessor to insist upon strict performance of the terms, covenants, agreement and conditions hereby contained, or any of them, shall not constitute or be construed as a waiver or relinquishment of the Lessor&#x27;s rights thereafter to enforce any such terms, covenants, agreements and conditions, but the same shall continue in full force and effect.</p>
 <p>In the event this rental agreement is executed by more than one tenant, it is understood and agreed that each individual shall be bound by all provisions of this rental agreement, and each shall be responsible for payment in full of the entire amount of any money due under this rental agreement, including, but not limited to, all interest, attorney fees, and other fees and charges of whatever nature and kind in the same manner as if each individual were the only person executing this rental agreement.  It is understood that each tenant who executes this rental agreement is to be jointly and solidarily liable for all of the obligations contained in this rental agreement.</p>
-<p class="section">20. <strong>PARKING</strong> <label class="checkbox-line" id="parking-label-not-available"><input type="radio" name="parking" id="parking-not-available">Parking not available at this address.</label>  <label class="checkbox-line" id="parking-label-limited"><input type="radio" name="parking" id="parking-limited">Parking spaces are limited to the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited to tenant&#x27;s automobiles listed on application and in operating condition.</label></p>
+<p data-option="walls=any" class="section">20. <strong>WALLS</strong> <span data-option="walls=A"><span class="version-label">(A) </span>Lessee shall not put stickers on, scratch, or make holes in any wall or ceiling, other than small nail holes for hanging pictures.  Lessee shall not use adhesive hooks, mounting tape, Command strips, or poster putty on any wall or ceiling.  Adhesives frequently pull away the paint and the wall surface beneath it.</span></p>
+<p data-option="walls=B"><span class="version-label">(B) </span>The walls and ceilings of the leased premises are historical or delicate plaster, not modern drywall.  Plaster is brittle, prone to cracking, and easily damaged by improper hanging methods, excessive weight, or inadequate hardware.  To preserve the plaster walls, Lessee agrees to the following.</p>
+<p data-option="walls=B">Lessee shall not use any of the following on any plaster wall or ceiling:</p>
+<p data-option="walls=B" class="bullet">• Large nails, framing nails, or spikes.</p>
+<p data-option="walls=B" class="bullet">• Screws, lag bolts, toggle bolts, or plastic drywall anchors.</p>
+<p data-option="walls=B" class="bullet">• Heavy-duty mounting hardware, such as television wall mounts or heavy shelving brackets.</p>
+<p data-option="walls=B" class="bullet">• Adhesive hooks, mounting tape, Command strips, or poster putty.  Adhesives frequently pull away the paint and the delicate skim coat of plaster beneath it.</p>
+<p data-option="walls=B">Lessee may hang only lightweight decorative items, such as small framed pictures, posters, or light mirrors, and only with:</p>
+<p data-option="walls=B" class="bullet">• Small, fine-gauge finish nails or tacks (3d size or smaller) driven gently into the wall at a downward angle.</p>
+<p data-option="walls=B" class="bullet">• Professional plaster hooks (for example, Floreat-style hangers) that hold by very thin, tempered steel pins.</p>
+<p data-option="walls=B">No single item weighing more than eight (8) pounds may be hung on any plaster wall without Lessor&#x27;s prior written consent.  If Lessor consents, Lessor or a contractor chosen by Lessor shall install the item, or supervise its installation, so that it is anchored into the wooden lath or studs behind the plaster.</p>
+<p data-option="walls=B">Lessee shall not attempt to patch, spackle, mud, or paint over any nail holes, cracks, or chips upon move-out.  Improper amateur repairs to plaster walls often cause more cosmetic and structural damage than the original hole itself.</p>
+<p data-option="walls=B">Any cracking, crumbling, keys breaking (the plaster behind the wall that grips the wooden lath and holds the wall in place), or surface delamination caused by unauthorized hardware, hanging heavy objects, or improper use of adhesives will not be considered ordinary wear and tear.  The Lessee will be held financially responsible for the full cost of professional plaster restoration and painting required to return the wall to its original condition.  Such repair costs will be deducted from the Lessee&#x27;s security deposit.</p>
+<p data-option="parking=any" class="section">21. <strong>PARKING</strong> <label class="checkbox-line" id="parking-label-not-available" data-option="parking=not-available"><input type="radio" name="parking" id="parking-not-available">Parking not available at this address.</label>  <label class="checkbox-line" id="parking-label-limited" data-option="parking=limited"><input type="radio" name="parking" id="parking-limited">Parking spaces are limited to the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited to tenant&#x27;s automobiles listed on application and in operating condition.</label></p>
 <div class="execution-block">
 <p>Executed in duplicate at <span class="blank word"></span>, Louisiana this <span class="blank tiny"></span> day of <span class="blank word"></span>20<span class="blank tiny"></span>.</p>
 <div class="signature-block">
@@ -228,10 +306,215 @@
   if you print from Firefox, those lines will simply be missing rather than
   wrong.
 </div>
+<div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+  <form class="picker-box" id="picker-form">
+    <h2 id="picker-title">Which apartment is this lease for?</h2>
+    <label>Address
+      <select id="picker-property"></select>
+    </label>
+    <label>Unit
+      <select id="picker-unit"></select>
+    </label>
+    <label>Parking
+      <select id="picker-parking">
+        <option value="limited">Parking spaces limited</option>
+        <option value="not-available">Parking not available at this address</option>
+      </select>
+    </label>
+    <div class="picker-actions">
+      <button type="submit" id="picker-fill">Fill in this apartment</button>
+      <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
+    </div>
+  </form>
+</div>
+<script type="application/json" id="lease-properties">
+{
+ "manager_id": "lgd",
+ "properties": [
+  {
+   "id": "1364-camp",
+   "address": "1364 Camp St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+   ],
+   "lease_options": {
+    "parking": "limited",
+    "walls": "A",
+    "yard": "B"
+   }
+  },
+  {
+   "id": "1534-camp",
+   "address": "1534 Camp St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
+    "yard": "A"
+   }
+  },
+  {
+   "id": "1536-camp",
+   "address": "1536 Camp St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
+    "yard": "A"
+   }
+  },
+  {
+   "id": "1558-camp",
+   "address": "1558 Camp St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [
+    "A",
+    "B",
+    "C"
+   ],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
+    "yard": "B"
+   }
+  },
+  {
+   "id": "1428-melpomene",
+   "address": "1428 Melpomene St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
+    "yard": "A"
+   }
+  },
+  {
+   "id": "1430-melpomene",
+   "address": "1430 Melpomene St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
+    "yard": "A"
+   }
+  },
+  {
+   "id": "1521-st-andrew",
+   "address": "1521 St. Andrew St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+   ],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
+    "yard": "B"
+   }
+  },
+  {
+   "id": "1523-st-andrew",
+   "address": "1523 St. Andrew St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "B",
+    "yard": "B"
+   }
+  }
+ ]
+}
+</script>
 <script>
-  // Opening this page (from the dashboard's "Print blank lease" button) is
-  // the whole point of the page, so bring up the browser's print dialog
-  // automatically rather than making the manager find Ctrl+P themselves.
+  // Before anything prints, the manager picks the apartment this lease is
+  // for (from documents/properties.json, inlined above). That fills in the
+  // premises line and, in each address-dependent section, hides every
+  // version that does not apply. The sections themselves - number and
+  // title - always show, so section numbers are the same on every lease.
+  // "Leave it blank" prints every version, labelled, as a blank form.
+  var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties;
+  var picker = document.getElementById("picker");
+  var propertySelect = document.getElementById("picker-property");
+  var unitSelect = document.getElementById("picker-unit");
+  var parkingSelect = document.getElementById("picker-parking");
+
+  var pageLoaded = new Promise(function (resolve) {
+    window.addEventListener("load", resolve);
+  });
+
+  function optionParts(element) {
+    var parts = element.getAttribute("data-option").split("=");
+    return { group: parts[0], value: parts[1] };
+  }
+
+  function chosenProperty() {
+    return properties[Number(propertySelect.value)];
+  }
+
+  function showUnits() {
+    var property = chosenProperty();
+    unitSelect.length = 0;
+    property.units.forEach(function (unit) { unitSelect.add(new Option(unit, unit)); });
+    unitSelect.parentNode.hidden = property.units.length === 0;
+    // The address's own setting is the default; the manager can change it.
+    parkingSelect.value = property.lease_options.parking;
+  }
+
+  function applyProperty(property, unit) {
+    var premises = document.getElementById("premises");
+    var place = property.units.length ? property.address + ", Unit " + unit : property.address;
+    premises.textContent = place;
+    premises.classList.add("filled");
+    document.title = "Residential Lease - " + place;
+    document.querySelectorAll("[data-option]").forEach(function (element) {
+      var option = optionParts(element);
+      if (option.value === "any") { return; }  // the section itself always shows
+      var applies = option.value === property.lease_options[option.group];
+      element.hidden = !applies;
+      // A parking sentence reads as plain text once it is the only one.
+      var radio = element.querySelector("input[type=radio]");
+      if (radio) { radio.checked = applies; radio.hidden = true; }
+    });
+    document.querySelectorAll(".version-label").forEach(function (label) {
+      label.hidden = true;
+    });
+  }
+
+  // Opening this page (from the dashboard's "Print paper lease" button) is
+  // the whole point of the page, so once an apartment is picked, bring up
+  // the browser's print dialog rather than making the manager find Ctrl+P.
   //
   // Wait for the embedded font before opening it. "load" can fire while the
   // document is still laid out in a fallback face, and printing at that
@@ -241,19 +524,39 @@
   //
   // The dashboard's "View paper lease" button opens this page with #view,
   // which skips the dialog so the lease can just be read on screen.
-  window.addEventListener("load", function () {
+  function finish() {
+    picker.hidden = true;
     if (window.location.hash === "#view") { return; }
-    var fontsReady = (document.fonts && document.fonts.ready)
-      ? document.fonts.ready
-      : Promise.resolve();
-    fontsReady.then(function () {
+    pageLoaded.then(function () {
+      var fontsReady = (document.fonts && document.fonts.ready)
+        ? document.fonts.ready
+        : Promise.resolve();
+      return fontsReady;
+    }).then(function () {
       setTimeout(function () { window.print(); }, 150);
     });
-  });
+  }
 
-  // Pick one of the two PARKING radio buttons first (cancel the print
-  // dialog above if it beat you to it, then print again with Ctrl+P/
-  // Cmd+P) to cross out whichever option doesn't apply.
+  properties.forEach(function (property, index) {
+    propertySelect.add(new Option(property.address, String(index)));
+  });
+  if (properties.length) {
+    showUnits();
+  } else {
+    document.getElementById("picker-fill").disabled = true;
+  }
+  propertySelect.addEventListener("change", showUnits);
+  document.getElementById("picker-form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var property = chosenProperty();
+    var options = Object.assign({}, property.lease_options, { parking: parkingSelect.value });
+    applyProperty(Object.assign({}, property, { lease_options: options }), unitSelect.value);
+    finish();
+  });
+  document.getElementById("picker-blank").addEventListener("click", finish);
+
+  // On a blank lease the PARKING radio buttons work by hand: picking one
+  // crosses out the other.
   function updateParkingStrikes() {
     var notAvailable = document.getElementById("parking-not-available");
     var limited = document.getElementById("parking-limited");

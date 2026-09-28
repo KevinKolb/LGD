@@ -230,9 +230,13 @@ with Section 14 (Additions or Alterations), and are removed within fourteen (14)
 after the applicable holiday or season.  Lessor may require immediate removal of any
 decoration that creates a safety hazard or nuisance.
 
-17. **PATIO/YARD** The patio/yard and alley maintenance up to the gate is the Lessee's
+17. **PATIO/YARD** (A) The patio/yard and alley maintenance up to the gate is the Lessee's
 responsibility.  This includes, but is not limited to, keeping it clean, pet waste, and
 weed/vegetation control.  Lessor will maintain front yard and side walk.
+
+(B) The patio/yard, alley, front yard and side walk maintenance is the Lessor's
+responsibility.  This includes, but is not limited to, keeping it clean and
+weed/vegetation control.
 
 18. **ATTORNEY'S FEES** Lessee further agrees that if an attorney is employed to protect any
 rights of the Lessor hereunder, Lessee will pay the fee of such attorney.  Such fee is
@@ -259,7 +263,54 @@ manner as if each individual were the only person executing this rental agreemen
 understood that each tenant who executes this rental agreement is to be jointly and
 solidarily liable for all of the obligations contained in this rental agreement.
 
-20. **PARKING** ( ) Parking not available at this address.  ( ) Parking spaces are limited to
+20. **WALLS** (A) Lessee shall not put stickers on, scratch, or make holes in any wall or
+ceiling, other than small nail holes for hanging pictures.  Lessee shall not use adhesive
+hooks, mounting tape, Command strips, or poster putty on any wall or ceiling.  Adhesives
+frequently pull away the paint and the wall surface beneath it.
+
+(B) The walls and ceilings of the leased premises are historical or delicate plaster, not
+modern drywall.  Plaster is brittle, prone to cracking, and easily damaged by improper hanging
+methods, excessive weight, or inadequate hardware.  To preserve the plaster walls, Lessee
+agrees to the following.
+
+Lessee shall not use any of the following on any plaster wall or ceiling:
+
+• Large nails, framing nails, or spikes.
+
+• Screws, lag bolts, toggle bolts, or plastic drywall anchors.
+
+• Heavy-duty mounting hardware, such as television wall mounts or heavy shelving brackets.
+
+• Adhesive hooks, mounting tape, Command strips, or poster putty.  Adhesives frequently
+pull away the paint and the delicate skim coat of plaster beneath it.
+
+Lessee may hang only lightweight decorative items, such as small framed pictures,
+posters, or light mirrors, and only with:
+
+• Small, fine-gauge finish nails or tacks (3d size or smaller) driven gently into the
+wall at a downward angle.
+
+• Professional plaster hooks (for example, Floreat-style hangers) that hold by very thin,
+tempered steel pins.
+
+No single item weighing more than eight (8) pounds may be hung on any plaster wall without
+Lessor's prior written consent.  If Lessor consents, Lessor or a contractor chosen by
+Lessor shall install the item, or supervise its installation, so that it is anchored
+into the wooden lath or studs behind the plaster.
+
+Lessee shall not attempt to patch, spackle, mud, or paint over any nail holes, cracks, or
+chips upon move-out.  Improper amateur repairs to plaster walls often cause more cosmetic
+and structural damage than the original hole itself.
+
+Any cracking, crumbling, keys breaking (the plaster behind the wall that grips the wooden
+lath and holds the wall in place), or surface delamination caused by unauthorized
+hardware, hanging heavy objects, or improper use of adhesives will not be considered
+ordinary wear and tear.  The Lessee will be held financially responsible for the full
+cost of professional plaster restoration and painting required to return the wall to its
+original condition.  Such repair costs will be deducted from the Lessee's security
+deposit.
+
+21. **PARKING** ( ) Parking not available at this address.  ( ) Parking spaces are limited to
 the number of tenants and/or bedrooms, whichever is less.  Parking spaces are limited
 to tenant's automobiles listed on application and in operating condition.
 

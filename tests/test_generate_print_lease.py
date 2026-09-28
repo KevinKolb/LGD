@@ -213,11 +213,11 @@ def test_signature_block_does_not_force_its_own_page(real_output):
     assert "margin-top: 0.3in;" in signature_css
 
 
-def test_all_twenty_sections_present_in_order(real_output):
+def test_all_twenty_one_sections_present_in_order(real_output):
     import re
 
     numbers = [int(n) for n in re.findall(r'class="section">(\d+)\.', real_output)]
-    assert numbers == list(range(1, 21))
+    assert numbers == list(range(1, 22))
 
 
 def test_footer_note_is_hidden_when_printed(real_output):
@@ -232,8 +232,8 @@ def test_parking_is_the_last_numbered_section(real_output):
     import re
 
     numbers = [int(n) for n in re.findall(r'class="section">(\d+)\.', real_output)]
-    assert numbers[-1] == 20
-    assert "20. <strong>PARKING</strong>" in real_output
+    assert numbers[-1] == 21
+    assert "21. <strong>PARKING</strong>" in real_output
 
 
 def test_parking_radios_are_real_inputs_not_blanks(real_output):
@@ -244,8 +244,10 @@ def test_parking_radios_are_real_inputs_not_blanks(real_output):
 
 
 def test_parking_options_are_wrapped_for_js_to_strike(real_output):
-    assert '<label class="checkbox-line" id="parking-label-not-available">' in real_output
-    assert '<label class="checkbox-line" id="parking-label-limited">' in real_output
+    assert ('<label class="checkbox-line" id="parking-label-not-available"'
+            ' data-option="parking=not-available">') in real_output
+    assert ('<label class="checkbox-line" id="parking-label-limited"'
+            ' data-option="parking=limited">') in real_output
 
 
 def test_parking_radios_toggle_strikethrough(gen):
@@ -256,12 +258,14 @@ def test_parking_radios_toggle_strikethrough(gen):
         iter([]),
     )
     assert (
-        '<label class="checkbox-line" id="parking-label-not-available">'
+        '<label class="checkbox-line" id="parking-label-not-available"'
+        ' data-option="parking=not-available">'
         '<input type="radio" name="parking" id="parking-not-available">'
         f"{html_module.escape(gen.PARKING_MARKER_A_TEXT)}</label>"
     ) in marked
     assert (
-        '<label class="checkbox-line" id="parking-label-limited">'
+        '<label class="checkbox-line" id="parking-label-limited"'
+        ' data-option="parking=limited">'
         '<input type="radio" name="parking" id="parking-limited">'
         f"{html_module.escape(gen.PARKING_MARKER_B_TEXT)}</label>"
     ) in marked
@@ -356,3 +360,175 @@ def test_signatures_are_bound_to_the_sentence_they_execute(real_output):
     css = real_output[real_output.index(".execution-block {"):real_output.index(".signature-block {")]
     assert "page-break-inside: avoid;" in css
     assert "break-inside: avoid;" in css
+
+
+# ---------------------------------------------------------------------------
+# Apartment picker: documents/properties.json fills in the premises and
+# crosses out the lease options that do not apply
+# ---------------------------------------------------------------------------
+
+def test_the_apartment_table_is_inlined_not_fetched(gen, real_output):
+    """Inlined like the font, so the page stays one file that works offline."""
+    import json
+
+    start = real_output.index('<script type="application/json" id="lease-properties">')
+    body = real_output[real_output.index(">", start) + 1:real_output.index("</script>", start)]
+    assert json.loads(body) == gen.load_properties()
+    assert "fetch(" not in real_output
+
+
+def test_the_premises_blank_is_the_one_the_picker_fills(real_output):
+    assert real_output.count('id="premises"') == 1
+    assert 'the premises known as <span class="blank medium" id="premises"></span>' in real_output
+
+
+LABEL = '<span class="version-label">'
+
+
+def test_the_patio_yard_section_holds_both_yard_versions(real_output):
+    """The heading belongs to the whole group and always shows; A and B are
+    each tagged on their own, so the one that does not apply is hidden."""
+    assert re.search(r'<p data-option="yard=any" class="section">\d+\. <strong>PATIO/YARD</strong> '
+                     r'<span data-option="yard=A">' + re.escape(LABEL) + r'\(A\) </span>The patio/yard',
+                     real_output)
+    assert re.search(r'<p data-option="yard=B">' + re.escape(LABEL) + r'\(B\) </span>The patio/yard, '
+                     r'alley, front yard', real_output)
+
+
+def test_parking_radios_are_not_mistaken_for_versions(gen):
+    marked = gen.mark_versions("<p>( ) Parking not available.</p>", "parking=any")
+    assert "<span" not in marked
+
+
+def test_every_address_dependent_section_is_on_every_lease(real_output):
+    """Section numbers must match across leases, so these three sections'
+    headings are tagged "any" - never hidden, whichever version applies."""
+    for title, group in (("PATIO/YARD", "yard"), ("WALLS", "walls"), ("PARKING", "parking")):
+        assert re.search(rf'<p data-option="{group}=any" class="section">\d+\. <strong>{re.escape(title)}</strong>',
+                         real_output)
+    script = real_output[real_output.index("function applyProperty"):]
+    assert 'option.value === "any") { return; }' in script
+
+
+def test_an_option_with_no_tagged_wording_fails_the_build(gen, monkeypatch):
+    monkeypatch.setitem(gen.OPTION_GROUPS, "yard", {"A", "B", "C"})
+    with pytest.raises(SystemExit, match="yard=C"):
+        gen.generate(SOURCE_PATH.read_text(encoding="utf-8"))
+
+
+def test_a_renamed_option_section_fails_the_build(gen, monkeypatch):
+    monkeypatch.setitem(gen.SECTION_OPTIONS, "NO SUCH SECTION", "yard=Z")
+    with pytest.raises(SystemExit, match="NO SUCH SECTION"):
+        gen.generate(SOURCE_PATH.read_text(encoding="utf-8"))
+
+
+def test_the_picker_never_reaches_paper(real_output):
+    print_css = real_output[real_output.index("@media print {"):]
+    assert ".picker { display: none !important; }" in print_css
+
+
+def test_versions_that_do_not_apply_are_hidden_not_crossed_out(real_output):
+    """The user's call on 2026-09-28: a lease shows only the wording that
+    applies to its address - hidden, so a blank lease can still show them
+    all - and never crossed out."""
+    script = real_output[real_output.index("function applyProperty"):]
+    script = script[:script.index("function finish")]
+    assert "element.hidden = !applies" in script
+    assert "struck" not in script
+    assert ".remove()" not in script
+
+
+def test_printing_waits_for_the_apartment_to_be_picked(real_output):
+    """window.print() is called only from finish(), which runs once the
+    manager has picked an apartment or chosen to leave it blank."""
+    script = real_output[real_output.index("function finish"):]
+    assert "window.print()" in script[:script.index("properties.forEach")]
+    assert real_output.count("window.print()") == 1
+
+
+@pytest.mark.parametrize("prop, message", [
+    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"parking": "maybe"}},
+     "parking must be one of"),
+    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"garage": "yes"}},
+     "unknown lease option"),
+    ({"id": "x", "address": "1 A St.", "units": ["1", "1"], "lease_options": {}},
+     "distinct"),
+    ({"id": "x", "units": [], "lease_options": {}},
+     "missing 'address'"),
+    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"parking": "limited", "walls": "A"}},
+     "yard must be one of"),
+    ({"id": "x", "address": "1 A St.", "units": [],
+      "lease_options": {"parking": "none", "walls": "A", "yard": "A"}},
+     "parking must be one of"),
+])
+def test_a_bad_apartment_entry_fails_the_build(gen, prop, message):
+    with pytest.raises(SystemExit, match=message):
+        gen.validate_properties({"properties": [prop]})
+
+
+def test_duplicate_apartment_ids_fail_the_build(gen):
+    prop = {"id": "x", "address": "1 A St.", "units": [],
+            "lease_options": {"parking": "limited", "walls": "A", "yard": "A"}}
+    with pytest.raises(SystemExit, match="used twice"):
+        gen.validate_properties({"properties": [prop, dict(prop)]})
+
+
+def test_the_real_apartment_table_is_valid(gen):
+    data = gen.load_properties()
+    assert data["manager_id"] == "lgd"
+    assert data["properties"]
+
+
+def test_a_closing_script_tag_in_the_data_cannot_escape_it(gen):
+    assert "</script>" not in gen.properties_json({"x": "</script>"})
+
+def test_every_paragraph_of_the_plaster_version_is_tagged(real_output):
+    """Walls version B (plaster) runs over several paragraphs and bullets;
+    hiding it has to hide all of them, while version A sits in the heading
+    paragraph."""
+    start = real_output.index("<strong>WALLS</strong>")
+    end = real_output.index("<strong>PARKING</strong>")
+    section = real_output[real_output.rindex("<p", 0, start):end]
+    paragraphs = re.findall(r"<p[^>]*>", section)
+    assert paragraphs[0].startswith('<p data-option="walls=any"')
+    assert '<span data-option="walls=A">' in section
+    assert len(paragraphs) > 5
+    assert all('data-option="walls=B"' in p for p in paragraphs[1:-1])
+
+
+def test_the_execution_sentence_is_never_struck_with_the_last_section(real_output):
+    block = real_output[real_output.index('<div class="execution-block">'):]
+    assert "data-option" not in block[:block.index("</p>")]
+
+
+def test_continuation_paragraphs_of_untagged_sections_stay_untagged(real_output):
+    """Section 14 runs onto a second page - that paragraph is not an option."""
+    holes = real_output.index("No holes shall be drilled")
+    assert "data-option" not in real_output[real_output.rindex("<p", 0, holes):holes]
+
+def test_the_page_script_parses(real_output, tmp_path):
+    """HTML_FOOTER is an ordinary Python string, so a \\" written in its
+    JavaScript loses the backslash and breaks the whole script - which is
+    exactly what happened while the apartment picker was being built: the
+    popup rendered with empty dropdowns and dead buttons. Checked with a
+    real JavaScript parser when one is installed."""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    scripts = re.findall(r"<script>(.*?)</script>", real_output, re.S)
+    assert scripts
+    for index, script in enumerate(scripts):
+        path = tmp_path / f"script{index}.js"
+        path.write_text(script, encoding="utf-8")
+        result = subprocess.run([node, "--check", str(path)], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+
+def test_bullet_items_are_their_own_indented_paragraphs(real_output):
+    """The walls section's hardware lists are "• " paragraphs in lease.md;
+    each renders as its own list item, still tagged with its section."""
+    bullets = re.findall(r'<p data-option="walls=B" class="bullet">• ', real_output)
+    assert len(bullets) == 6
+    assert "p.bullet {" in real_output
