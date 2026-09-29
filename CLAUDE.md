@@ -403,6 +403,17 @@ loses its backslash and breaks the entire script - it did, once, while the
 picker was being built. `test_the_page_script_parses` runs every script
 through `node --check` when node is installed.
 
+## Saved for later: `_saved/`
+
+Finished work that is not live yet goes in `_saved/`, with a line in its
+`README.md`. GitHub Pages builds this site with Jekyll, which does not
+publish folders starting with `_`, so nothing there is on the website -
+**don't add a `.nojekyll` file**, or it all goes live. First in:
+`_saved/applicant_form.html`, the online rental application that was the
+applicant page until 2026-09-29, when the user had the page say "Coming
+soon" for now; it is also at the git tag `applicant-form-2026-09-29`. To
+restore it, move it back to `applicant/index.html`.
+
 ## Wording is a legal decision, not a typo to autocorrect
 
 The original scanned lease has several apparent OCR-era wording quirks. Never "fix"

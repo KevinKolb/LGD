@@ -143,215 +143,28 @@
   .msg { font-size: 13px; margin-top: 10px; }
   .msg.error { color: var(--danger); }
   .msg.ok { color: var(--ok); }
+  .soon { text-align: center; padding: 48px 24px; }
+  .soon h2 { margin: 0 0 8px; }
+  .soon p { margin: 0; color: var(--muted); }
 </style>
 </head>
 <body>
 <header>
   <h1>APPLICANT PORTAL</h1>
-  <p id="company-name"></p>
+  <p>Lower Garden District Properties, Inc.</p>
 </header>
 
 <main>
-  <section>
-    <h2>Rental application</h2>
-    <p class="hint">
-      Fill this out and the property owner will follow up. This isn't a
-      lease and doesn't commit you to anything.
-    </p>
-    <form id="application-form">
-      <div class="grid">
-        <div>
-          <label for="applicant_name">Full name</label>
-          <input id="applicant_name" required maxlength="200">
-        </div>
-        <div>
-          <label for="applicant_email">Email</label>
-          <input id="applicant_email" type="email" required maxlength="254">
-        </div>
-      </div>
-      <div class="grid">
-        <div>
-          <label for="applicant_phone">Phone</label>
-          <input id="applicant_phone" type="tel" required maxlength="40">
-        </div>
-        <div>
-          <label for="desired_move_in">Desired move-in date</label>
-          <input id="desired_move_in" type="date">
-        </div>
-      </div>
-      <label class="checkbox-row" for="consent_to_text">
-        <input type="checkbox" id="consent_to_text">
-        I consent to receive text messages about my application at the phone
-        number above.
-      </label>
-      <label for="property_interest">Property you're interested in</label>
-      <input id="property_interest" maxlength="300" placeholder="123 Canal Street">
-
-      <label>Additional roommates</label>
-      <div id="roommates"></div>
-      <button type="button" class="secondary" id="add-roommate">Add roommate</button>
-      <p class="hint roommate-hint">
-        Their full name and email - up to 10.
-      </p>
-
-      <label for="message">
-        Anything else? (household size, income/employment, references)
-      </label>
-      <textarea id="message" maxlength="2000"></textarea>
-      <button type="submit" id="submit-application">Submit application</button>
-      <div id="application-msg"></div>
-    </form>
-    <p class="hint">
-      You will be sent the property manager's contact information when your
-      is submitted.
-    </p>
+  <section class="soon">
+    <h2>Coming soon</h2>
+    <p>Online applications will open here.</p>
   </section>
 </main>
 
-<script>
-"use strict";
-
-function el(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    if (key === "class") node.className = value;
-    else if (key === "text") node.textContent = value;
-    else if (value !== null && value !== undefined) node.setAttribute(key, value);
-  }
-  for (const child of children) node.append(child);
-  return node;
-}
-
-function showMessage(id, text, isError) {
-  const node = document.getElementById(id);
-  node.replaceChildren();
-  if (!text) return;
-  node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
-}
-
-// --- Additional roommates -------------------------------------------------
-// Just name + email for now - a household-size hint for whoever reviews the
-// application. Sending each roommate their own linked application is a
-// later project, not built yet.
-
-const MAX_ROOMMATES = 10;
-
-function field(labelText, type, name) {
-  const box = el("div");
-  const id = `${name}-${Math.random().toString(36).slice(2, 8)}`;
-  box.append(
-    el("label", { for: id, text: labelText }),
-    el("input", { id, type, "data-name": name, required: "required" })
-  );
-  return box;
-}
-
-function roommateRow(index) {
-  const wrap = el("div", { class: "roommate" });
-  const head = el("div", { class: "row-head" });
-  head.append(
-    el("strong", { text: `Roommate ${index + 1}` }),
-    el("button", { type: "button", class: "link", text: "Remove" })
-  );
-  const grid = el("div", { class: "grid" });
-  grid.append(field("Full name", "text", "name"), field("Email", "email", "email"));
-  wrap.append(head, grid);
-
-  head.querySelector("button").addEventListener("click", () => {
-    wrap.remove();
-    renumberRoommates();
-  });
-  return wrap;
-}
-
-function renumberRoommates() {
-  const rows = document.querySelectorAll("#roommates .roommate");
-  rows.forEach((row, index) => {
-    row.querySelector(".row-head strong").textContent = `Roommate ${index + 1}`;
-  });
-  document.getElementById("add-roommate").disabled = rows.length >= MAX_ROOMMATES;
-}
-
-function collectRoommates() {
-  return Array.from(document.querySelectorAll("#roommates .roommate")).map((row) => ({
-    name: row.querySelector('[data-name="name"]').value.trim(),
-    email: row.querySelector('[data-name="email"]').value.trim(),
-  }));
-}
-
-// Management company shown under the heading, picked by a ?company= URL
-// param rather than a login - this page is public, before anyone has an
-// account. "orange" and "lgd" are the two options; anything else (or no
-// param at all) leaves the line blank rather than guessing.
-const COMPANY_NAMES = {
-  orange: "Orange Street LLC",
-  lgd: "Lower Garden District Properties, Inc.",
-};
-
-function showCompanyName() {
-  const company = new URLSearchParams(window.location.search).get("company");
-  document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
-}
-
-function firstOfNextMonth() {
-  const today = new Date();
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  const yyyy = nextMonth.getFullYear();
-  const mm = String(nextMonth.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}-01`;
-}
-
-function boot() {
-  showCompanyName();
-  document.getElementById("desired_move_in").value = firstOfNextMonth();
-
-  document.getElementById("add-roommate").addEventListener("click", () => {
-    const count = document.querySelectorAll("#roommates .roommate").length;
-    if (count >= MAX_ROOMMATES) return;
-    document.getElementById("roommates").append(roommateRow(count));
-    renumberRoommates();
-  });
-
-  document.getElementById("application-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = document.getElementById("submit-application");
-    button.disabled = true;
-    showMessage("application-msg", "", false);
-    try {
-      const response = await fetch("/api/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicant_name: document.getElementById("applicant_name").value.trim(),
-          applicant_email: document.getElementById("applicant_email").value.trim(),
-          applicant_phone: document.getElementById("applicant_phone").value.trim(),
-          consent_to_text: document.getElementById("consent_to_text").checked,
-          desired_move_in: document.getElementById("desired_move_in").value,
-          property_interest: document.getElementById("property_interest").value.trim(),
-          message: document.getElementById("message").value.trim(),
-          roommates: collectRoommates(),
-        }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (response.ok) {
-        showMessage("application-msg", "Application submitted. Thank you!", false);
-        event.target.reset();
-        document.getElementById("roommates").replaceChildren();
-        document.getElementById("desired_move_in").value = firstOfNextMonth();
-        document.getElementById("add-roommate").disabled = false;
-      } else {
-        showMessage("application-msg", body.detail || `Failed (HTTP ${response.status}).`, true);
-      }
-    } catch (error) {
-      showMessage("application-msg", `Could not reach the server: ${error.message}`, true);
-    } finally {
-      button.disabled = false;
-    }
-  });
-}
-
-boot();
-</script>
+<!-- The working online application form is kept, unpublished, in
+     _saved/applicant_form.html (and the git tag applicant-form-2026-09-29):
+     GitHub Pages' Jekyll build skips folders starting with "_". To bring it
+     back, move that file back to applicant/index.html. -->
 <script src="../shared/footer.js"></script>
 </body>
 </html>

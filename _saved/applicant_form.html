@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // Tulane green/blue by default; ?org=O (or o) swaps in an orange scheme
+  // instead, remembered via localStorage so it survives navigating here
+  // from a page that set it (this app's links between pages don't carry
+  // query strings). Set on <html> here, before <body> paints, so there's
+  // no flash of the wrong colors.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("org")) {
+      localStorage.setItem("lgd-org", params.get("org").toLowerCase());
+    }
+    if (localStorage.getItem("lgd-org") === "o") {
+      document.documentElement.classList.add("theme-orange");
+    }
+  } catch (error) {
+    /* localStorage unavailable (e.g. private browsing) - default colors. */
+  }
+</script>
+<link rel="icon" href="../favicon.ico?v=1">
+<link rel="stylesheet" href="../shared/site.css">
+<title>Applicant Portal</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1c1a;
+    --muted: #6b6a66;
+    --line: #dcdad4;
+    --accent: #1f5d4c;
+    --accent2: #71c5e8;
+    --accent2-soft: rgba(113, 197, 232, .35);
+    --accent-ink: #ffffff;
+    --danger: #9b2c2c;
+    --ok: #1f5d4c;
+    --radius: 8px;
+  }
+  html.theme-orange {
+    --accent: #d2601a;
+    --accent2: #f4a261;
+    --accent2-soft: rgba(244, 162, 97, .35);
+    --ok: #d2601a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 18px 24px;
+    border-bottom: 4px solid var(--accent2);
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 13px; }
+  main { width: 100%; max-width: 700px; margin: 0 auto; padding: 24px; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  .hint.roommate-hint { margin-top: 8px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  label.checkbox-row {
+    display: flex; align-items: flex-start; gap: 8px; font-weight: normal;
+    margin-bottom: 14px;
+  }
+  label.checkbox-row input { width: auto; margin: 2px 0 0; }
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+    color: var(--ink);
+  }
+  /* The secondary color marks the field being typed in. It is only a
+     tint - the browser's own focus ring is left alone, since this blue is
+     too pale to carry the focus indication by itself. */
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px var(--accent2-soft);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .roommate {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: #fcfcfa;
+  }
+  .roommate .row-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .roommate .row-head strong { font-size: 13px; }
+  button {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 9px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-weight: 600;
+  }
+  button:disabled { opacity: .55; cursor: progress; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button.link {
+    background: none; border: none; color: var(--danger);
+    padding: 0; font-size: 12px; cursor: pointer; text-decoration: underline;
+  }
+  /* Hover fills with the secondary. The label turns dark ink rather than
+     white, because white does not read on a blue this pale. */
+  button:not(.link):not(:disabled):hover {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink);
+  }
+  .msg { font-size: 13px; margin-top: 10px; }
+  .msg.error { color: var(--danger); }
+  .msg.ok { color: var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>APPLICANT PORTAL</h1>
+  <p id="company-name"></p>
+</header>
+
+<main>
+  <section>
+    <h2>Rental application</h2>
+    <p class="hint">
+      Fill this out and the property owner will follow up. This isn't a
+      lease and doesn't commit you to anything.
+    </p>
+    <form id="application-form">
+      <div class="grid">
+        <div>
+          <label for="applicant_name">Full name</label>
+          <input id="applicant_name" required maxlength="200">
+        </div>
+        <div>
+          <label for="applicant_email">Email</label>
+          <input id="applicant_email" type="email" required maxlength="254">
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="applicant_phone">Phone</label>
+          <input id="applicant_phone" type="tel" required maxlength="40">
+        </div>
+        <div>
+          <label for="desired_move_in">Desired move-in date</label>
+          <input id="desired_move_in" type="date">
+        </div>
+      </div>
+      <label class="checkbox-row" for="consent_to_text">
+        <input type="checkbox" id="consent_to_text">
+        I consent to receive text messages about my application at the phone
+        number above.
+      </label>
+      <label for="property_interest">Property you're interested in</label>
+      <input id="property_interest" maxlength="300" placeholder="123 Canal Street">
+
+      <label>Additional roommates</label>
+      <div id="roommates"></div>
+      <button type="button" class="secondary" id="add-roommate">Add roommate</button>
+      <p class="hint roommate-hint">
+        Their full name and email - up to 10.
+      </p>
+
+      <label for="message">
+        Anything else? (household size, income/employment, references)
+      </label>
+      <textarea id="message" maxlength="2000"></textarea>
+      <button type="submit" id="submit-application">Submit application</button>
+      <div id="application-msg"></div>
+    </form>
+    <p class="hint">
+      You will be sent the property manager's contact information when your
+      is submitted.
+    </p>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (value !== null && value !== undefined) node.setAttribute(key, value);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+function showMessage(id, text, isError) {
+  const node = document.getElementById(id);
+  node.replaceChildren();
+  if (!text) return;
+  node.append(el("p", { class: `msg ${isError ? "error" : "ok"}`, text }));
+}
+
+// --- Additional roommates -------------------------------------------------
+// Just name + email for now - a household-size hint for whoever reviews the
+// application. Sending each roommate their own linked application is a
+// later project, not built yet.
+
+const MAX_ROOMMATES = 10;
+
+function field(labelText, type, name) {
+  const box = el("div");
+  const id = `${name}-${Math.random().toString(36).slice(2, 8)}`;
+  box.append(
+    el("label", { for: id, text: labelText }),
+    el("input", { id, type, "data-name": name, required: "required" })
+  );
+  return box;
+}
+
+function roommateRow(index) {
+  const wrap = el("div", { class: "roommate" });
+  const head = el("div", { class: "row-head" });
+  head.append(
+    el("strong", { text: `Roommate ${index + 1}` }),
+    el("button", { type: "button", class: "link", text: "Remove" })
+  );
+  const grid = el("div", { class: "grid" });
+  grid.append(field("Full name", "text", "name"), field("Email", "email", "email"));
+  wrap.append(head, grid);
+
+  head.querySelector("button").addEventListener("click", () => {
+    wrap.remove();
+    renumberRoommates();
+  });
+  return wrap;
+}
+
+function renumberRoommates() {
+  const rows = document.querySelectorAll("#roommates .roommate");
+  rows.forEach((row, index) => {
+    row.querySelector(".row-head strong").textContent = `Roommate ${index + 1}`;
+  });
+  document.getElementById("add-roommate").disabled = rows.length >= MAX_ROOMMATES;
+}
+
+function collectRoommates() {
+  return Array.from(document.querySelectorAll("#roommates .roommate")).map((row) => ({
+    name: row.querySelector('[data-name="name"]').value.trim(),
+    email: row.querySelector('[data-name="email"]').value.trim(),
+  }));
+}
+
+// Management company shown under the heading, picked by a ?company= URL
+// param rather than a login - this page is public, before anyone has an
+// account. "orange" and "lgd" are the two options; anything else (or no
+// param at all) leaves the line blank rather than guessing.
+const COMPANY_NAMES = {
+  orange: "Orange Street LLC",
+  lgd: "Lower Garden District Properties, Inc.",
+};
+
+function showCompanyName() {
+  const company = new URLSearchParams(window.location.search).get("company");
+  document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
+}
+
+function firstOfNextMonth() {
+  const today = new Date();
+  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const yyyy = nextMonth.getFullYear();
+  const mm = String(nextMonth.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}-01`;
+}
+
+function boot() {
+  showCompanyName();
+  document.getElementById("desired_move_in").value = firstOfNextMonth();
+
+  document.getElementById("add-roommate").addEventListener("click", () => {
+    const count = document.querySelectorAll("#roommates .roommate").length;
+    if (count >= MAX_ROOMMATES) return;
+    document.getElementById("roommates").append(roommateRow(count));
+    renumberRoommates();
+  });
+
+  document.getElementById("application-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = document.getElementById("submit-application");
+    button.disabled = true;
+    showMessage("application-msg", "", false);
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicant_name: document.getElementById("applicant_name").value.trim(),
+          applicant_email: document.getElementById("applicant_email").value.trim(),
+          applicant_phone: document.getElementById("applicant_phone").value.trim(),
+          consent_to_text: document.getElementById("consent_to_text").checked,
+          desired_move_in: document.getElementById("desired_move_in").value,
+          property_interest: document.getElementById("property_interest").value.trim(),
+          message: document.getElementById("message").value.trim(),
+          roommates: collectRoommates(),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        showMessage("application-msg", "Application submitted. Thank you!", false);
+        event.target.reset();
+        document.getElementById("roommates").replaceChildren();
+        document.getElementById("desired_move_in").value = firstOfNextMonth();
+        document.getElementById("add-roommate").disabled = false;
+      } else {
+        showMessage("application-msg", body.detail || `Failed (HTTP ${response.status}).`, true);
+      }
+    } catch (error) {
+      showMessage("application-msg", `Could not reach the server: ${error.message}`, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+boot();
+</script>
+<script src="../shared/footer.js"></script>
+</body>
+</html>
