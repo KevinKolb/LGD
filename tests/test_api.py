@@ -97,8 +97,11 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     body = response.text[response.text.index("</head>"):]
     assert body.count("Lower Garden District Properties, Inc.") == 1
     assert "<h1>Lower Garden District Properties, Inc. Portal</h1>" in response.text
-    # Manager and Admin sit below a line, in Tulane light blue.
-    assert '<hr class="links-divider">' in response.text
+    # A line after Applicant, and one before Manager and Admin, which are
+    # in Tulane light blue.
+    assert response.text.count('<hr class="links-divider">') == 2
+    links = response.text[response.text.index('<div class="links">'):]
+    assert links.index('href="applicant/"') < links.index("<hr") < links.index('href="resident/"')
     assert '<a class="staff" href="manager/">Manager</a>' in response.text
     assert '<a class="staff" href="admin/">Admin</a>' in response.text
     assert 'href="applicant/"' in response.text
