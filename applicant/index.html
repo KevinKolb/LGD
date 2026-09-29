@@ -148,7 +148,15 @@
   .msg.error { color: var(--danger); }
   .msg.ok { color: var(--ok); }
   .signin-hint { margin: 14px 0 0; }
-  .soon { text-align: center; padding: 32px 24px; }
+  /* The page opens on two buttons only, one above the other. */
+  .choices { display: flex; flex-direction: column; gap: 14px; padding: 28px 22px; }
+  .choices button { width: 100%; padding: 16px; font-size: 16px; }
+  button.linkish {
+    background: none; border: none; padding: 0; color: var(--accent);
+    font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0;
+    text-decoration: underline; cursor: pointer;
+  }
+  button.linkish:not(:disabled):hover { background: none; color: var(--ink); }
   .soon h2 { margin: 0 0 8px; }
   .soon p { margin: 0; color: var(--muted); }
 </style>
@@ -160,38 +168,63 @@
 </header>
 
 <main>
-  <!-- Creating a login (the user, 2026-09-29): only for an email address
-       already on file - someone a manager added on the manager page. The
-       address is checked first (supabase/migrations/003's email_on_file),
-       and nothing else is asked until it is; LGD.auth.signUp checks again,
-       and 001's signup trigger holds the line for a signup sent any other
-       way. The confirmed login attaches to the person already on file. -->
-  <section>
-    <h2>Create your login</h2>
+  <!-- The applicant page starts with two buttons only (the user,
+       2026-09-29). Apply creates a login, and only for an email address
+       already on file - someone a manager approved: the address is checked
+       first (supabase/migrations/003's email_on_file), then their name and
+       phone and a password are asked. LGD.auth.signUp checks the address
+       again, and 001's signup trigger holds the line for a signup sent any
+       other way; it also copies the name and phone onto the person on
+       file. Check application status needs a login; for now it says
+       "Coming soon". -->
+  <section class="choices" id="choices">
+    <button type="button" id="choose-apply">Apply</button>
+    <button type="button" class="secondary" id="choose-status">Check application status</button>
+  </section>
+
+  <section id="apply" hidden>
+    <h2>Apply</h2>
     <p class="hint">
-      Use the email address you gave us. Once your login is set up you can
-      sign in here to follow your application.
+      Start with the email address you gave us. Then you will create your
+      account with your name, phone and a password.
     </p>
     <form id="signup-form" novalidate>
       <label for="signup-email">Email</label>
-      <input type="email" id="signup-email" autocomplete="username" maxlength="254" required>
+      <input type="email" id="signup-email" autocomplete="email" maxlength="254" required>
       <div id="signup-step-email">
         <button type="submit" id="signup-continue">Continue</button>
       </div>
-      <div id="signup-step-password" hidden>
+      <div id="signup-step-details" hidden>
+        <div class="grid">
+          <div>
+            <label for="signup-first">First name</label>
+            <input type="text" id="signup-first" autocomplete="given-name" maxlength="100">
+          </div>
+          <div>
+            <label for="signup-last">Last name</label>
+            <input type="text" id="signup-last" autocomplete="family-name" maxlength="100">
+          </div>
+        </div>
+        <label for="signup-phone">Phone</label>
+        <input type="tel" id="signup-phone" inputmode="tel" autocomplete="tel" maxlength="40">
         <label for="signup-password">Password (12 or more characters)</label>
         <input type="password" id="signup-password" autocomplete="new-password" minlength="12">
         <label for="signup-confirm">Password again</label>
         <input type="password" id="signup-confirm" autocomplete="new-password" minlength="12">
-        <button type="submit" id="signup-create">Create login</button>
+        <button type="submit" id="signup-create">Create account</button>
       </div>
       <p class="msg" id="signup-msg" role="status" aria-live="polite" hidden></p>
     </form>
-    <p class="hint signin-hint">Already have a login? <a href="../login/">Sign in</a></p>
+    <p class="hint signin-hint">
+      Already have an account? <a href="../login/">Sign in</a> &middot;
+      <button type="button" class="linkish" data-back>Back</button>
+    </p>
   </section>
-  <section class="soon">
-    <h2>Coming soon</h2>
-    <p>Online applications will open here.</p>
+
+  <section id="status" hidden>
+    <h2>Application status</h2>
+    <p id="status-text"></p>
+    <p class="hint signin-hint"><button type="button" class="linkish" data-back>Back</button></p>
   </section>
 </main>
 
@@ -204,14 +237,26 @@
 "use strict";
 (function () {
   const auth = window.LGD.auth;
+  const views = {
+    choices: document.getElementById("choices"),
+    apply: document.getElementById("apply"),
+    status: document.getElementById("status"),
+  };
   const form = document.getElementById("signup-form");
   const email = document.getElementById("signup-email");
   const stepEmail = document.getElementById("signup-step-email");
-  const stepPassword = document.getElementById("signup-step-password");
+  const stepDetails = document.getElementById("signup-step-details");
+  const first = document.getElementById("signup-first");
+  const last = document.getElementById("signup-last");
+  const phone = document.getElementById("signup-phone");
   const password = document.getElementById("signup-password");
   const confirm = document.getElementById("signup-confirm");
   const message = document.getElementById("signup-msg");
   let checked = "";  // the address found on file, once it has been
+
+  function show(name) {
+    for (const [key, view] of Object.entries(views)) view.hidden = key !== name;
+  }
 
   function say(text, isError) {
     message.textContent = text || "";
@@ -219,19 +264,59 @@
     message.hidden = !text;
   }
 
+  function restart() {
+    checked = "";
+    stepDetails.hidden = true;
+    stepEmail.hidden = false;
+  }
+
+  document.getElementById("choose-apply").addEventListener("click", () => {
+    show("apply");
+    email.focus();
+  });
+  document.querySelectorAll("[data-back]").forEach((control) => {
+    control.addEventListener("click", () => {
+      if (window.location.hash) history.replaceState(null, "", window.location.pathname);
+      show("choices");
+    });
+  });
+
+  // Application status needs a login: signed out, it sends them to sign
+  // in and brings them back here (#status); signed in, it is coming soon.
+  async function showStatus() {
+    const text = document.getElementById("status-text");
+    const session = auth.configured ? await auth.session() : null;
+    if (!session) {
+      const back = new URL("#status", window.location.href).href;
+      window.location.href = auth.root + "login/?next=" + encodeURIComponent(back);
+      return;
+    }
+    text.textContent = "Coming soon.";
+    show("status");
+  }
+  document.getElementById("choose-status").addEventListener("click", showStatus);
+  if (window.location.hash === "#status") showStatus();
+
   // A different address has to be checked again before going on.
   email.addEventListener("input", () => {
     if (checked && email.value.trim().toLowerCase() !== checked) {
-      checked = "";
-      stepPassword.hidden = true;
-      stepEmail.hidden = false;
+      restart();
       say("");
+    }
+  });
+
+  // A US number, however it was typed, reads (504) 555-1234.
+  phone.addEventListener("blur", () => {
+    let digits = phone.value.replace(/[^0-9]/g, "");
+    if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
+    if (digits.length === 10) {
+      phone.value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
     }
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const button = (checked ? stepPassword : stepEmail).querySelector("button");
+    const button = (checked ? stepDetails : stepEmail).querySelector("button[type=submit]");
     button.disabled = true;
     say("");
     try {
@@ -243,20 +328,26 @@
         if (!(await auth.emailOnFile(address))) throw new auth.AuthError(auth.NOT_ON_FILE);
         checked = address;
         stepEmail.hidden = true;
-        stepPassword.hidden = false;
-        password.focus();
+        stepDetails.hidden = false;
+        first.focus();
         return;
+      }
+      const details = { first_name: first.value.trim(), last_name: last.value.trim(), phone: phone.value.trim() };
+      if (!details.first_name || !details.last_name || !details.phone) {
+        throw new auth.AuthError("First name, last name and phone are all needed.");
+      }
+      if (details.phone.replace(/[^0-9]/g, "").length < 10) {
+        throw new auth.AuthError("The phone number needs at least 10 digits.");
       }
       if (password.value.length < 12) throw new auth.AuthError("The password needs 12 or more characters.");
       if (password.value !== confirm.value) throw new auth.AuthError("Those two passwords do not match.");
-      const result = await auth.signUp(address, password.value, "");
+      const result = await auth.signUp(address, password.value,
+        `${details.first_name} ${details.last_name}`, details);
       form.reset();
-      checked = "";
-      stepPassword.hidden = true;
-      stepEmail.hidden = false;
+      restart();
       say(result.confirmationRequired
         ? "Check your email for a link to confirm the address, then sign in."
-        : "Your login is ready.", false);
+        : "Your account is ready.", false);
     } catch (error) {
       say(error.message, true);
     } finally {

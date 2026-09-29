@@ -16,8 +16,9 @@ ROOT = Path(__file__).resolve().parent.parent
 MIGRATION = ROOT / "supabase" / "migrations" / "002_manager_adds_applicants.sql"
 MANAGER_PAGE = ROOT / "manager" / "index.html"
 
-JANE = {"first_name": " Jane ", "last_name": "Doe", "email": " Jane.Doe@Example.com ",
-        "mobile": "504.555.1234", "address": "1558 Camp St.", "unit": "B"}
+# A manager approves someone with their email and the apartment, nothing
+# else (the user, 2026-09-29); they give their name and phone at signup.
+JANE = {"email": " Jane.Doe@Example.com ", "address": "1558 Camp St.", "unit": "B"}
 
 
 def add(client, auth, **changes):
@@ -28,9 +29,9 @@ def test_a_manager_adds_an_applicant_to_their_own_company(client) -> None:
     response = add(client, STEVE)
     assert response.status_code == 201
     created = response.json()["applicant"]
-    assert created["first_name"] == "Jane" and created["last_name"] == "Doe"
     assert created["email"] == "jane.doe@example.com"
-    assert created["mobile"] == "(504) 555-1234"
+    # Their name and phone are theirs to give, when they sign up.
+    assert (created["first_name"], created["last_name"], created["mobile"]) == ("", "", None)
     assert (created["address"], created["unit"]) == ("1558 Camp St.", "B")
     assert created["has_login"] is False
     listed = client.get("/api/applicants", auth=STEVE).json()["applicants"]
@@ -39,9 +40,10 @@ def test_a_manager_adds_an_applicant_to_their_own_company(client) -> None:
 
 def test_another_company_cannot_see_them_but_an_admin_can(client) -> None:
     add(client, STEVE)
-    add(client, GAY, email="bob@other.com", first_name="Bob")
-    assert [a["first_name"] for a in client.get("/api/applicants", auth=GAY).json()["applicants"]] == ["Bob"]
-    assert sorted(a["first_name"] for a in client.get("/api/applicants", auth=ADMIN).json()["applicants"]) == ["Bob", "Jane"]
+    add(client, GAY, email="bob@other.com")
+    assert [a["email"] for a in client.get("/api/applicants", auth=GAY).json()["applicants"]] == ["bob@other.com"]
+    assert sorted(a["email"] for a in client.get("/api/applicants", auth=ADMIN).json()["applicants"]) == [
+        "bob@other.com", "jane.doe@example.com"]
 
 
 def test_the_same_email_is_refused_the_second_time(client) -> None:
@@ -52,9 +54,8 @@ def test_the_same_email_is_refused_the_second_time(client) -> None:
 
 
 @pytest.mark.parametrize("changes, reason", [
-    ({"first_name": "  "}, "First name, last name, email and mobile are all needed."),
+    ({"email": "  "}, "Enter their email address."),
     ({"email": "not-an-email"}, "That email address does not look right."),
-    ({"mobile": "555-1234"}, "The mobile number needs at least 10 digits."),
     ({"address": " "}, "Pick the apartment they are applying for."),
 ])
 def test_bad_details_are_refused_with_a_reason(client, changes, reason) -> None:
@@ -80,7 +81,7 @@ def test_a_signed_out_visitor_cannot_add_one(client) -> None:
 
 def test_the_migration_only_lets_signed_in_staff_call_it() -> None:
     sql = MIGRATION.read_text(encoding="utf-8")
-    for function in ("create_applicant(text, text, text, text, text, text)", "list_applicants(boolean)",
+    for function in ("create_applicant(text, text, text)", "list_applicants(boolean)",
                      "set_applicant_archived(text, boolean)"):
         assert f"revoke all on function public.{function} from public, anon;" in sql
         assert f"grant execute on function public.{function} to authenticated;" in sql
@@ -112,8 +113,15 @@ def test_the_manager_page_has_the_applicant_form_as_step_1() -> None:
     section = section[:section.index("</section>")]
     assert '<span class="step" aria-hidden="true">1</span>' in section
     assert "Add a person you approve to apply. They will be emailed a link to the application." in section
-    for name in ("first_name", "last_name", "email", "mobile", "address", "unit"):
-        assert f'name="{name}"' in section
+    # Three buttons, and the form in a popup: email and apartment only.
+    for button in ('id="open-add-applicant">Add applicant</button>',
+                   'id="view-current" aria-pressed="false">View current applicants</button>',
+                   'id="view-archived" aria-pressed="false">View archived applicants</button>'):
+        assert button in section
+    assert "<form" not in section
+    popup = page[page.index('<dialog class="popup" id="applicant-dialog"'):page.index("</dialog>")]
+    assert sorted(re.findall(r'name="(\w+)"', popup)) == ["address", "email", "unit"]
+    assert "dialog.showModal();" in page
     assert 'window.LGD.auth.rpc("create_applicant", values)' in page
     assert 'window.LGD.auth.rpc("list_applicants", { archived })' in page
 
@@ -181,7 +189,7 @@ def test_each_applicant_row_offers_application_email_and_archive() -> None:
     assert "mailto:${encodeURIComponent(person.email)}" in page
     assert 'actionButton("Archive", () => archive(person, true, actions))' in page
     assert 'actionButton("Restore", () => archive(person, false, actions))' in page
-    assert 'id="toggle-archived"' in page
+    assert 'mail.textContent = "Send application";' in page
     assert 'window.LGD.auth.rpc("list_applicants", { archived })' in page
     assert 'window.LGD.auth.rpc("set_applicant_archived", { person_id: person.id, archived })' in page
 
@@ -211,3 +219,24 @@ def test_the_migration_asks_for_the_apartment() -> None:
 def test_properties_json_is_served_to_the_manager_page(client) -> None:
     assert client.get("/documents/properties.json", auth=STEVE).json()["properties"]
     assert client.get("/documents/properties.json", auth=TENANT1).status_code == 404
+
+
+def test_adding_one_offers_to_send_the_application() -> None:
+    """When an applicant is created, the popup offers to send them the
+    application (the user, 2026-09-29)."""
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    popup = page[page.index('<dialog class="popup" id="applicant-dialog"'):page.index("</dialog>")]
+    assert '<a class="button-link" id="send-application" href="#">Send application</a>' in popup
+    assert 'document.getElementById("send-application").href = emailLink(created);' in page
+
+
+def test_the_email_links_to_the_applicant_page() -> None:
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert 'const apply = new URL("../applicant/", window.location.href).href;' in page
+    assert "choose Apply, and create your account with this email address" in page
+
+
+def test_the_signup_trigger_takes_their_name_and_phone() -> None:
+    sql = (MIGRATION.parent / "001_auth_people_rls.sql").read_text(encoding="utf-8")
+    for key in ("first_name", "last_name", "phone"):
+        assert f"new.raw_user_meta_data ->> '{key}'" in sql

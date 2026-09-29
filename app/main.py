@@ -459,10 +459,7 @@ async def api_list_news(user: User = Depends(current_user)) -> dict[str, Any]:
 
 
 class ApplicantRequest(BaseModel):
-    first_name: str = Field(max_length=100)
-    last_name: str = Field(max_length=100)
     email: str = Field(max_length=254)
-    mobile: str = Field(max_length=40)
     address: str = Field(default="", max_length=200)
     unit: str = Field(default="", max_length=20)
 
@@ -480,10 +477,7 @@ async def api_add_applicant(
     try:
         created = await db.create_applicant(
             settings.db_path,
-            first_name=applicant.first_name,
-            last_name=applicant.last_name,
             email=applicant.email,
-            mobile=applicant.mobile,
             address=applicant.address,
             unit=applicant.unit,
             manager_id=user.manager_id,

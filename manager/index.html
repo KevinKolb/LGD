@@ -173,9 +173,25 @@
   .applicant-list .row-actions { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .applicant-list .row-actions .button-link,
   .applicant-list .row-actions button.secondary { padding: 5px 11px; font-size: 12px; }
-  .list-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 22px; }
-  .list-head h3 { margin: 0; font-size: 15px; }
-  .list-head + .applicant-list { margin-top: 10px; }
+  #applicant-msg:empty { display: none; }
+  #applicant-msg { margin: 12px 0 0; }
+  .list-title { margin: 22px 0 0; font-size: 15px; }
+  .list-title + .applicant-list { margin-top: 10px; }
+  .actions button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  /* The add-applicant popup. */
+  dialog.popup {
+    width: min(460px, calc(100vw - 32px));
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+    color: var(--ink);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
+  }
+  dialog.popup::backdrop { background: rgba(0, 0, 0, .45); }
+  dialog.popup h2 { margin: 0 0 6px; font-size: 18px; color: var(--accent); }
+  dialog.popup .field-grid.single { grid-template-columns: 1fr; }
+  dialog.popup .form-msg { margin: 0 0 12px; }
+  dialog.popup .form-msg:empty { display: none; }
   .note { color: var(--muted); font-size: 12px; }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.secondary {
@@ -284,26 +300,32 @@
     <p class="hint">
       Add a person you approve to apply. They will be emailed a link to the application.
     </p>
-    <p class="hint">
-      <strong>Application</strong> opens it filled in with their name, mobile,
-      email and apartment; Print it and save it as a PDF. <strong>Email</strong>
-      starts an email to them with the link to create their login here; attach
-      that PDF and send. <strong>Archive</strong> takes them off the list, and
-      Show archived brings them back.
-    </p>
+    <div class="actions">
+      <button type="button" class="button-link" id="open-add-applicant">Add applicant</button>
+      <button type="button" class="secondary" id="view-current" aria-pressed="false">View current applicants</button>
+      <button type="button" class="secondary" id="view-archived" aria-pressed="false">View archived applicants</button>
+    </div>
+    <p class="form-msg" id="applicant-msg" role="status" aria-live="polite"></p>
+    <div id="applicant-list-wrap" hidden>
+      <h3 class="list-title" id="applicant-list-title">Current applicants</h3>
+      <ul class="applicant-list" id="applicant-list" aria-labelledby="applicant-list-title"></ul>
+    </div>
+  </section>
+
+  <!-- Adding an applicant: their email and the apartment, nothing else -
+       they give their own name and phone when they create their login on
+       the applicant page. Once added, the popup offers to send them the
+       application. -->
+  <dialog class="popup" id="applicant-dialog" aria-labelledby="applicant-dialog-title">
     <form id="applicant-form" novalidate>
-      <div class="field-grid">
-        <label>First name
-          <input id="applicant-first" name="first_name" autocomplete="off" maxlength="100" required>
-        </label>
-        <label>Last name
-          <input id="applicant-last" name="last_name" autocomplete="off" maxlength="100" required>
-        </label>
+      <h2 id="applicant-dialog-title">Add applicant</h2>
+      <p class="hint">
+        Their email address and the apartment they may apply for. They fill
+        in the rest when they create their account.
+      </p>
+      <div class="field-grid single">
         <label>Email
           <input id="applicant-email" name="email" type="email" autocomplete="off" maxlength="254" required>
-        </label>
-        <label>Mobile
-          <input id="applicant-mobile" name="mobile" type="tel" inputmode="tel" autocomplete="off" maxlength="40" required>
         </label>
         <label>Apartment
           <select id="applicant-address" name="address" required>
@@ -314,17 +336,25 @@
           <select id="applicant-unit" name="unit"></select>
         </label>
       </div>
+      <p class="form-msg" id="applicant-form-msg" role="status" aria-live="polite"></p>
       <div class="actions">
         <button type="submit" class="button-link" id="add-applicant">Add applicant</button>
-        <span class="form-msg" id="applicant-msg" role="status" aria-live="polite"></span>
+        <button type="button" class="secondary" data-close>Cancel</button>
       </div>
     </form>
-    <div class="list-head">
-      <h3 id="applicant-list-title">Current applicants</h3>
-      <button type="button" class="secondary" id="toggle-archived" aria-pressed="false">Show archived</button>
+    <div id="applicant-added" hidden>
+      <h2>Applicant added</h2>
+      <p id="applicant-added-text"></p>
+      <p class="hint">
+        Send application starts an email to them, from your own email, with
+        the link to apply here.
+      </p>
+      <div class="actions">
+        <a class="button-link" id="send-application" href="#">Send application</a>
+        <button type="button" class="secondary" data-close>Done</button>
+      </div>
     </div>
-    <ul class="applicant-list" id="applicant-list" aria-labelledby="applicant-list-title"></ul>
-  </section>
+  </dialog>
   <section>
     <div class="step-head">
       <span class="step" aria-hidden="true">2</span>
@@ -550,64 +580,38 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
 "use strict";
 // --- Step 1: add an applicant -------------------------------------------
 //
-// First, last, email and mobile, stored as a person with is_applicant set,
-// in the manager's own company - for filling in their application, and
-// adopted by their login when they sign up with the same email. On GitHub
+// A manager approves someone to apply with their email address and the
+// apartment (the user, 2026-09-29); the applicant gives their own name and
+// phone when they create their login on the applicant page. Stored as a
+// person with is_applicant set, in the manager's own company. On GitHub
 // Pages this calls the database's create_applicant / list_applicants /
 // set_applicant_archived (supabase/migrations/002_manager_adds_applicants.sql),
 // which check that the caller is a manager or admin; served by the FastAPI
 // app it calls /api/applicants, which checks the same.
 (function () {
+  const dialog = document.getElementById("applicant-dialog");
   const form = document.getElementById("applicant-form");
+  const added = document.getElementById("applicant-added");
+  const formMessage = document.getElementById("applicant-form-msg");
   const message = document.getElementById("applicant-msg");
+  const listWrap = document.getElementById("applicant-list-wrap");
   const list = document.getElementById("applicant-list");
   const listTitle = document.getElementById("applicant-list-title");
-  const toggle = document.getElementById("toggle-archived");
+  const viewCurrent = document.getElementById("view-current");
+  const viewArchived = document.getElementById("view-archived");
   const button = document.getElementById("add-applicant");
   const fields = {
-    first_name: document.getElementById("applicant-first"),
-    last_name: document.getElementById("applicant-last"),
     email: document.getElementById("applicant-email"),
-    mobile: document.getElementById("applicant-mobile"),
     address: document.getElementById("applicant-address"),
     unit: document.getElementById("applicant-unit"),
   };
   const unitLabel = document.getElementById("applicant-unit-label");
-  let showingArchived = false;
+  let showing = null;  // null (no list shown), "current" or "archived"
   let properties = [];
 
-  // The apartments, from documents/properties.json - the same table the
-  // documents' popup uses. A building with units asks which one.
-  async function loadProperties() {
-    try {
-      const response = await fetch("../documents/properties.json", { cache: "no-store" });
-      properties = (await response.json()).properties;
-    } catch (error) {
-      properties = [];
-    }
-    for (const property of properties) {
-      fields.address.add(new Option(property.address, property.address));
-    }
-  }
-
-  function showUnits() {
-    const property = properties.find((p) => p.address === fields.address.value);
-    const units = property ? property.units : [];
-    fields.unit.length = 0;
-    fields.unit.add(new Option("Choose…", ""));
-    for (const unit of units) fields.unit.add(new Option(unit, unit));
-    unitLabel.hidden = !units.length;
-  }
-  fields.address.addEventListener("change", showUnits);
-
-  function apartment(person) {
-    if (!person.address) return "";
-    return person.unit ? `${person.address}, Unit ${person.unit}` : person.address;
-  }
-
-  function say(text, kind) {
-    message.textContent = text;
-    message.className = "form-msg" + (kind ? " " + kind : "");
+  function say(target, text, kind) {
+    target.textContent = text;
+    target.className = "form-msg" + (kind ? " " + kind : "");
   }
 
   async function api(path, options) {
@@ -616,7 +620,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     if (!response.ok) {
       const detail = payload.detail;
       throw new Error(typeof detail === "string" ? detail
-        : "Please check the four boxes and try again.");
+        : "Please check the email address and try again.");
     }
     return payload;
   }
@@ -654,13 +658,44 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     return window.LGD.auth.rpc("set_applicant_archived", { person_id: person.id, archived });
   }
 
-  function fullName(person) {
-    return `${person.first_name} ${person.last_name}`.trim();
+  // The apartments, from documents/properties.json - the same table the
+  // documents' popup uses. A building with units asks which one.
+  async function loadProperties() {
+    try {
+      const response = await fetch("../documents/properties.json", { cache: "no-store" });
+      properties = (await response.json()).properties;
+    } catch (error) {
+      properties = [];
+    }
+    for (const property of properties) {
+      fields.address.add(new Option(property.address, property.address));
+    }
   }
 
-  // The application, filled in with this applicant's name, mobile and
-  // email. Their details go in this tab's sessionStorage, and the page's
-  // address names them, so the popup fills only when both agree.
+  function showUnits() {
+    const property = properties.find((p) => p.address === fields.address.value);
+    const units = property ? property.units : [];
+    fields.unit.length = 0;
+    fields.unit.add(new Option("Choose…", ""));
+    for (const unit of units) fields.unit.add(new Option(unit, unit));
+    unitLabel.hidden = !units.length;
+  }
+  fields.address.addEventListener("change", showUnits);
+
+  function apartment(person) {
+    if (!person.address) return "";
+    return person.unit ? `${person.address}, Unit ${person.unit}` : person.address;
+  }
+
+  // Their name once they have signed up and given it; their email before.
+  function fullName(person) {
+    return `${person.first_name || ""} ${person.last_name || ""}`.trim();
+  }
+
+  // The application, filled in with what is known of them - their name,
+  // mobile and email, and the apartment. Their details go in this tab's
+  // sessionStorage, and the page's address names them, so the popup fills
+  // only when both agree.
   function openApplication(person) {
     try {
       sessionStorage.setItem("lgd-applicant", JSON.stringify({
@@ -675,17 +710,17 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       + encodeURIComponent(person.id) + "#view";
   }
 
-  // An email to them, ready for the application's PDF to be attached - a
-  // mailto link cannot attach a file itself.
+  // "Send application": an email from the manager's own mail, with the
+  // link to the applicant page, where they choose Apply and create their
+  // account with this address. Nothing is sent by the site itself.
   function emailLink(person) {
     const subject = "Your rental application - Lower Garden District Properties, Inc.";
     const place = apartment(person);
-    const signup = new URL("../applicant/", window.location.href).href;
-    const body = `Hello ${person.first_name},\n\n`
+    const apply = new URL("../applicant/", window.location.href).href;
+    const body = `Hello${person.first_name ? " " + person.first_name : ""},\n\n`
       + (place ? `You are approved to apply for ${place}. ` : "You are approved to apply. ")
-      + "Attached is our rental application. Please fill it in, sign it, and "
-      + "send it back to us, or bring it to our office.\n\n"
-      + `You can also create your login to our portal, with this email address, here:\n${signup}\n\n`
+      + `To apply, go to\n${apply}\nchoose Apply, and create your account with this email address `
+      + `(${person.email}).\n\n`
       + "Thank you,\nLower Garden District Properties, Inc.";
     return `mailto:${encodeURIComponent(person.email)}`
       + `?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -705,7 +740,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     if (!applicants.length) {
       const item = document.createElement("li");
       item.className = "empty";
-      item.textContent = showingArchived ? "No archived applicants." : "No applicants yet.";
+      item.textContent = showing === "archived" ? "No archived applicants." : "No applicants yet.";
       list.append(item);
       return;
     }
@@ -713,20 +748,21 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       const item = document.createElement("li");
       const who = document.createElement("span");
       who.className = "who";
-      who.textContent = fullName(person);
+      who.textContent = fullName(person) || person.email;
       const contact = document.createElement("span");
       contact.className = "contact";
-      contact.textContent = [apartment(person), person.email, person.mobile].filter(Boolean).join(" · ");
+      contact.textContent = [apartment(person), fullName(person) ? person.email : "", person.mobile]
+        .filter(Boolean).join(" · ");
       const login = document.createElement("span");
       login.className = "login" + (person.has_login ? " yes" : "");
-      login.textContent = (person.has_login ? "Has a login" : "No login yet")
+      login.textContent = (person.has_login ? "Has an account" : "No account yet")
         + (person.is_resident ? " · Resident" : "");
       const left = document.createElement("span");
       left.append(who, document.createElement("br"), contact);
 
       const actions = document.createElement("span");
       actions.className = "row-actions";
-      if (showingArchived) {
+      if (showing === "archived") {
         actions.append(actionButton("Restore", () => archive(person, false, actions)));
       } else {
         actions.append(actionButton("Application", () => openApplication(person), true));
@@ -734,7 +770,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
           const mail = document.createElement("a");
           mail.className = "button-link secondary";
           mail.href = emailLink(person);
-          mail.textContent = "Email";
+          mail.textContent = "Send application";
           actions.append(mail);
         }
         actions.append(actionButton("Archive", () => archive(person, true, actions)));
@@ -748,20 +784,23 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     actions.querySelectorAll("button").forEach((control) => { control.disabled = true; });
     try {
       await setArchived(person, archived);
-      say(`${fullName(person)} ${archived ? "archived" : "restored"}.`, "ok");
+      say(message, `${fullName(person) || person.email} ${archived ? "archived" : "restored"}.`, "ok");
       await refresh();
     } catch (error) {
-      say(error.message, "error");
+      say(message, error.message, "error");
       actions.querySelectorAll("button").forEach((control) => { control.disabled = false; });
     }
   }
 
+  // The list shows only once asked for, current or archived.
   async function refresh() {
-    listTitle.textContent = showingArchived ? "Archived applicants" : "Current applicants";
-    toggle.textContent = showingArchived ? "Show current" : "Show archived";
-    toggle.setAttribute("aria-pressed", String(showingArchived));
+    viewCurrent.setAttribute("aria-pressed", String(showing === "current"));
+    viewArchived.setAttribute("aria-pressed", String(showing === "archived"));
+    listWrap.hidden = !showing;
+    if (!showing) return;
+    listTitle.textContent = showing === "archived" ? "Archived applicants" : "Current applicants";
     try {
-      render(await fetchAll(showingArchived));
+      render(await fetchAll(showing === "archived"));
     } catch (error) {
       list.textContent = "";
       const item = document.createElement("li");
@@ -771,58 +810,63 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     }
   }
 
-  toggle.addEventListener("click", () => {
-    showingArchived = !showingArchived;
+  function view(which) {
+    say(message, "");
+    showing = showing === which ? null : which;  // a second press hides it
     refresh();
-  });
+  }
+  viewCurrent.addEventListener("click", () => view("current"));
+  viewArchived.addEventListener("click", () => view("archived"));
 
-  // A US number, however it was typed, reads (504) 555-1234.
-  fields.mobile.addEventListener("blur", () => {
-    let digits = fields.mobile.value.replace(/[^0-9]/g, "");
-    if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
-    if (digits.length === 10) {
-      fields.mobile.value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    }
+  document.getElementById("open-add-applicant").addEventListener("click", () => {
+    form.reset();
+    showUnits();
+    say(formMessage, "");
+    form.hidden = false;
+    added.hidden = true;
+    dialog.showModal();
+    fields.email.focus();
+  });
+  dialog.querySelectorAll("[data-close]").forEach((control) => {
+    control.addEventListener("click", () => dialog.close());
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const values = {};
     for (const [key, input] of Object.entries(fields)) values[key] = input.value.trim();
-    const missing = ["first_name", "last_name", "email", "mobile"].find((key) => !values[key]);
-    if (missing) {
-      say("First name, last name, email and mobile are all needed.", "error");
-      fields[missing].focus();
+    if (!values.email) {
+      say(formMessage, "Enter their email address.", "error");
+      fields.email.focus();
       return;
     }
     if (!values.address || (!unitLabel.hidden && !values.unit)) {
-      say(values.address ? "Pick the unit they are applying for." : "Pick the apartment they are applying for.", "error");
+      say(formMessage, values.address ? "Pick the unit they are applying for."
+        : "Pick the apartment they are applying for.", "error");
       (values.address ? fields.unit : fields.address).focus();
       return;
     }
     button.disabled = true;
-    say("Adding…");
+    say(formMessage, "Adding…");
     try {
       const created = await add(values);
-      say(`${created.first_name} ${created.last_name} added.`, "ok");
-      form.reset();
-      showUnits();
-      fields.first_name.focus();
-      showingArchived = false;
+      // Added: the popup now offers to send them the application.
+      document.getElementById("applicant-added-text").textContent =
+        `${created.email} is approved to apply for ${apartment(created)}.`;
+      document.getElementById("send-application").href = emailLink(created);
+      form.hidden = true;
+      added.hidden = false;
+      if (showing !== "current") showing = "current";
       await refresh();
     } catch (error) {
-      say(error.message, "error");
+      say(formMessage, error.message, "error");
     } finally {
       button.disabled = false;
     }
   });
 
-  async function start() {
-    await loadProperties();
-    await refresh();
-  }
-  if (window.LGD_DASHBOARD) start();
-  else document.addEventListener("lgd-dashboard-ready", start, { once: true });
+  if (window.LGD_DASHBOARD) loadProperties();
+  else document.addEventListener("lgd-dashboard-ready", loadProperties, { once: true });
 })();
 </script>
 <script src="../shared/account.js"></script>

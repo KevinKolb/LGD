@@ -272,6 +272,9 @@ set search_path = public
 as $fn$
 declare
   waiting public.people;
+  first text;
+  last text;
+  phone_typed text;
 begin
   perform 1 from public.people where auth_id = new.id;
   if found then
@@ -285,7 +288,21 @@ begin
    limit 1;
 
   if found then
+    -- The name and phone they typed on the applicant page's signup
+    -- (raw_user_meta_data), for a person a manager approved with only an
+    -- email. Anything already on file is kept.
+    first := nullif(btrim(coalesce(new.raw_user_meta_data ->> 'first_name', '')), '');
+    last := nullif(btrim(coalesce(new.raw_user_meta_data ->> 'last_name', '')), '');
+    phone_typed := nullif(btrim(coalesce(new.raw_user_meta_data ->> 'phone', '')), '');
     update public.people set
+      first_name = coalesce(nullif(first_name, ''), left(first, 100)),
+      last_name = coalesce(nullif(last_name, ''), left(last, 100)),
+      full_name = case
+        when (full_name is null or full_name = '' or lower(full_name) = lower(email))
+             and coalesce(first, last) is not null
+        then left(btrim(coalesce(first, '') || ' ' || coalesce(last, '')), 201)
+        else full_name end,
+      phone = coalesce(nullif(phone, ''), left(phone_typed, 40)),
       auth_id = new.id,
       username = coalesce(username,
         case when exists (select 1 from public.people where username = lower(new.email))

@@ -413,18 +413,31 @@ through `node --check` when node is installed.
 ## A manager adds an applicant (the first "less print" feature)
 
 The manager page's step 1, Applicants (2026-09-29; Paper Documents
-Generator became step 2), takes first name, last name, email, mobile, and
-the apartment and unit they are applying for, and stores a `people` row with `is_applicant` set, in the
-manager's own company - for filling in their application, and for their
-login. `people` gained `first_name` / `last_name` (`full_name` stays, as
-"first last"); the mobile is `phone`, stored as `(504) 555-1234` for any
-US number. Someone already in `people` with that email (a resident
-applying for another apartment) is not a second person: their row becomes
-an applicant too. Only an applicant already on the current list is refused.
+Generator became step 2), is three buttons (the user, 2026-09-29): **Add
+applicant**, **View current applicants** and **View archived applicants**.
+No list shows until one of the View buttons is pressed; pressing it again
+hides it.
+
+**A manager approves an applicant with their email address** and the
+apartment and unit they may apply for, in a popup (`<dialog>`). Nothing
+else: "The applicant will fill in the rest when they create an account"
+(the user). It stores a `people` row with `is_applicant` set, in the
+manager's own company, with `full_name` holding the email until they sign
+up (the column is NOT NULL). Their first and last name and phone arrive
+with their signup on the applicant page, in Supabase's user metadata,
+which 001's trigger copies onto the row, keeping anything already on file.
+Until then the list shows their email and "No account yet". (The first
+version, earlier the same day, had the manager type first, last, email and
+mobile.) Someone already in `people` with that email (a resident applying
+for another apartment) is not a second person: their row becomes an
+applicant too. Only an applicant already on the current list is refused.
+
+Once added, the popup offers **Send application** (the user: "When an
+applicant is created give the option to send application") beside Done.
 
 Its wording is the user's: "Add a person you approve to apply. They will
 be emailed a link to the application." Nothing is sent automatically yet:
-the **Email** button below opens the manager's own mail with the link.
+Send application opens the manager's own mail with the link.
 
 **The apartment** (the user, same day: "Manager specifies an apartment and
 a unit when creating an applicant") is two selects from
@@ -436,23 +449,26 @@ Application button's popup starts on it, and the email names it. The
 FastAPI app serves `/documents/properties.json` (manager/admin only) so the
 same relative fetch works on both hosts.
 
-Each applicant in the list has three buttons (the user, same day):
+Each current applicant in the list has three buttons (the user, same day):
 
 - **Application** opens `documents_print.html?docs=application&applicant=<id>#view`
-  with the applicant's name, mobile and email in the manager page's
+  with what is known of the applicant (email, apartment, and their name and
+  mobile once they have signed up) in the manager page's
   `sessionStorage` ("lgd-applicant"). The popup says "For Jane Doe." and
   fills the three blanks the application generator tags `data-applicant`
   (`APPLICANT_FIELDS`: the first blank after "Name of Applicant",
   "Telephone #" and "Email" - later Email blanks are the occupants'). It
   fills only when the stored id matches the address, so a document opened
   any other way never gets a stale applicant.
-- **Email** is a `mailto:` with a subject, the apartment, and the link to
-  the applicant page to create their login. A mailto cannot attach a file,
-  so the manager prints the application to PDF and attaches it. Sending
-  from the site itself would need a mail service and a server step.
+- **Send application** (the same as in the popup) is a `mailto:` with a
+  subject, the apartment, and the link to the applicant page, telling them
+  to choose Apply and create their account with that address. A mailto
+  cannot attach a file; a paper application printed to PDF can be attached
+  by hand. Sending from the site itself would need a mail service and a
+  server step.
 - **Archive** sets `people.archived_at`: off the list, kept in the
-  directory. **Show archived** lists them, each with **Restore**. Adding an
-  archived applicant again restores the same row.
+  directory. **View archived applicants** lists them, each with
+  **Restore**. Adding an archived applicant again restores the same row.
 
 On the live site (GitHub Pages) the browser still cannot write `people` -
 001's default deny stands. It calls three SECURITY DEFINER functions from
@@ -604,11 +620,15 @@ not yet on file") a login is created only for someone already in `people`
 - an applicant a manager added, or anyone an admin put there. Three places
 hold it:
 
-- The applicant page, which is where a login is created now: email first,
-  checked by `LGD.auth.emailOnFile` (003's `email_on_file`, callable signed
-  out, answering only true/false), and the password boxes appear only
-  after a yes. Otherwise it says exactly "That email address is not yet on
-  file."
+- The applicant page, which is where a login is created now. It opens on
+  two buttons only, **Apply** and **Check application status** (the user,
+  2026-09-29). Apply asks the email first, checked by
+  `LGD.auth.emailOnFile` (003's `email_on_file`, callable signed out,
+  answering only true/false); only after a yes does it ask first name,
+  last name, phone and a password. Otherwise it says exactly "That email
+  address is not yet on file." Check application status works only signed
+  in: signed out it goes to the login page and comes back to
+  `applicant/#status`; signed in it says "Coming soon." for now.
 - `LGD.auth.signUp` checks again, so the login page's "Create one" obeys
   the same rule.
 - 001's `handle_auth_user_confirmed` attaches a confirmed login to the

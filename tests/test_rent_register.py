@@ -3,6 +3,7 @@ page creating a login only for an email address already on file."""
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from pathlib import Path
 
@@ -90,9 +91,25 @@ def test_sign_up_stops_at_an_address_not_on_file() -> None:
     assert "if (!(await emailOnFile(email))) throw new AuthError(NOT_ON_FILE);" in script
 
 
-def test_the_applicant_page_asks_the_email_first() -> None:
+def test_the_applicant_page_starts_with_two_buttons() -> None:
     page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
-    assert "<h2>Create your login</h2>" in page
+    main = page[page.index("<main>"):page.index("</main>")]
+    visible = main[:main.index('<section id="apply" hidden>')]
+    assert re.findall(r"<button[^>]*>([^<]+)</button>", visible) == ["Apply", "Check application status"]
+    assert '<section id="status" hidden>' in main
+
+
+def test_applying_asks_the_email_first_then_name_and_phone() -> None:
+    page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
     assert "if (!(await auth.emailOnFile(address))) throw new auth.AuthError(auth.NOT_ON_FILE);" in page
-    assert '<div id="signup-step-password" hidden>' in page
+    details = page[page.index('<div id="signup-step-details" hidden>'):]
+    details = details[:details.index('<button type="submit"')]
+    assert re.findall(r'<input [^>]*id="signup-(\w+)"', details) == ["first", "last", "phone", "password", "confirm"]
+    assert "const details = { first_name: first.value.trim(), last_name: last.value.trim(), phone: phone.value.trim() };" in page
     assert '<script src="../shared/auth.js"></script>' in page
+
+
+def test_status_needs_a_login_and_is_coming_soon() -> None:
+    page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
+    assert 'window.location.href = auth.root + "login/?next=" + encodeURIComponent(back);' in page
+    assert 'text.textContent = "Coming soon.";' in page

@@ -593,32 +593,22 @@ class ApplicantError(ValueError):
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def clean_applicant(first_name: str, last_name: str, email: str, mobile: str,
-                    address: str = "", unit: str = "") -> dict[str, str]:
+def clean_applicant(email: str, address: str = "", unit: str = "") -> dict[str, str]:
     """The same checks, and the same wording, as create_applicant in
     supabase/migrations/002_manager_adds_applicants.sql - the website calls
-    that; this app's own API calls this."""
-    first, last = first_name.strip(), last_name.strip()
-    email, mobile = email.strip().lower(), mobile.strip()
-    address, unit = address.strip(), unit.strip()
-    if not (first and last and email and mobile):
-        raise ApplicantError("First name, last name, email and mobile are all needed.")
+    that; this app's own API calls this. A manager approves someone with
+    their email and the apartment; the applicant gives their own name and
+    phone when they create their login."""
+    email, address, unit = email.strip().lower(), address.strip(), unit.strip()
+    if not email:
+        raise ApplicantError("Enter their email address.")
     if not address:
         raise ApplicantError("Pick the apartment they are applying for.")
-    if (len(first) > 100 or len(last) > 100 or len(email) > 254 or len(mobile) > 40
-            or len(address) > 200 or len(unit) > 20):
+    if len(email) > 254 or len(address) > 200 or len(unit) > 20:
         raise ApplicantError("One of those is too long.")
     if not EMAIL_PATTERN.match(email):
         raise ApplicantError("That email address does not look right.")
-    digits = re.sub(r"[^0-9]", "", mobile)
-    if len(digits) < 10:
-        raise ApplicantError("The mobile number needs at least 10 digits.")
-    if len(digits) == 11 and digits.startswith("1"):
-        digits = digits[1:]
-    if len(digits) == 10:
-        mobile = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-    return {"first_name": first, "last_name": last, "email": email, "mobile": mobile,
-            "address": address, "unit": unit}
+    return {"email": email, "address": address, "unit": unit}
 
 
 def applicant_view(row: dict[str, Any]) -> dict[str, Any]:
@@ -626,7 +616,10 @@ def applicant_view(row: dict[str, Any]) -> dict[str, Any]:
     lgd_applicant_json in migration 002."""
     return {
         "id": row["id"],
-        "first_name": row.get("first_name") or row["full_name"],
+        # Empty until they sign up with their name (full_name holds the
+        # email until then).
+        "first_name": row.get("first_name") or (
+            "" if row["full_name"] == row.get("email") else row["full_name"]),
         "last_name": row.get("last_name") or "",
         "email": row.get("email"),
         "mobile": row.get("phone"),
@@ -685,19 +678,17 @@ async def _person(db_path: str, person_id: str) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
-async def create_applicant(db_path: str, *, first_name: str, last_name: str,
-                           email: str, mobile: str, address: str = "", unit: str = "",
-                           manager_id: str | None,
-                           is_admin: bool = False) -> dict[str, Any]:
-    """A manager adds someone who is applying: stored now, to fill in their
-    application later, and adopted by their login when they sign up with
-    the same email (migration 001's trigger does that part on Supabase).
+async def create_applicant(db_path: str, *, email: str, address: str = "", unit: str = "",
+                           manager_id: str | None, is_admin: bool = False) -> dict[str, Any]:
+    """A manager approves someone to apply, by email and apartment (the
+    user, 2026-09-29); their name and phone come later, from their signup
+    (migration 001's trigger does that on Supabase).
 
     Someone already in the directory with that email - a resident applying
     for another apartment - becomes an applicant too rather than a second
     person (the user: "User can be applicant and resident"). Raises
     ApplicantError with a reason fit to show the manager."""
-    clean = clean_applicant(first_name, last_name, email, mobile, address, unit)
+    clean = clean_applicant(email, address, unit)
     existing = await _rows(
         db_path, "SELECT * FROM people WHERE lower(email) = ? ORDER BY created_at LIMIT 1",
         clean["email"])
@@ -711,20 +702,16 @@ async def create_applicant(db_path: str, *, first_name: str, last_name: str,
         await _write(
             db_path,
             "UPDATE people SET is_applicant = ?, archived_at = NULL, "
-            "first_name = COALESCE(first_name, ?), last_name = COALESCE(last_name, ?), "
-            "phone = COALESCE(phone, ?), manager_id = COALESCE(manager_id, ?), "
-            "apply_address = ?, apply_unit = ? WHERE id = ?",
-            True, clean["first_name"], clean["last_name"], clean["mobile"], manager_id,
-            clean["address"], clean["unit"], person["id"])
+            "manager_id = COALESCE(manager_id, ?), apply_address = ?, apply_unit = ? WHERE id = ?",
+            True, manager_id, clean["address"], clean["unit"], person["id"])
         return applicant_view(await _person(db_path, person["id"]))
-    person_id = secrets.token_hex(12)
     row = {
-        "id": person_id,
-        "full_name": f"{clean['first_name']} {clean['last_name']}",
-        "first_name": clean["first_name"],
-        "last_name": clean["last_name"],
+        "id": secrets.token_hex(12),
+        "full_name": clean["email"],
+        "first_name": None,
+        "last_name": None,
         "email": clean["email"],
-        "phone": clean["mobile"],
+        "phone": None,
         "property_id": None,
         "manager_id": manager_id,
         "created_at": _now(),

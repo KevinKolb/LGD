@@ -200,7 +200,7 @@
    * stopped here with NOT_ON_FILE, before Supabase sends any email. (001's
    * trigger holds the same line for a signup sent any other way.)
    */
-  async function signUp(email, password, fullName) {
+  async function signUp(email, password, fullName, details) {
     if (!(await emailOnFile(email))) throw new AuthError(NOT_ON_FILE);
     const body = await request(
       "/auth/v1/signup?redirect_to=" + encodeURIComponent(ROOT + "login/"),
@@ -210,7 +210,10 @@
           password,
           // Lands in auth.users.raw_user_meta_data, which the database
           // trigger reads to name the person's row.
-          data: { full_name: (fullName || "").trim() },
+          // `details` - first_name, last_name, phone from the applicant
+          // page - go the same way, and 001's trigger copies them onto
+          // the person on file.
+          data: { full_name: (fullName || "").trim(), ...(details || {}) },
         },
       }
     );

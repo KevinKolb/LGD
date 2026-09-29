@@ -6,10 +6,10 @@
 -- shape of `people` - four role columns, logins on the same row - this is
 -- written against; the script applies every file in name order).
 --
--- The user, 2026-09-29: the manager page adds an applicant - first, last,
--- email and mobile - "stored for later use to fill in application info and
--- to create a login account to this portal"; picks one from the list to
--- send them the application; archives them; and can see the archived ones.
+-- The user, 2026-09-29: the manager page approves an applicant - by email
+-- and the apartment only; they give their name and phone when they create
+-- their account on the applicant page - sends them the application,
+-- archives them, and can see the archived ones.
 --
 -- The browser still has no write access to `people` - 001's default deny
 -- stands. These functions run as their owner (SECURITY DEFINER) and do
@@ -54,7 +54,9 @@ stable
 as $fn$
   select json_build_object(
     'id', p.id,
-    'first_name', coalesce(p.first_name, p.full_name),
+    -- Empty until they sign up and give their name (full_name holds the
+    -- email until then).
+    'first_name', coalesce(p.first_name, case when p.full_name = p.email then '' else p.full_name end),
     'last_name', coalesce(p.last_name, ''),
     'email', p.email, 'mobile', p.phone, 'created_at', p.created_at,
     'archived', p.archived_at is not null,
@@ -70,20 +72,25 @@ revoke all on function public.lgd_applicant_json(public.people) from public, ano
 -- create_applicant
 -- ---------------------------------------------------------------------------
 --
+-- A manager approves someone to apply with their email address and the
+-- apartment (the user, 2026-09-29: "approve an applicant by simply putting
+-- in their email address. The applicant will fill in the rest when they
+-- create an account"). Their name and phone come from the applicant page's
+-- signup, which 001's trigger copies onto this row; until then full_name
+-- holds the email, as it must hold something.
+--
 -- Someone already in the directory with that email - a resident applying
 -- for another apartment, say - is not a second person: they become an
 -- applicant too (the user: "User can be applicant and resident"). Only an
 -- applicant already on the list is refused.
 --
--- The four-argument version, from before the apartment was asked, is
--- dropped: PostgREST picks a function by its argument names, and two
--- versions would only leave a stale one callable.
+-- Earlier versions (four arguments: names, email, mobile; then six, with
+-- the apartment) are dropped: PostgREST picks a function by its argument
+-- names, and a stale one would stay callable.
 drop function if exists public.create_applicant(text, text, text, text);
+drop function if exists public.create_applicant(text, text, text, text, text, text);
 create or replace function public.create_applicant(
-  first_name text,
-  last_name text,
   email text,
-  mobile text,
   address text,
   unit text default ''
 )
@@ -95,13 +102,9 @@ set search_path = public
 as $fn$
 declare
   caller public.people := public.lgd_caller();
-  clean_first text := btrim(coalesce(first_name, ''));
-  clean_last text := btrim(coalesce(last_name, ''));
   clean_email text := lower(btrim(coalesce(email, '')));
-  clean_mobile text := btrim(coalesce(mobile, ''));
   clean_address text := btrim(coalesce(address, ''));
   clean_unit text := btrim(coalesce(unit, ''));
-  digits text;
   existing public.people;
   result public.people;
 begin
@@ -109,32 +112,17 @@ begin
     raise exception 'Only a manager or an admin can add an applicant.'
       using errcode = '42501';
   end if;
-  if clean_first = '' or clean_last = '' or clean_email = '' or clean_mobile = '' then
-    raise exception 'First name, last name, email and mobile are all needed.'
-      using errcode = '22023';
+  if clean_email = '' then
+    raise exception 'Enter their email address.' using errcode = '22023';
   end if;
   if clean_address = '' then
     raise exception 'Pick the apartment they are applying for.' using errcode = '22023';
   end if;
-  if length(clean_first) > 100 or length(clean_last) > 100
-     or length(clean_email) > 254 or length(clean_mobile) > 40
-     or length(clean_address) > 200 or length(clean_unit) > 20 then
+  if length(clean_email) > 254 or length(clean_address) > 200 or length(clean_unit) > 20 then
     raise exception 'One of those is too long.' using errcode = '22023';
   end if;
   if clean_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
     raise exception 'That email address does not look right.' using errcode = '22023';
-  end if;
-  digits := regexp_replace(clean_mobile, '[^0-9]', '', 'g');
-  if length(digits) < 10 then
-    raise exception 'The mobile number needs at least 10 digits.' using errcode = '22023';
-  end if;
-  -- One way of writing a US number, however it was typed: (504) 555-1234.
-  -- Anything else (an international number) is kept as typed.
-  if length(digits) = 11 and left(digits, 1) = '1' then
-    digits := substr(digits, 2);
-  end if;
-  if length(digits) = 10 then
-    clean_mobile := '(' || substr(digits, 1, 3) || ') ' || substr(digits, 4, 3) || '-' || substr(digits, 7);
   end if;
 
   select * into existing from public.people p where lower(p.email) = clean_email
@@ -153,9 +141,6 @@ begin
     update public.people p set
       is_applicant = true,
       archived_at = null,
-      first_name = coalesce(p.first_name, clean_first),
-      last_name = coalesce(p.last_name, clean_last),
-      phone = coalesce(p.phone, clean_mobile),
       manager_id = coalesce(p.manager_id, caller.manager_id),
       apply_address = clean_address,
       apply_unit = clean_unit
@@ -163,11 +148,9 @@ begin
     returning p.* into result;
   else
     insert into public.people
-      (id, full_name, first_name, last_name, email, phone, manager_id,
-       is_applicant, created_at, apply_address, apply_unit)
+      (id, full_name, email, manager_id, is_applicant, created_at, apply_address, apply_unit)
     values (
-      public.lgd_new_id(), clean_first || ' ' || clean_last,
-      clean_first, clean_last, clean_email, clean_mobile, caller.manager_id,
+      public.lgd_new_id(), clean_email, clean_email, caller.manager_id,
       true, public.lgd_now_text(), clean_address, clean_unit
     )
     returning * into result;
@@ -175,8 +158,8 @@ begin
   return public.lgd_applicant_json(result);
 end
 $fn$;
-revoke all on function public.create_applicant(text, text, text, text, text, text) from public, anon;
-grant execute on function public.create_applicant(text, text, text, text, text, text) to authenticated;
+revoke all on function public.create_applicant(text, text, text) from public, anon;
+grant execute on function public.create_applicant(text, text, text) to authenticated;
 
 
 -- ---------------------------------------------------------------------------
