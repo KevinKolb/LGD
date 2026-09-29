@@ -411,7 +411,7 @@ publish folders starting with `_`, so nothing there is on the website -
 **don't add a `.nojekyll` file**, or it all goes live. First in:
 `_saved/applicant_form.html`, the online rental application that was the
 applicant page until 2026-09-29, when the user had the page say "Coming
-soon" for now; it is also at the git tag `applicant-form-2026-09-29`. To
+soon" for now; the last commit with it live is `e81c562`. To
 restore it, move it back to `applicant/index.html`.
 
 ## Wording is a legal decision, not a typo to autocorrect

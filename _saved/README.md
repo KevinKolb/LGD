@@ -10,4 +10,4 @@ nothing here is reachable on the website.
   to `POST /api/applications`. The applicant page shows "Coming soon" for
   now, at the user's request. To bring the form back, move this file back
   to `applicant/index.html` (its links are written for that folder). The
-  same file is also at the git tag `applicant-form-2026-09-29`.
+  last commit with it live is `e81c562`.
