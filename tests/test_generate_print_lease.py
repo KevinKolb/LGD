@@ -592,12 +592,12 @@ def test_the_popup_scrolls_on_a_short_screen(real_output):
     assert "margin: auto;" in box[:box.index("}")]
 
 
-def test_every_document_floats_home_back_and_print(real_output):
-    """Home, then Back, then Print; Home and Back move into the popup while
-    it is open, so they never cover its buttons."""
+def test_documents_float_back_and_print_but_no_home(real_output):
+    """Every other page has Home; a document does not (the user,
+    2026-09-29) - Back returns to the page that opened it."""
     buttons = real_output[real_output.index('<div class="float-buttons">'):]
     buttons = buttons[:buttons.index("</div>")]
-    assert buttons.index('id="home-button"') < buttons.index('id="back-button"') < buttons.index('id="print-button"')
-    assert '<a href="../../" id="home-button">Home</a>' in buttons
-    assert '<a class="secondary" id="picker-home" href="../../">Home</a>' in real_output
-    assert "floatingHome.hidden = true;" in real_output
+    assert buttons.index('id="back-button"') < buttons.index('id="print-button"')
+    assert "Home" not in buttons
+    assert 'id="picker-home"' not in real_output
+    assert 'id="home-button"' not in real_output

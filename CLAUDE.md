@@ -206,14 +206,15 @@ popup closes, so it can never print a lease before its apartment is
 picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
 `render_head` opens, which keeps the popup and buttons out of the zoom.
 
-**Every page has a Home button** (the user, 2026-09-29). `shared/footer.js`,
+**Every site page has a Home button** (the user, 2026-09-29). `shared/footer.js`,
 which every site page loads, floats Home bottom right on every page but the
 home page itself; a page with its own floating buttons (the legal pages'
 Back) puts them in a `.site-float` group *before* the script tag, and Home
 joins it on the left. The documents don't load that script (they are
-self-contained files), so `DOC_BUTTONS` carries its own Home: the order is
-Home, Back, Print. While a document's popup is open, Home and Back are
-among its buttons instead of floating over them.
+self-contained files), and **the documents have no Home** (the user,
+the same day, after one was added): they float Back and Print only, and
+Back returns to the page that opened them. While a document's popup is
+open, Back is among its buttons instead of floating over them.
 
 The rule, settled by the user on 2026-09-28: **every lease has the same
 sections with the same numbers; only the wording inside §17 PATIO/YARD,
