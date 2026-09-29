@@ -151,6 +151,26 @@
   /* The page opens on two buttons only, one above the other. */
   .choices { display: flex; flex-direction: column; gap: 14px; padding: 28px 22px; }
   .choices button { width: 100%; padding: 16px; font-size: 16px; }
+  /* The Apply and Application status popups. */
+  dialog.popup {
+    width: min(460px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+    color: var(--ink);
+    background: var(--panel);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
+  }
+  dialog.popup::backdrop { background: rgba(0, 0, 0, .45); }
+  dialog.popup h2 { margin: 0 0 8px; }
+  .popup-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  a.button-link {
+    display: inline-block; font: inherit; border-radius: 6px; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--accent-ink); padding: 9px 16px; text-decoration: none;
+    text-transform: uppercase; letter-spacing: .03em; font-weight: 600;
+  }
+  a.button-link[hidden] { display: none; }
   button.linkish {
     background: none; border: none; padding: 0; color: var(--accent);
     font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0;
@@ -176,14 +196,15 @@
        again, and 001's signup trigger holds the line for a signup sent any
        other way; it also copies the name and phone onto the person on
        file. Check application status needs a login; for now it says
-       "Coming soon". -->
+       "Coming soon". Each button opens its own popup (the user,
+       2026-09-29), over the two buttons. -->
   <section class="choices" id="choices">
     <button type="button" id="choose-apply">Apply</button>
     <button type="button" class="secondary" id="choose-status">Check application status</button>
   </section>
 
-  <section id="apply" hidden>
-    <h2>Apply</h2>
+  <dialog class="popup" id="apply" aria-labelledby="apply-title">
+    <h2 id="apply-title">Apply</h2>
     <p class="hint">
       Start with the email address you gave us. Then you will create your
       account with your name, phone and a password.
@@ -216,16 +237,21 @@
       <p class="msg" id="signup-msg" role="status" aria-live="polite" hidden></p>
     </form>
     <p class="hint signin-hint">
-      Already have an account? <a href="../login/">Sign in</a> &middot;
-      <button type="button" class="linkish" data-back>Back</button>
+      Already have an account? <a href="../login/">Sign in</a>
     </p>
-  </section>
+    <div class="popup-actions">
+      <button type="button" class="secondary" data-close>Close</button>
+    </div>
+  </dialog>
 
-  <section id="status" hidden>
-    <h2>Application status</h2>
+  <dialog class="popup" id="status" aria-labelledby="status-title">
+    <h2 id="status-title">Application status</h2>
     <p id="status-text"></p>
-    <p class="hint signin-hint"><button type="button" class="linkish" data-back>Back</button></p>
-  </section>
+    <div class="popup-actions">
+      <a class="button-link" id="status-signin" href="../login/" hidden>Sign in</a>
+      <button type="button" class="secondary" data-close>Close</button>
+    </div>
+  </dialog>
 </main>
 
 <!-- The working online application form is kept, unpublished, in
@@ -237,11 +263,8 @@
 "use strict";
 (function () {
   const auth = window.LGD.auth;
-  const views = {
-    choices: document.getElementById("choices"),
-    apply: document.getElementById("apply"),
-    status: document.getElementById("status"),
-  };
+  const applyPopup = document.getElementById("apply");
+  const statusPopup = document.getElementById("status");
   const form = document.getElementById("signup-form");
   const email = document.getElementById("signup-email");
   const stepEmail = document.getElementById("signup-step-email");
@@ -253,10 +276,6 @@
   const confirm = document.getElementById("signup-confirm");
   const message = document.getElementById("signup-msg");
   let checked = "";  // the address found on file, once it has been
-
-  function show(name) {
-    for (const [key, view] of Object.entries(views)) view.hidden = key !== name;
-  }
 
   function say(text, isError) {
     message.textContent = text || "";
@@ -271,28 +290,34 @@
   }
 
   document.getElementById("choose-apply").addEventListener("click", () => {
-    show("apply");
+    applyPopup.showModal();
     email.focus();
   });
-  document.querySelectorAll("[data-back]").forEach((control) => {
-    control.addEventListener("click", () => {
-      if (window.location.hash) history.replaceState(null, "", window.location.pathname);
-      show("choices");
-    });
+  document.querySelectorAll("dialog [data-close]").forEach((control) => {
+    control.addEventListener("click", () => control.closest("dialog").close());
   });
+  // Closing either popup drops a #status left from coming back from sign in.
+  [applyPopup, statusPopup].forEach((popup) => popup.addEventListener("close", () => {
+    if (window.location.hash) history.replaceState(null, "", window.location.pathname);
+  }));
 
-  // Application status needs a login: signed out, it sends them to sign
-  // in and brings them back here (#status); signed in, it is coming soon.
+  // Application status needs a login: signed out, the popup says so and
+  // offers Sign in, which comes back here (#status) and opens it again;
+  // signed in, it is coming soon.
   async function showStatus() {
     const text = document.getElementById("status-text");
+    const signIn = document.getElementById("status-signin");
     const session = auth.configured ? await auth.session() : null;
-    if (!session) {
+    if (session) {
+      text.textContent = "Coming soon.";
+      signIn.hidden = true;
+    } else {
+      text.textContent = "Sign in to check your application status.";
       const back = new URL("#status", window.location.href).href;
-      window.location.href = auth.root + "login/?next=" + encodeURIComponent(back);
-      return;
+      signIn.href = auth.root + "login/?next=" + encodeURIComponent(back);
+      signIn.hidden = false;
     }
-    text.textContent = "Coming soon.";
-    show("status");
+    if (!statusPopup.open) statusPopup.showModal();
   }
   document.getElementById("choose-status").addEventListener("click", showStatus);
   if (window.location.hash === "#status") showStatus();

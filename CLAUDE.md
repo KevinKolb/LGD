@@ -630,8 +630,11 @@ hold it:
   answering only true/false); only after a yes does it ask first name,
   last name, phone and a password. Otherwise it says exactly "That email
   address is not yet on file." Check application status works only signed
-  in: signed out it goes to the login page and comes back to
-  `applicant/#status`; signed in it says "Coming soon." for now.
+  in. Each button opens its own popup (`<dialog>`, the user, same day):
+  Apply's holds the signup; the status popup, signed out, says "Sign in to
+  check your application status." with a Sign in button that comes back to
+  `applicant/#status` and reopens it; signed in it says "Coming soon." for
+  now.
 - `LGD.auth.signUp` checks again, so the login page's "Create one" obeys
   the same rule.
 - 001's `handle_auth_user_confirmed` attaches a confirmed login to the

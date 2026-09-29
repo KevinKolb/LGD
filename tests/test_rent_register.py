@@ -94,9 +94,19 @@ def test_sign_up_stops_at_an_address_not_on_file() -> None:
 def test_the_applicant_page_starts_with_two_buttons() -> None:
     page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
     main = page[page.index("<main>"):page.index("</main>")]
-    visible = main[:main.index('<section id="apply" hidden>')]
+    visible = main[:main.index('<dialog class="popup" id="apply"')]
     assert re.findall(r"<button[^>]*>([^<]+)</button>", visible) == ["Apply", "Check application status"]
-    assert '<section id="status" hidden>' in main
+
+
+def test_each_button_opens_its_own_popup() -> None:
+    """Apply gives an apply popup, Check application status a status popup
+    (the user, 2026-09-29)."""
+    page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
+    assert '<dialog class="popup" id="apply" aria-labelledby="apply-title">' in page
+    assert '<dialog class="popup" id="status" aria-labelledby="status-title">' in page
+    assert "applyPopup.showModal();" in page
+    assert "if (!statusPopup.open) statusPopup.showModal();" in page
+    assert '<form id="signup-form" novalidate>' in page[page.index('id="apply"'):page.index('id="status"')]
 
 
 def test_applying_asks_the_email_first_then_name_and_phone() -> None:
@@ -111,5 +121,6 @@ def test_applying_asks_the_email_first_then_name_and_phone() -> None:
 
 def test_status_needs_a_login_and_is_coming_soon() -> None:
     page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
-    assert 'window.location.href = auth.root + "login/?next=" + encodeURIComponent(back);' in page
+    assert 'text.textContent = "Sign in to check your application status.";' in page
+    assert 'signIn.href = auth.root + "login/?next=" + encodeURIComponent(back);' in page
     assert 'text.textContent = "Coming soon.";' in page
