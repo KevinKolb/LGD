@@ -263,6 +263,12 @@ Ticked in the manager page's step 1. Changes are logged in
   digits, "$" and ".", and collapse any number of "$" into one at the
   front. The "$" is dropped from what fills the form, since the printed
   label already has it; a box left at "$" leaves its blank empty.
+- **Term of lease** (the user, 2026-09-29: "months or years, not both"):
+  `TERM_FIELDS` gives it a whole-number box and a months/years select
+  (`render_picker_footer(..., terms=)`), filled as "12 months" or "1 year".
+- While the popup is open, Back is one of its buttons rather than floating
+  (it covered "Leave it blank" on a short screen); it floats once the
+  popup closes.
 
 Two originals, both never edited: `application_original.pdf` (with the
 handwritten edit notes, transcribed in `application_original.ocr`) and

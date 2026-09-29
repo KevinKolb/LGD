@@ -345,6 +345,11 @@ HTML_HEAD = """<!doctype html>
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* A term: the number box and its months/years select on one line. */
+  .term-row { display: flex; gap: 8px; margin-top: 4px; }
+  .term-row input[data-term], .term-row select { margin-top: 0; }
+  .picker-box .term-row input[data-term] { width: 6em; flex: 0 0 auto; }
+  .picker-box .term-row select { width: auto; flex: 0 0 auto; }
   /* The combined page's document checkboxes. */
   .doc-choices { border: 0; margin: 0 0 14px; padding: 0; }
   .doc-choices legend { padding: 0; margin-bottom: 6px; font-size: 11pt; font-weight: bold; }
@@ -359,7 +364,16 @@ HTML_HEAD = """<!doctype html>
     font: inherit;
     cursor: pointer;
   }
-  .picker-actions button.secondary { background: transparent; color: #1f5d4c; }
+  .picker-actions button.secondary, .picker-actions a.secondary { background: transparent; color: #1f5d4c; }
+  /* Back sits in the popup while it is open (the floating one would cover
+     these buttons on a short screen), and floats once it closes. */
+  .picker-actions a {
+    padding: 8px 14px;
+    border: 1px solid #1f5d4c;
+    border-radius: 6px;
+    text-decoration: none;
+    font: inherit;
+  }
   .picker-actions button:disabled { opacity: .45; cursor: not-allowed; }
   /* Screen-only, like the picker: a Print button that floats over the
      document while it is read on screen, so "View" is one click from
@@ -584,6 +598,7 @@ __EXTRA_FIELDS__
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>
       <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
+      <a class="secondary" id="picker-back" href="../../manager/">Back</a>
     </div>
   </form>
 </div>
@@ -693,6 +708,14 @@ __PROPERTIES_JSON__
     clean();
   });
 
+  // Term boxes: a whole number only; months or years is the select beside it.
+  document.querySelectorAll("input[data-term]").forEach(function (input) {
+    input.addEventListener("input", function () {
+      var digits = input.value.replace(/[^0-9]/g, "").replace(/^0+/, "");
+      if (digits !== input.value) { input.value = digits; }
+    });
+  });
+
   // The combined page's document checkboxes: an unticked document is
   // hidden, and so is any popup question only it asks. A page of one
   // document has no checkboxes, and this does nothing.
@@ -745,9 +768,20 @@ __PROPERTIES_JSON__
   docChoices.forEach(function (box) { box.addEventListener("change", showQuestions); });
   showQuestions();
 
+  // Back sits in the popup while it is open - floating, it would cover
+  // the popup's own buttons on a short screen - and floats once it closes.
+  // Both behave the same: the popup's one just clicks the floating one.
+  var floatingBack = document.getElementById("back-button");
+  floatingBack.hidden = true;
+  document.getElementById("picker-back").addEventListener("click", function (event) {
+    event.preventDefault();
+    floatingBack.click();
+  });
+
   function finish() {
     showDocs();
     picker.hidden = true;
+    floatingBack.hidden = false;
     document.getElementById("print-button").hidden = false;
     if (window.location.hash === "#view") { return; }
     pageLoaded.then(function () {
@@ -782,6 +816,11 @@ __PROPERTIES_JSON__
       var value = input.value.trim();
       // An amount's printed label already ends in "$"; "$" alone is empty.
       if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
+      // A term is a number of months or of years: "1 year", "12 months".
+      if (input.hasAttribute("data-term") && value) {
+        var unit = document.getElementById(input.id + "-unit").value;
+        value = value + " " + unit + (value === "1" ? "" : "s");
+      }
       if (target && value) {
         target.textContent = value;
         target.classList.add("filled");
@@ -813,7 +852,7 @@ __PROPERTIES_JSON__
 
 def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
                          documents: tuple[tuple[str, str, bool], ...] = (),
-                         money: tuple[str, ...] = ()) -> str:
+                         money: tuple[str, ...] = (), terms: tuple[str, ...] = ()) -> str:
     """The apartment picker, its script and the inlined apartment table -
     shared by every printable document that names the premises.
 
@@ -823,16 +862,24 @@ def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
     id. `documents`, on the combined page only, is (key, name, ticked) per
     document, offered as checkboxes above the apartment questions. The
     blank ids in `money` are amounts: their boxes take only digits, "$"
-    and ".", and always start with one "$"."""
+    and ".", and always start with one "$". The blank ids in `terms` are
+    lengths of time: a whole number and a choice of months or years, never
+    both, filled as "12 months" or "1 year"."""
     lines = []
     for field in fields:
         label, target = field[0], field[1]
         for_docs = f' data-for-docs="{html.escape(field[2])}"' if len(field) > 2 else ""
         lines.append(
-            f'    <label{for_docs}>{html.escape(label)} <span class="optional">(optional)</span>\n'
-            f'      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}"'
+            f'    <label{for_docs}>{html.escape(label)} <span class="optional">(optional)</span>'
+            + ('\n      <span class="term-row">' if target in terms else "")
+            + f'\n      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}"'
             + (' data-money inputmode="decimal" value="$"' if target in money else "")
-            + '>\n'
+            + (' data-term inputmode="numeric"' if target in terms else "")
+            + '>'
+            + (f'\n      <select id="picker-{html.escape(target)}-unit" aria-label="Months or years">'
+               '<option value="month">months</option><option value="year">years</option></select>'
+               '</span>' if target in terms else "")
+            + '\n'
             f"    </label>")
     extra = "\n".join(lines)
     if documents:

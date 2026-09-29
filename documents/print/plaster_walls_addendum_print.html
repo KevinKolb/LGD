@@ -174,6 +174,11 @@
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* A term: the number box and its months/years select on one line. */
+  .term-row { display: flex; gap: 8px; margin-top: 4px; }
+  .term-row input[data-term], .term-row select { margin-top: 0; }
+  .picker-box .term-row input[data-term] { width: 6em; flex: 0 0 auto; }
+  .picker-box .term-row select { width: auto; flex: 0 0 auto; }
   /* The combined page's document checkboxes. */
   .doc-choices { border: 0; margin: 0 0 14px; padding: 0; }
   .doc-choices legend { padding: 0; margin-bottom: 6px; font-size: 11pt; font-weight: bold; }
@@ -188,7 +193,16 @@
     font: inherit;
     cursor: pointer;
   }
-  .picker-actions button.secondary { background: transparent; color: #1f5d4c; }
+  .picker-actions button.secondary, .picker-actions a.secondary { background: transparent; color: #1f5d4c; }
+  /* Back sits in the popup while it is open (the floating one would cover
+     these buttons on a short screen), and floats once it closes. */
+  .picker-actions a {
+    padding: 8px 14px;
+    border: 1px solid #1f5d4c;
+    border-radius: 6px;
+    text-decoration: none;
+    font: inherit;
+  }
   .picker-actions button:disabled { opacity: .45; cursor: not-allowed; }
   /* Screen-only, like the picker: a Print button that floats over the
      document while it is read on screen, so "View" is one click from

@@ -55,6 +55,8 @@ OFFICE_FIELDS = (
 # accept only digits, "$" and ".", and supply the "$" themselves; the "$"
 # is left off what fills the form, whose label already prints one.
 MONEY_FIELDS = ("field-rent", "field-deposit")
+# The blank that holds a length of time: a number of months or of years.
+TERM_FIELDS = ("field-term",)
 
 # A block beginning "(parking=limited) " prints on every blank application
 # but, once an apartment is picked, only where that option applies - the
@@ -239,7 +241,7 @@ PICKER_FIELDS = tuple((label, target) for _, label, target in OFFICE_FIELDS)
 def generate(source_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
     return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("application", PICKER_FIELDS,
-                                                                                   money=MONEY_FIELDS)
+                                                                                   money=MONEY_FIELDS, terms=TERM_FIELDS)
 
 
 def main() -> None:

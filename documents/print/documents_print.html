@@ -174,6 +174,11 @@
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* A term: the number box and its months/years select on one line. */
+  .term-row { display: flex; gap: 8px; margin-top: 4px; }
+  .term-row input[data-term], .term-row select { margin-top: 0; }
+  .picker-box .term-row input[data-term] { width: 6em; flex: 0 0 auto; }
+  .picker-box .term-row select { width: auto; flex: 0 0 auto; }
   /* The combined page's document checkboxes. */
   .doc-choices { border: 0; margin: 0 0 14px; padding: 0; }
   .doc-choices legend { padding: 0; margin-bottom: 6px; font-size: 11pt; font-weight: bold; }
@@ -188,7 +193,16 @@
     font: inherit;
     cursor: pointer;
   }
-  .picker-actions button.secondary { background: transparent; color: #1f5d4c; }
+  .picker-actions button.secondary, .picker-actions a.secondary { background: transparent; color: #1f5d4c; }
+  /* Back sits in the popup while it is open (the floating one would cover
+     these buttons on a short screen), and floats once it closes. */
+  .picker-actions a {
+    padding: 8px 14px;
+    border: 1px solid #1f5d4c;
+    border-radius: 6px;
+    text-decoration: none;
+    font: inherit;
+  }
   .picker-actions button:disabled { opacity: .45; cursor: not-allowed; }
   /* Screen-only, like the picker: a Print button that floats over the
      document while it is read on screen, so "View" is one click from
@@ -587,7 +601,9 @@
       <input type="text" id="picker-field-rent" data-fills="field-rent" data-money inputmode="decimal" value="$">
     </label>
     <label data-for-docs="application">Term of lease <span class="optional">(optional)</span>
-      <input type="text" id="picker-field-term" data-fills="field-term">
+      <span class="term-row">
+      <input type="text" id="picker-field-term" data-fills="field-term" data-term inputmode="numeric">
+      <select id="picker-field-term-unit" aria-label="Months or years"><option value="month">months</option><option value="year">years</option></select></span>
     </label>
     <label data-for-docs="application">Security deposit <span class="optional">(optional)</span>
       <input type="text" id="picker-field-deposit" data-fills="field-deposit" data-money inputmode="decimal" value="$">
@@ -596,6 +612,7 @@
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>
       <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
+      <a class="secondary" id="picker-back" href="../../manager/">Back</a>
     </div>
   </form>
 </div>
@@ -832,6 +849,14 @@
     clean();
   });
 
+  // Term boxes: a whole number only; months or years is the select beside it.
+  document.querySelectorAll("input[data-term]").forEach(function (input) {
+    input.addEventListener("input", function () {
+      var digits = input.value.replace(/[^0-9]/g, "").replace(/^0+/, "");
+      if (digits !== input.value) { input.value = digits; }
+    });
+  });
+
   // The combined page's document checkboxes: an unticked document is
   // hidden, and so is any popup question only it asks. A page of one
   // document has no checkboxes, and this does nothing.
@@ -884,9 +909,20 @@
   docChoices.forEach(function (box) { box.addEventListener("change", showQuestions); });
   showQuestions();
 
+  // Back sits in the popup while it is open - floating, it would cover
+  // the popup's own buttons on a short screen - and floats once it closes.
+  // Both behave the same: the popup's one just clicks the floating one.
+  var floatingBack = document.getElementById("back-button");
+  floatingBack.hidden = true;
+  document.getElementById("picker-back").addEventListener("click", function (event) {
+    event.preventDefault();
+    floatingBack.click();
+  });
+
   function finish() {
     showDocs();
     picker.hidden = true;
+    floatingBack.hidden = false;
     document.getElementById("print-button").hidden = false;
     if (window.location.hash === "#view") { return; }
     pageLoaded.then(function () {
@@ -921,6 +957,11 @@
       var value = input.value.trim();
       // An amount's printed label already ends in "$"; "$" alone is empty.
       if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
+      // A term is a number of months or of years: "1 year", "12 months".
+      if (input.hasAttribute("data-term") && value) {
+        var unit = document.getElementById(input.id + "-unit").value;
+        value = value + " " + unit + (value === "1" ? "" : "s");
+      }
       if (target && value) {
         target.textContent = value;
         target.classList.add("filled");

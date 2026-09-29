@@ -149,9 +149,20 @@ def test_money_boxes_take_only_digits_a_point_and_one_dollar_sign(real_output):
     for target in ("field-rent", "field-deposit"):
         assert (f'data-fills="{target}" data-money inputmode="decimal" value="$">') in popup
     # Term of lease is not an amount.
-    assert 'data-fills="field-term">' in popup
+    assert 'data-fills="field-term" data-money' not in popup
     script = real_output[real_output.index('document.querySelectorAll("input[data-money]")'):]
     assert 'before.replace(/[^0-9.]/g, "")' in script
     assert 'var cleaned = "$" + amount;' in script
     # What fills the form drops the "$" - its printed label has one.
     assert 'value = value.replace(/^[$]/, "");' in real_output
+
+
+def test_the_term_is_months_or_years_never_both(real_output):
+    """A whole number and one choice of months or years; filled as
+    "12 months" or "1 year"."""
+    popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
+    assert 'data-fills="field-term" data-term inputmode="numeric">' in popup
+    assert ('<select id="picker-field-term-unit" aria-label="Months or years">'
+            '<option value="month">months</option><option value="year">years</option></select>') in popup
+    assert 'input.value.replace(/[^0-9]/g, "")' in real_output
+    assert 'value = value + " " + unit + (value === "1" ? "" : "s");' in real_output

@@ -91,7 +91,8 @@ def generate() -> str:
     choices = tuple((key, name, ticked) for key, name, _, _, ticked in DOCUMENTS)
     head += '<main class="sheet-stack">\n'
     page = head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("documents", fields, choices,
-                                                                          money=application.MONEY_FIELDS)
+                                                                          money=application.MONEY_FIELDS,
+                                                                          terms=application.TERM_FIELDS)
     check_unique_ids(page)
     return page
 
