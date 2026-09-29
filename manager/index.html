@@ -71,13 +71,16 @@
     padding: 20px 22px;
     margin-bottom: 20px;
   }
-  h2 {
+  h2, h3 {
     margin: 0 0 4px;
     font-size: 15px;
     text-transform: uppercase;
     letter-spacing: .06em;
     color: var(--muted);
   }
+  /* A heading over retired documents, outside any panel and unnumbered:
+     they stay reachable, but out of the numbered steps. */
+  .group-head { margin: 32px 0 12px; }
   .hint { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
   .step-head {
     display: flex;
@@ -260,23 +263,6 @@
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">2c</span>
-      <h2>Plaster walls addendum</h2>
-    </div>
-    <p class="hint">
-      For a lease at 1523 St. Andrew St. signed before the lease had its plaster walls
-      section &mdash; the same plaster rules, as an addendum the Lessee signs.
-    </p>
-    <div class="actions">
-      <a class="button-link secondary" id="view-addendum-link"
-         href="../documents/print/plaster_walls_addendum_print.html#view" target="_blank" rel="noopener">View addendum</a>
-      <a class="button-link secondary" id="print-addendum-link"
-         href="../documents/print/plaster_walls_addendum_print.html" target="_blank" rel="noopener">Print addendum</a>
-    </div>
-  </section>
-
-  <section>
-    <div class="step-head">
       <span class="step" aria-hidden="true">3a</span>
       <h2>Legal research</h2>
     </div>
@@ -304,6 +290,22 @@
     <div class="actions">
       <a class="button-link secondary" id="legal-review-link"
          href="legal_review.html" target="_blank" rel="noopener">Read the checklist</a>
+    </div>
+  </section>
+
+  <h2 class="group-head">No longer in use</h2>
+
+  <section>
+    <h3>Plaster walls addendum</h3>
+    <p class="hint">
+      For a lease at 1523 St. Andrew St. signed before the lease had its plaster walls
+      section &mdash; the same plaster rules, as an addendum the Lessee signs.
+    </p>
+    <div class="actions">
+      <a class="button-link secondary" id="view-addendum-link"
+         href="../documents/print/plaster_walls_addendum_print.html#view" target="_blank" rel="noopener">View addendum</a>
+      <a class="button-link secondary" id="print-addendum-link"
+         href="../documents/print/plaster_walls_addendum_print.html" target="_blank" rel="noopener">Print addendum</a>
     </div>
   </section>
 </main>

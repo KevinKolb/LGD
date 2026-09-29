@@ -253,7 +253,8 @@ alongside the lease. The premises come from the one `properties.json` entry
 with walls "B" (it raises if there are zero or several). Its own wording is
 only the opening "made part of and incorporated into..." paragraph and the
 closing acknowledgement, in the generator. Signature and date lines for the
-Lessor/Agent and three Lessees. Manager page step 2c.
+Lessor/Agent and three Lessees. On the manager page it sits at the bottom,
+unnumbered, under "No longer in use" (moved from step 2c on 2026-09-29).
 
 `HTML_FOOTER` is an ordinary Python string, so a `\"` in its JavaScript
 loses its backslash and breaks the entire script - it did, once, while the
