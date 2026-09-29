@@ -134,8 +134,10 @@
     inset: 0;
     z-index: 10;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    /* Centred by the box's auto margins rather than align-items, so a
+       popup taller than a phone screen scrolls from its top instead of
+       being cut off above it. */
+    overflow-y: auto;
     padding: 16px;
     /* Opaque, not a dimmed overlay: the lease is not shown at all until an
        apartment is picked, so nobody reads or prints the wrong one. */
@@ -143,6 +145,7 @@
   }
   .picker[hidden] { display: none; }
   .picker-box {
+    margin: auto;
     width: 100%;
     max-width: 380px;
     padding: 22px 24px;
@@ -161,6 +164,8 @@
     margin-top: 4px;
     padding: 6px;
     font: inherit;
+    /* 16px or more, or an iPhone zooms the page in on tapping a box. */
+    font-size: max(16px, 1em);
   }
   .picker-summary {
     margin: 4px 0 0;
@@ -169,6 +174,10 @@
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* The combined page's document checkboxes. */
+  .doc-choices { border: 0; margin: 0 0 14px; padding: 0; }
+  .doc-choices legend { padding: 0; margin-bottom: 6px; font-size: 11pt; font-weight: bold; }
+  .picker-box label.doc-choice { display: flex; align-items: center; gap: 0.5em; margin: 0 0 6px; }
   .picker-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
   .picker-actions button {
     padding: 8px 14px;
@@ -263,8 +272,44 @@
       padding: 0 0 0.25in;
     }
   }
+  /* The combined page. A document's wrapper takes no part in layout, so
+     its paragraphs break across pages exactly as on the document's own
+     page (wrapped in a real box, Chrome paginated the lease differently).
+     The break before each later document goes on its heading instead. */
+  section.document { display: contents; }
+  section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {
+    page-break-before: always;
+    break-before: page;
+  }
   @media screen {
     body { padding: 0.5in 0.75in 1in; box-shadow: 0 0 12px rgba(0,0,0,.15); }
+    section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {
+      margin-top: 0.6in;
+      padding-top: 0.5in;
+      border-top: 1px dashed #999;
+    }
+  }
+  /* A phone. Screen only: print keeps its own fixed 6.8in column above,
+     so this cannot change how anything paginates. The long fill-in lines
+     are wider than a phone, and a page wider than the screen puts
+     everything at its right edge - the Print button included - out of
+     sight, which is how the button went missing on phones. */
+  @media screen and (max-width: 700px) {
+    body { padding: 20px 16px 96px; box-shadow: none; }
+    .blank.long, .blank.medium, .blank.word { min-width: 0; width: 100%; max-width: 3in; }
+    .blank { max-width: 100%; }
+    .blank.fixed { min-width: 0 !important; width: 40%; }
+    /* "body" for weight: the application's own rules come later in the
+       page and would otherwise win. */
+    body p.field.row { display: block; min-height: 0; margin: 0 0 0.3em; }
+    body p.field.row .label,
+    body p.field.row .blank + .label { display: block; margin: 0.5em 0 0; white-space: normal; }
+    body p.field.row .blank.fixed { display: block; width: 100%; height: 1.4em; margin: 0; }
+    body p.field.row .blank.fixed.filled { height: auto; white-space: normal; }
+    p { text-align: left; }
+    .sig-row { flex-wrap: wrap; }
+    .print-button { right: 16px; bottom: 16px; }
+    .footer-note code { overflow-wrap: anywhere; }
   }
 
   p.incorporation { text-align: left; }

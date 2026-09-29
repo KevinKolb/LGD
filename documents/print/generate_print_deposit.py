@@ -151,7 +151,9 @@ def render_signatures(labels: list[str]) -> str:
     return f'<div class="signature-block">\n{rows}\n</div>'
 
 
-def generate(source_text: str) -> str:
+def render_body(source_text: str) -> str:
+    """The agreement itself, without the page around it - shared by this
+    page and the combined one (generate_print_packet.py)."""
     parts: list[str] = []
     list_numbers: list[int] = []
     signatures: list[str] = []
@@ -196,8 +198,12 @@ def generate(source_text: str) -> str:
             if f'data-option="{group}={value}"' not in body:
                 raise SystemExit(f"{SOURCE.name} has no {group} version {value}, which the lease has.")
 
+    return body
+
+
+def generate(source_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
-    return head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("security deposit")
+    return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("security deposit")
 
 
 def main() -> None:

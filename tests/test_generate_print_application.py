@@ -69,7 +69,8 @@ def test_field_rows_run_the_full_page_width(real_output):
     for row in rows:
         assert '<span class="blank fixed"' in row
         assert "flex-grow:" in row
-    css = real_output[real_output.index("p.field.row {"):]
+    # The application's own rule, not the phone layout's "body p.field.row".
+    css = real_output[real_output.index("\n  p.field.row {"):]
     assert "display: flex;" in css[:css.index("}")]
     assert "min-height: 0.375in;" in css[:css.index("}")]
 

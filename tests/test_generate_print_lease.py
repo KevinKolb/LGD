@@ -560,3 +560,25 @@ def test_bullet_items_are_their_own_indented_paragraphs(real_output):
     bullets = re.findall(r'<p data-option="walls=B" class="bullet">• ', real_output)
     assert len(bullets) == 6
     assert "p.bullet {" in real_output
+
+def test_on_a_phone_nothing_is_wider_than_the_screen(real_output):
+    """The long fill-in lines were wider than a phone, so the page was
+    wider than the screen and the floating Print button, at its right
+    edge, was out of sight. Measured in headless Chrome as iPhone SE, 13
+    and Pixel 7: page width now equals screen width on every document.
+    The rules are screen-only, so printing is untouched."""
+    phone = real_output[real_output.index("@media screen and (max-width: 700px) {"):]
+    phone = phone[:phone.index("\n  }\n")]
+    assert ".blank.long, .blank.medium, .blank.word { min-width: 0;" in phone
+    assert ".blank { max-width: 100%; }" in phone
+    assert "@media print" not in phone
+
+
+def test_the_popup_scrolls_on_a_short_screen(real_output):
+    """Centred with align-items, a popup taller than a phone screen was cut
+    off at the top with no way to scroll up to it."""
+    picker = real_output[real_output.index("  .picker {"):]
+    assert "overflow-y: auto;" in picker[:picker.index("}")]
+    assert "align-items: center;" not in picker[:picker.index("}")]
+    box = real_output[real_output.index("  .picker-box {"):]
+    assert "margin: auto;" in box[:box.index("}")]

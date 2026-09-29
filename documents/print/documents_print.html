@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico">
-<title>Residential Lease</title>
+<title>Documents</title>
 <style>
   @font-face {
     font-family: "Gelasio";
@@ -311,12 +311,121 @@
     .print-button { right: 16px; bottom: 16px; }
     .footer-note code { overflow-wrap: anywhere; }
   }
+
+  /* A row of form fields: full page width, the blanks stretching to fill
+     it in proportion to their underscores in application.md, and 3/8in
+     tall - room to write, without spreading the form over extra pages. */
+  p.field.row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.07in;
+    min-height: 0.375in;
+    margin: 0;
+    line-height: 1.2;
+    text-align: left;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  p.field.row .label { flex: 0 0 auto; white-space: nowrap; }
+  p.field.row .blank + .label { margin-left: 0.12in; }
+  p.field.row .blank.fixed {
+    flex-basis: 0;
+    flex-shrink: 1;
+    min-width: 0.35in;
+    height: 1.2em;
+  }
+  p.field.row .blank.fixed.filled {
+    border-bottom: 1px solid #000;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  p.field {
+    text-align: left;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  p.label-line { margin: 0.9em 0 0; }
+  .blank.fixed { min-width: 0; }
+  /* The form's labels run straight into their blanks; a filled-in address
+     needs a gap the empty line did not. */
+  .blank.fixed.filled { margin-left: 0.3em; margin-right: 0.6em; }
+  .box {
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    border: 1px solid #000;
+    vertical-align: -0.05em;
+  }
+  ul.steps { margin: 0 0 0.85em; padding-left: 1.4em; }
+  ul.steps li { margin: 0 0 0.3em; text-align: justify; }
+
+  p.fill { text-align: left; }
+  p.conditions-heading {
+    margin-top: 1.2em;
+    font-weight: bold;
+    font-style: italic;
+    text-decoration: underline;
+    text-align: left;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  ol.conditions { margin: 0 0 0.85em; padding-left: 2em; }
+  ol.conditions li { margin: 0 0 0.3em; text-align: justify; }
 </style>
 </head>
 <body>
+<section class="document" data-doc="application">
+<h1 class="company">Lower Garden District Properties, Inc.</h1>
+<p class="subtitle">APPLICATION FOR APARTMENT</p>
+<p class="field row"><span class="label">Address of property</span><span class="blank fixed" data-premises style="flex-grow: 20"></span><span class="label">Desired Date of occupancy</span><span class="blank fixed" style="flex-grow: 12"></span></p>
+<p class="field row"><span class="label">Monthly rental rate</span><span class="blank fixed" id="field-rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" id="field-term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" id="field-deposit" style="flex-grow: 6"></span></p>
+<p class="field row"><span class="label">Name of Applicant</span><span class="blank fixed" style="flex-grow: 37"></span></p>
+<p class="field row"><span class="label">Date of birth</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">Social Security #</span><span class="blank fixed" style="flex-grow: 14"></span></p>
+<p class="field row"><span class="label">Telephone #</span><span class="blank fixed" style="flex-grow: 16"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 25"></span></p>
+<p class="field row"><span class="label">Present address</span><span class="blank fixed" style="flex-grow: 27"></span><span class="label">City, State, Zip</span><span class="blank fixed" style="flex-grow: 14"></span></p>
+<p class="field row"><span class="label">Monthly rent</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">How long</span><span class="blank fixed" style="flex-grow: 12"></span></p>
+<p class="field row"><span class="label">Previous Landlord</span><span class="blank fixed" style="flex-grow: 30"></span><span class="label">Previous Landlord&#x27;s phone #</span><span class="blank fixed" style="flex-grow: 14"></span></p>
+<p class="field row"><span class="label">Employer</span><span class="blank fixed" style="flex-grow: 19"></span><span class="label">Business Address</span><span class="blank fixed" style="flex-grow: 27"></span></p>
+<p class="field row"><span class="label">Business phone #</span><span class="blank fixed" style="flex-grow: 16"></span><span class="label">Length of employment</span><span class="blank fixed" style="flex-grow: 17"></span></p>
+<p class="field row"><span class="label">Position</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Monthly salary</span><span class="blank fixed" style="flex-grow: 22"></span></p>
+<p class="field row"><span class="label">Name of supervisor</span><span class="blank fixed" style="flex-grow: 18"></span><span class="label">Supervisor phone #</span><span class="blank fixed" style="flex-grow: 15"></span></p>
+<p class="label-line">Other persons who will occupy this apartment with you:</p>
+<p class="field row"><span class="label">Full name</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 22"></span></p>
+<p class="field row"><span class="label">Full name</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 22"></span></p>
+<p class="field row"><span class="label">Full name</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 22"></span></p>
+<p class="field row"><span class="label">Bank reference</span><span class="blank fixed" style="flex-grow: 18"></span></p>
+<p class="field row"><span class="label">Personal reference name</span><span class="blank fixed" style="flex-grow: 22"></span><span class="label">Phone #</span><span class="blank fixed" style="flex-grow: 14"></span></p>
+<p class="field row"><span class="label">Address</span><span class="blank fixed" style="flex-grow: 31"></span><span class="label">Relationship</span><span class="blank fixed" style="flex-grow: 14"></span></p>
+<p class="field row"><span class="label">Do you have pets? Yes</span><span class="blank fixed" style="flex-grow: 6"></span><span class="label">No</span><span class="blank fixed" style="flex-grow: 6"></span><span class="label">Small</span><span class="blank fixed" style="flex-grow: 5"></span><span class="label">Large</span><span class="blank fixed" style="flex-grow: 5"></span><span class="label">Comments</span><span class="blank fixed" style="flex-grow: 11"></span></p>
+<p data-option="parking=limited" class="label-line">Vehicles to be parked at the property (parking is limited to vehicles listed here):</p>
+<p data-option="parking=limited" class="field row"><span class="label">Make</span><span class="blank fixed" style="flex-grow: 14"></span><span class="label">Model</span><span class="blank fixed" style="flex-grow: 14"></span><span class="label">Color</span><span class="blank fixed" style="flex-grow: 10"></span><span class="label">Plate #</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">State</span><span class="blank fixed" style="flex-grow: 5"></span></p>
+<p data-option="parking=limited" class="field row"><span class="label">Make</span><span class="blank fixed" style="flex-grow: 14"></span><span class="label">Model</span><span class="blank fixed" style="flex-grow: 14"></span><span class="label">Color</span><span class="blank fixed" style="flex-grow: 10"></span><span class="label">Plate #</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">State</span><span class="blank fixed" style="flex-grow: 5"></span></p>
+<p class="field row"><span class="label">In case of emergency please notify</span><span class="blank fixed" style="flex-grow: 36"></span></p>
+<p class="field row"><span class="label">Telephone#</span><span class="blank fixed" style="flex-grow: 14"></span><span class="label">Address</span><span class="blank fixed" style="flex-grow: 25"></span><span class="label">Relationship</span><span class="blank fixed" style="flex-grow: 10"></span></p>
+<p><strong>PLEASE READ CAREFULLY:</strong> I hereby give prospective Lessor and/or its agent permission to check information on this application and my credit history in general.  I hereby release any liability on the part of the prospective Lessor, its agent and/or above references in acquiring information concerning rental, employment or credit history.  This application is made with the understanding that it is subject to acceptance by Lessor and subject to execution by a representative of said company and delivery of a lease covering said premises. Please allow a minimum of 5 days to process your application for both credit and character references.</p>
+<p class="field"><strong>CREDIT CHECK AUTHORIZATION:</strong> I authorize Lessor and its agent to obtain a consumer credit report on me and to verify the information in this application, including my rental and employment history.  Applicant&#x27;s initials<span class="blank fixed" style="min-width: 0.56in"></span></p>
+<p class="field"><strong>HOLDING DEPOSIT — THERE IS NO APPLICATION FEE.</strong>  There is no fee to apply. However, a holding deposit is submitted with this application.  Applicant has deposited herewith the sum of $<span class="blank fixed" style="min-width: 0.70in"></span>, receipt of which is hereby acknowledged, as a non-interest bearing holding deposit.  It is not an application fee and it is not a rental payment.  If this application is approved, the deposit holds the apartment for applicant.  If this application is not approved, the deposit will be returned to applicant in full.  If this application is approved and applicant then fails or refuses to enter into the contemplated lease, Lessor shall retain said deposit as liquidated damages to cover the cost of taking and processing the application and removing the premises from the market and holding same for applicant.</p>
+<p class="field row"><span class="label">Signature of applicant</span><span class="blank fixed" style="flex-grow: 31"></span><span class="label">Date</span><span class="blank fixed" style="flex-grow: 14"></span></p>
+<p><strong>BINDING ARBITRATION — PLEASE READ BEFORE SIGNING.</strong>  <strong>By signing below, you and Lessor both give up the right to have any dispute about this application decided by a court or a jury.  Disputes go to a private arbitrator instead. This applies to both of you equally.</strong></p>
+<p>In exchange for Lessor reviewing this application, checking the references and credit history described above, and holding the apartment on the terms described under HOLDING DEPOSIT, Applicant and Lessor agree as follows.</p>
+<p>Any dispute between Applicant and Lessor — including Lessor&#x27;s agents and employees — arising out of this application or the handling of it will be resolved by binding arbitration rather than in court.  This includes any claim about how the application was processed, about a decision to approve or deny it, and about the handling or return of the holding deposit.  It includes claims under the Fair Housing Act, the Americans with Disabilities Act, and any other federal or Louisiana law prohibiting discrimination.</p>
+<p class="label-line">How the arbitration works:</p>
+<ul class="steps">
+  <li>Either party starts it by giving the other written notice demanding arbitration.  Within fifteen (15) days of that notice, each party names one arbitrator and tells the other party who it named.</li>
+  <li>Within fifteen (15) days after that, those two arbitrators select a neutral third arbitrator, who must be an attorney licensed to practice in Louisiana or a notary commissioned in the parish where the apartment is located.</li>
+  <li>The arbitrators hold a hearing within ninety (90) days of the neutral arbitrator being selected.</li>
+  <li>Notices and other papers required by this section are served by certified United States mail.</li>
+  <li>The arbitration is governed by the Louisiana Binding Arbitration Law, La. R.S. 9:4201 et seq.  The rules of evidence used in Louisiana courts apply at the hearing.</li>
+</ul>
+<p>This section continues to apply after the application is decided, whether it is approved or denied, and regardless of when the dispute arises.</p>
+<p class="field row"><span class="label">Applicant signature</span><span class="blank fixed" style="flex-grow: 29"></span></p>
+<p class="field row"><span class="label">Date</span><span class="blank fixed" style="flex-grow: 34"></span></p>
+</section>
+<section class="document" data-doc="lease">
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">RESIDENTIAL LEASE</p>
-<p class="preamble"><span class="blank medium"></span>(hereinafter referred to as Lessor) hereby leases to <span class="blank medium"></span> (hereinafter referred to as Lessee) the premises known as <span class="blank medium" id="premises"></span> in New Orleans, Louisiana for use as a private residence only.</p>
+<p class="preamble"><span class="blank medium"></span>(hereinafter referred to as Lessor) hereby leases to <span class="blank medium"></span> (hereinafter referred to as Lessee) the premises known as <span class="blank medium" data-premises></span> in New Orleans, Louisiana for use as a private residence only.</p>
 <p class="section">1. <strong>TERM</strong> This lease is for a term commencing on the <span class="blank tiny"></span> day of <span class="blank word"></span> 20<span class="blank tiny"></span>, and ending on the last day of <span class="blank word"></span> 20 <span class="blank tiny"></span>.  If Lessee, or Lessor, desires that this lease terminate at the expiration of its term, written notice must be given to the other party at least 30 days prior to that date to be effective only on the first day of the month. Failure of either party to give this required notice will automatically renew this lease and all of the terms thereof except that the term of the lease will be one month. This provision is a continuing one and will apply at the expiration of the original term and at the expiration of each subsequent term. All other notices required to or by Lessor, or Lessee, will be in accordance with the law.  If Lessee and Lessor desire to renew this lease at the end of one year, there will be an automatic five percent (5%) increase in the rent.  Failure to give proper moving notice will result in forfeiture of any deposits.</p>
 <p class="section">2. <strong>RENT</strong> This lease is made for and in consideration of a monthly rental of<span class="blank word"></span>dollars per month payable in advance on or before 9:00 AM on the FIRST of each month at 1556 Camp Street, New Orleans, Louisiana.  If the rent is received on or prior to date due, Lessee shall be entitled to a deduction of $50 per month or net rental of <span class="blank word"></span> dollars per month.  If Lessee pays by check and said check is not honored on presentation for any reason whatsoever, Lessee agrees to pay an additional sum of $50 as penalty.  This penalty provision is not to be considered a waiver or relinquishment of any of the rights or remedies of a Lessor.  Rents received after the first of the month must be accompanied by a $10 per day late fee.  If rent is not received by 9:00AM on the third, an eviction notice will be served.  If Lessee wants to continue leasing the premises, the rent, late fees, and all costs associated with the eviction process must be paid to Lessor within twenty-four (24) hours of revocation of the eviction notice.</p>
 <p class="section">3. <strong>SECURITY DEPOSIT</strong> Upon execution of this lease contract, Lessee agrees to deposit with Lessor, the sum of <span class="blank word"></span> dollars. This deposit, which is non-interest bearing, is to be held by Lessor as security for the full and faithful performance of all the terms and conditions of this lease.  This security deposit is not an advance rental and Lessor may not deduct any portion of the deposit from rent due to Lessor.  This security deposit is not an advance rental and Lessee&#x27;s failure to fully and faithfully perform all of the terms and conditions of the lease, Lessor retains all of his other rights and remedies.  Lessee does not have the right to cancel this lease and avoid his obligations thereunder by forfeiting the said security deposit.  SECURITY DEPOSIT CANNOT BE USED AS LAST MONTH&#x27;S RENT.</p>
@@ -372,16 +481,61 @@
 <div class="sig-line">Lessee</div>
 </div>
 </div>
+</section>
+<section class="document" data-doc="deposit">
+<h1 class="company">Lower Garden District Properties, Inc.</h1>
+<p class="subtitle">SECURITY DEPOSIT AGREEMENT</p>
+<p class="fill">Received from <span class="blank medium"></span> on <span class="blank word"></span></p>
+<p class="fill"><span class="blank medium"></span> dollars $<span class="blank word"></span></p>
+<p class="fill">As Security Deposit for <span class="blank medium" data-premises></span></p>
+<div class="execution-block">
+<p>Undersigned agrees that this Security Deposit may not be applied as rent and that the full monthly rent will be paid on or before the first day of every month including the last month of occupancy.</p>
+<div class="signature-block">
+<div class="sig-line">Lessee</div>
+<div class="sig-line">Lessee</div>
+<div class="sig-line">Lessee</div>
+</div>
+</div>
+<p class="conditions-heading">RELEASE OF THE SECURITY DEPOSIT IS SUBJECT TO THE FOLLOWING:</p>
+<ol class="conditions" start="1">
+  <li>Full term of lease has expired.</li>
+  <li>Thirty (30) days written notice has been given prior to vacating. Written notice must be received on the first of the month. If thirty (30) days written notice is not given on the first of the month you are required to pay the entire rent for the following month.</li>
+  <li>Property is completely ready for the following tenant. If it is not ready, you are responsible for ALL costs incurred by the new tenant. These costs may include, but are not limited to: accommodations, storage and any additional moving expenses.</li>
+  <li>Entire apartment has been cleaned.  That includes, but not limited to, appliances, cabinets, doors, baseboards, fans, light fixtures, bathroom fixtures, floors.</li>
+  <li>No damage to property beyond fair wear and tear.</li>
+  <li><span data-option="walls=A"><span class="version-label">(A) </span>No stickers, scratches, or holes, other than small nail holes, and no adhesive hooks (such as Command Strips), mounting tape, or poster putty used on any wall or ceiling.</span> <span data-option="walls=B"><span class="version-label">(B) </span>No stickers, scratches, or holes, other than small nail holes made as permitted by the lease, and no adhesive hooks (such as Command Strips), mounting tape, or poster putty used on any wall or ceiling.  No cracking, crumbling, or other damage to the plaster walls or ceilings from large nails, screws, anchors, or heavy-duty mounting hardware; from excessive weight, including any item over eight (8) pounds hung without Lessor&#x27;s prior written consent; or from patching, spackling, or painting by Lessee.</span></li>
+  <li>All burned out light bulbs have been replaced.</li>
+  <li>Air conditioning filters have been cleaned or replaced.</li>
+  <li><span data-option="yard=A"><span class="version-label">(A) </span>Patio/yard and alley up to the gate have been cleaned; including, but not limited to, pet waste and vegetation.</span> <span data-option="yard=B"><span class="version-label">(B) </span>Patio/yard maintenance is Lessor&#x27;s responsibility under Section 17 of the lease; this condition does not apply.</span></li>
+  <li>No unpaid late charges or delinquent rents.</li>
+  <li>All keys have been returned.</li>
+  <li>All debris, rubbish, and discards have been removed.</li>
+</ol>
+<ol class="conditions" start="13">
+  <li>Forwarding address has been left with management.</li>
+  <li>All terms of the lease have been complied with.</li>
+</ol>
+<p>In the event the lease agreement is broken, NO portion of the deposit will be refunded.</p>
+<p>Said premises MUST be returned to Lessor in as good condition as they were at the time the Lessee first occupied the apartment.  The cost of general labor is $40.00 per hour. Labor, materials for cleaning and repairs, and delinquent payments will be deducted from the Security Deposit. If premises cannot be rented due to the condition upon its return to Lessor, the days that it requires to return the premise to acceptable condition will be prorated and will be the Lessee&#x27;s responsibility.</p>
+<p>Security Deposit will be refunded by a check mailed to the forwarding address, made payable to all persons signing the lease. Refunds cannot be picked up at the office.</p>
+<p class="fill">Applicant has deposited herewith the sum of $<span class="blank word"></span>, receipt of which is hereby acknowledged as a non-interest bearing deposit (and not as a rental payment) to be refunded as provided in the Lease Agreement and Security Deposit Agreement.</p>
+<div class="execution-block">
+<p>In the event the application is approved and applicant fails or refuses to enter into the contemplated lease, Lessor shall retain the deposit as liquidated damages to cover the cost of taking and processing this application and removing the premises from the market and holding same for the applicant. In the event this application is disapproved, or for any other reason for which owner is responsible the Lease Agreement is not consummated, this deposit will be refunded to applicant.</p>
+<div class="signature-block">
+<div class="sig-line">Lessee</div>
+<div class="sig-line">Lessee</div>
+<div class="sig-line">Lessee</div>
+</div>
+</div>
+</section>
+
 <div class="footer-note">
-  This is a blank lease generated from <code>documents/lease.md</code> by
-  <code>documents/print/generate_print_lease.py</code> for printing and hand-filling on
-  paper. It will not appear on a printed copy (hidden in print styles).
-  Regenerate after editing <code>documents/lease.md</code>. The "Page X of Y"
-  line at the top and bottom of each page is a CSS page-number counter: it
-  renders correctly when printed from Chrome, Edge, or Safari (18.2+), but not
-  from Firefox, which does not yet support this CSS feature as of early 2026 -
-  if you print from Firefox, those lines will simply be missing rather than
-  wrong.
+  These documents are generated by <code>documents/print/generate_print_packet.py</code>
+  from the same masters as each one's own page (<code>documents/application.md</code>,
+  <code>documents/lease.md</code>, <code>documents/security_deposit.md</code>). This note
+  will not appear on a printed copy. Regenerate after editing any of them or
+  <code>documents/properties.json</code>. Printed together, "Page X of Y" counts the
+  whole printout, not each document.
 </div>
 <button type="button" class="print-button" id="print-button" hidden>Print</button>
 <script>
@@ -392,15 +546,28 @@
 </script>
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
   <form class="picker-box" id="picker-form">
-    <h2 id="picker-title">Which apartment is this lease for?</h2>
-
+    <h2 id="picker-title">Which documents, and for which apartment?</h2>
+    <fieldset class="doc-choices">
+      <legend>Documents</legend>
+      <label class="doc-choice"><input type="checkbox" data-doc-choice value="application"> Application</label>
+      <label class="doc-choice"><input type="checkbox" data-doc-choice value="lease" checked> Lease</label>
+      <label class="doc-choice"><input type="checkbox" data-doc-choice value="deposit" checked> Security deposit</label>
+    </fieldset>
     <label>Address
       <select id="picker-property"></select>
     </label>
     <label>Unit
       <select id="picker-unit"></select>
     </label>
-
+    <label data-for-docs="application">Monthly rental rate <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-rent" data-fills="field-rent">
+    </label>
+    <label data-for-docs="application">Term of lease <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-term" data-fills="field-term">
+    </label>
+    <label data-for-docs="application">Security deposit $ <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-deposit" data-fills="field-deposit">
+    </label>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>

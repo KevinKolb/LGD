@@ -170,6 +170,12 @@ BLANK = re.compile(r"_{2,}")
 # this exact form - comma and period - for every document the same day.
 COMPANY_NAME = "Lower Garden District Properties, Inc."
 
+TITLE = "Residential Lease"
+SUBTITLE = "RESIDENTIAL LEASE"
+# This document's own CSS on top of HTML_HEAD's - none; the other
+# generators each have one, and the combined page gathers them.
+EXTRA_CSS = ""
+
 # HTML_HEAD and PICKER_FOOTER are shared with the security deposit's
 # generator, which fills the same placeholders with its own values - see
 # render_head and render_picker_footer.
@@ -299,8 +305,10 @@ HTML_HEAD = """<!doctype html>
     inset: 0;
     z-index: 10;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    /* Centred by the box's auto margins rather than align-items, so a
+       popup taller than a phone screen scrolls from its top instead of
+       being cut off above it. */
+    overflow-y: auto;
     padding: 16px;
     /* Opaque, not a dimmed overlay: the lease is not shown at all until an
        apartment is picked, so nobody reads or prints the wrong one. */
@@ -308,6 +316,7 @@ HTML_HEAD = """<!doctype html>
   }
   .picker[hidden] { display: none; }
   .picker-box {
+    margin: auto;
     width: 100%;
     max-width: 380px;
     padding: 22px 24px;
@@ -326,6 +335,8 @@ HTML_HEAD = """<!doctype html>
     margin-top: 4px;
     padding: 6px;
     font: inherit;
+    /* 16px or more, or an iPhone zooms the page in on tapping a box. */
+    font-size: max(16px, 1em);
   }
   .picker-summary {
     margin: 4px 0 0;
@@ -334,6 +345,10 @@ HTML_HEAD = """<!doctype html>
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* The combined page's document checkboxes. */
+  .doc-choices { border: 0; margin: 0 0 14px; padding: 0; }
+  .doc-choices legend { padding: 0; margin-bottom: 6px; font-size: 11pt; font-weight: bold; }
+  .picker-box label.doc-choice { display: flex; align-items: center; gap: 0.5em; margin: 0 0 6px; }
   .picker-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
   .picker-actions button {
     padding: 8px 14px;
@@ -428,23 +443,73 @@ HTML_HEAD = """<!doctype html>
       padding: 0 0 0.25in;
     }
   }
+  /* The combined page. A document's wrapper takes no part in layout, so
+     its paragraphs break across pages exactly as on the document's own
+     page (wrapped in a real box, Chrome paginated the lease differently).
+     The break before each later document goes on its heading instead. */
+  section.document { display: contents; }
+  section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {
+    page-break-before: always;
+    break-before: page;
+  }
   @media screen {
     body { padding: 0.5in 0.75in 1in; box-shadow: 0 0 12px rgba(0,0,0,.15); }
+    section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {
+      margin-top: 0.6in;
+      padding-top: 0.5in;
+      border-top: 1px dashed #999;
+    }
+  }
+  /* A phone. Screen only: print keeps its own fixed 6.8in column above,
+     so this cannot change how anything paginates. The long fill-in lines
+     are wider than a phone, and a page wider than the screen puts
+     everything at its right edge - the Print button included - out of
+     sight, which is how the button went missing on phones. */
+  @media screen and (max-width: 700px) {
+    body { padding: 20px 16px 96px; box-shadow: none; }
+    .blank.long, .blank.medium, .blank.word { min-width: 0; width: 100%; max-width: 3in; }
+    .blank { max-width: 100%; }
+    .blank.fixed { min-width: 0 !important; width: 40%; }
+    /* "body" for weight: the application's own rules come later in the
+       page and would otherwise win. */
+    body p.field.row { display: block; min-height: 0; margin: 0 0 0.3em; }
+    body p.field.row .label,
+    body p.field.row .blank + .label { display: block; margin: 0.5em 0 0; white-space: normal; }
+    body p.field.row .blank.fixed { display: block; width: 100%; height: 1.4em; margin: 0; }
+    body p.field.row .blank.fixed.filled { height: auto; white-space: normal; }
+    p { text-align: left; }
+    .sig-row { flex-wrap: wrap; }
+    .print-button { right: 16px; bottom: 16px; }
+    .footer-note code { overflow-wrap: anywhere; }
   }
 </style>
 </head>
 <body>
-<h1 class="company">__COMPANY__</h1>
+"""
+
+# The heading every document opens with. Kept apart from HTML_HEAD because
+# the combined page (generate_print_packet.py) prints one per document.
+TITLE_BLOCK = """<h1 class="company">__COMPANY__</h1>
 <p class="subtitle">__SUBTITLE__</p>
 """
 
 
-def render_head(company: str, title: str, subtitle: str) -> str:
-    """HTML_HEAD with its placeholders filled and the font spliced in."""
+def render_title_block(company: str, subtitle: str) -> str:
+    return (TITLE_BLOCK.replace("__COMPANY__", html.escape(company))
+            .replace("__SUBTITLE__", html.escape(subtitle)))
+
+
+def render_page_head(company: str, title: str) -> str:
+    """HTML_HEAD with its placeholders filled and the font spliced in -
+    everything up to and including <body>, with no document heading."""
     return (HTML_HEAD.replace(FONT_FACE_MARKER, font_face_rule())
             .replace("__COMPANY__", html.escape(company))
-            .replace("__TITLE__", html.escape(title))
-            .replace("__SUBTITLE__", html.escape(subtitle)))
+            .replace("__TITLE__", html.escape(title)))
+
+
+def render_head(company: str, title: str, subtitle: str) -> str:
+    """The page head and the document's own heading: one document's page."""
+    return render_page_head(company, title) + render_title_block(company, subtitle)
 
 
 LEASE_FOOTER_NOTE = """
@@ -475,7 +540,8 @@ PRINT_BUTTON = """
 PICKER_FOOTER = """
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
   <form class="picker-box" id="picker-form">
-    <h2 id="picker-title">Which apartment is this __DOCUMENT__ for?</h2>
+    <h2 id="picker-title">__QUESTION__</h2>
+__DOC_CHOICES__
     <label>Address
       <select id="picker-property"></select>
     </label>
@@ -543,10 +609,13 @@ __PROPERTIES_JSON__
   }
 
   function applyProperty(property, unit) {
-    var premises = document.getElementById("premises");
     var place = property.units.length ? property.address + ", Unit " + unit : property.address;
-    premises.textContent = place;
-    premises.classList.add("filled");
+    // An id on a one-document page; data-premises on the combined page,
+    // where each document has its own premises blank.
+    document.querySelectorAll("#premises, [data-premises]").forEach(function (premises) {
+      premises.textContent = place;
+      premises.classList.add("filled");
+    });
     document.title = baseTitle + " - " + place;
     document.querySelectorAll("[data-option]").forEach(function (element) {
       var option = optionParts(element);
@@ -574,7 +643,44 @@ __PROPERTIES_JSON__
   //
   // The dashboard's "View paper lease" button opens this page with #view,
   // which skips the dialog so the lease can just be read on screen.
+  // The combined page's document checkboxes: an unticked document is
+  // hidden, and so is any popup question only it asks. A page of one
+  // document has no checkboxes, and this does nothing.
+  var docChoices = document.querySelectorAll("input[data-doc-choice]");
+  function chosenDocs() {
+    var chosen = {};
+    docChoices.forEach(function (box) { if (box.checked) { chosen[box.value] = true; } });
+    return chosen;
+  }
+  function showQuestions() {
+    var chosen = chosenDocs();
+    document.querySelectorAll(".picker-box [data-for-docs]").forEach(function (question) {
+      question.hidden = !question.getAttribute("data-for-docs").split(" ").some(function (doc) {
+        return chosen[doc];
+      });
+    });
+    var none = docChoices.length > 0 && Object.keys(chosen).length === 0;
+    document.getElementById("picker-fill").disabled = none || !properties.length;
+    document.getElementById("picker-blank").disabled = none;
+  }
+  function showDocs() {
+    if (!docChoices.length) { return; }
+    var chosen = chosenDocs();
+    document.querySelectorAll("section.document").forEach(function (section) {
+      section.hidden = !chosen[section.getAttribute("data-doc")];
+    });
+  }
+  // The manager page can pre-tick documents: ?docs=lease,deposit
+  var preset = new URLSearchParams(window.location.search).get("docs");
+  if (preset !== null && docChoices.length) {
+    var wanted = preset.split(",");
+    docChoices.forEach(function (box) { box.checked = wanted.indexOf(box.value) !== -1; });
+  }
+  docChoices.forEach(function (box) { box.addEventListener("change", showQuestions); });
+  showQuestions();
+
   function finish() {
+    showDocs();
     picker.hidden = true;
     document.getElementById("print-button").hidden = false;
     if (window.location.hash === "#view") { return; }
@@ -596,6 +702,7 @@ __PROPERTIES_JSON__
   } else {
     document.getElementById("picker-fill").disabled = true;
   }
+  showQuestions();
   propertySelect.addEventListener("change", showUnits);
   document.getElementById("picker-form").addEventListener("submit", function (event) {
     event.preventDefault();
@@ -604,6 +711,7 @@ __PROPERTIES_JSON__
     // Optional boxes (a document's own, e.g. the application's rent): each
     // fills the blank it names; left empty, the blank stays to write in.
     document.querySelectorAll("input[data-fills]").forEach(function (input) {
+      if (input.closest("[hidden]")) { return; }  // a document not chosen
       var target = document.getElementById(input.getAttribute("data-fills"));
       var value = input.value.trim();
       if (target && value) {
@@ -635,19 +743,37 @@ __PROPERTIES_JSON__
 """
 
 
-def render_picker_footer(document_name: str, fields: tuple[tuple[str, str], ...] = ()) -> str:
+def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
+                         documents: tuple[tuple[str, str, bool], ...] = ()) -> str:
     """The apartment picker, its script and the inlined apartment table -
     shared by every printable document that names the premises.
 
     `fields` adds optional text boxes to the popup, as (label, blank id)
-    pairs: whatever is typed fills the element with that id."""
-    extra = "\n".join(
-        f'    <label>{html.escape(label)} <span class="optional">(optional)</span>\n'
-        f'      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}">\n'
-        f"    </label>"
-        for label, target in fields
-    )
-    return PRINT_BUTTON + (PICKER_FOOTER.replace("__DOCUMENT__", html.escape(document_name))
+    pairs, or (label, blank id, doc key) when the combined page asks it
+    only for that document: whatever is typed fills the element with that
+    id. `documents`, on the combined page only, is (key, name, ticked) per
+    document, offered as checkboxes above the apartment questions."""
+    lines = []
+    for field in fields:
+        label, target = field[0], field[1]
+        for_docs = f' data-for-docs="{html.escape(field[2])}"' if len(field) > 2 else ""
+        lines.append(
+            f'    <label{for_docs}>{html.escape(label)} <span class="optional">(optional)</span>\n'
+            f'      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}">\n'
+            f"    </label>")
+    extra = "\n".join(lines)
+    if documents:
+        boxes = "\n".join(
+            f'      <label class="doc-choice"><input type="checkbox" data-doc-choice value="{html.escape(key)}"'
+            f'{" checked" if ticked else ""}> {html.escape(name)}</label>'
+            for key, name, ticked in documents)
+        choices = f'    <fieldset class="doc-choices">\n      <legend>Documents</legend>\n{boxes}\n    </fieldset>'
+        question = "Which documents, and for which apartment?"
+    else:
+        choices = ""
+        question = f"Which apartment is this {document_name} for?"
+    return PRINT_BUTTON + (PICKER_FOOTER.replace("__QUESTION__", html.escape(question))
+            .replace("__DOC_CHOICES__", choices)
             .replace("__EXTRA_FIELDS__", extra)
             .replace(PROPERTIES_MARKER, properties_json(load_properties())))
 
@@ -1033,7 +1159,9 @@ def check_section_options(paragraphs: list[str]) -> None:
             )
 
 
-def generate(source_text: str) -> str:
+def render_body(source_text: str) -> str:
+    """The lease itself, without the page around it - shared by this page
+    and the combined one (generate_print_packet.py)."""
     body_source, signature_source = split_source(source_text)
     body_blocks = extract_body_blocks(body_source)
     labels = parse_signature_labels(signature_source)
@@ -1081,11 +1209,13 @@ def generate(source_text: str) -> str:
         + "\n</div>"
     )
 
+    return "\n".join(paragraphs[:-1]) + "\n" + tail_html
+
+
+def generate(source_text: str) -> str:
     return (
-        render_head(COMPANY_NAME, "Residential Lease", "RESIDENTIAL LEASE")
-        + "\n".join(paragraphs[:-1])
-        + "\n"
-        + tail_html
+        render_head(COMPANY_NAME, TITLE, SUBTITLE)
+        + render_body(source_text)
         + LEASE_FOOTER_NOTE
         + render_picker_footer("lease")
     )

@@ -194,7 +194,9 @@ def render_list(block: str) -> str:
     return f'<ul class="steps">\n{rows}\n</ul>'
 
 
-def generate(source_text: str) -> str:
+def render_body(source_text: str) -> str:
+    """The form itself, without the page around it - shared by this page
+    and the combined one (generate_print_packet.py)."""
     parts = []
     for block in body_blocks(source_text):
         tag = ""
@@ -223,9 +225,16 @@ def generate(source_text: str) -> str:
     for lead, _, target in OFFICE_FIELDS:
         if body.count(f'id="{target}"') != 1:
             raise SystemExit(f'{SOURCE.name} needs exactly one "{lead}___" blank.')
+    return body
+
+
+# The popup's optional boxes for this document, as (label, blank id).
+PICKER_FIELDS = tuple((label, target) for _, label, target in OFFICE_FIELDS)
+
+
+def generate(source_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
-    fields = tuple((label, target) for _, label, target in OFFICE_FIELDS)
-    return head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("application", fields)
+    return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("application", PICKER_FIELDS)
 
 
 def main() -> None:

@@ -191,7 +191,12 @@ Every printable document also carries a floating **Print** button
 2026-09-29 so a document opened with View is one click from paper. It is
 screen-only, waits on `document.fonts.ready` like the auto-print, and stays
 hidden until the popup closes, so it can never print a lease before its
-apartment is picked.
+apartment is picked. On a phone it had been out of sight: the long
+fill-in lines made the page wider than the screen, putting the button past
+its right edge. The `@media screen and (max-width: 700px)` rules in
+`HTML_HEAD` fix that (and stack the application's rows one field per line);
+they are screen-only, so printing is untouched - verified by comparing every
+printed page before and after, blank and filled, at desktop and phone widths.
 
 The rule, settled by the user on 2026-09-28: **every lease has the same
 sections with the same numbers; only the wording inside §17 PATIO/YARD,
@@ -262,6 +267,37 @@ only the opening "made part of and incorporated into..." paragraph and the
 closing acknowledgement, in the generator. Signature and date lines for the
 Lessor/Agent and three Lessees. On the manager page it sits at the bottom,
 unnumbered, under "No longer in use" (moved from step 2c on 2026-09-29).
+
+### Several documents at once
+
+[`documents/print/generate_print_packet.py`](documents/print/generate_print_packet.py)
+builds `documents_print.html`: the application, lease and security deposit
+on one page, each from its own generator's `render_body` - never copied, so
+it cannot drift from the single pages. The popup gains a checkbox per
+document (`?docs=lease,deposit` pre-ticks them) and asks each question once:
+the address and unit for all, the application's `OFFICE_FIELDS` only while
+it is ticked (`data-for-docs`). Unticked documents are hidden. Manager page
+step 2c. **Regenerate it after editing any of the three masters or
+`properties.json`**, alongside that document's own page. The addendum is
+left out: no longer in use, and it names a fixed address.
+
+Two things that are load-bearing:
+
+- **`section.document { display: contents; }`.** Wrapped in a real box,
+  Chrome paginated the lease differently from its own page. With no box,
+  every document prints exactly as on its own page - checked for each
+  document at every address. The break before each later document sits on
+  its `h1.company` instead. The one known difference: at 1364 Camp the
+  lease fills 6 pages when another document follows it, against 7 on its
+  own, with the signatures still kept together. A spacer to force 7 put an
+  empty page into the printout instead, so it was dropped.
+- **Premises blanks become `data-premises`**, since an id may appear once
+  per page; the picker fills `#premises, [data-premises]`. The generator
+  fails the build on any other id repeated across documents.
+
+Printed together, "Page X of Y" counts the whole printout: Chrome can give
+each document its own header (named pages), but it cannot restart the page
+counter.
 
 `HTML_FOOTER` is an ordinary Python string, so a `\"` in its JavaScript
 loses its backslash and breaks the entire script - it did, once, while the
