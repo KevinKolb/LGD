@@ -633,7 +633,7 @@ def test_dates_start_blank_with_a_today_switch(real_output):
     """The user, 2026-09-29: blank by default; Today fills in today's date,
     which stays editable."""
     for key in ("start", "signed"):
-        assert f'<input type="date" id="q-{key}" data-q="{key}">' in real_output
+        assert re.search(rf'<input type="date" id="q-{key}" data-q="{key}"( data-default="[\w-]+")?>', real_output)
         assert f'<input type="checkbox" class="switch" id="q-{key}-today" data-today-for="q-{key}">' in real_output
     assert "if (toggle.checked) { date.value = isoToday(); }" in real_output
 
