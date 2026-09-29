@@ -93,7 +93,8 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     Manager and Admin links come from the shared footer script."""
     response = client.get("/", auth=None)
     assert response.status_code == 200
-    assert "<h2>Lower Garden District Properties, Inc. Portal</h2>" in response.text
+    assert "<h1>Lower Garden District Properties, Inc.</h1>" in response.text
+    assert "<h2>Portal</h2>" in response.text
     # Manager and Admin sit below a line, in Tulane light blue.
     assert '<hr class="links-divider">' in response.text
     assert '<a class="staff" href="manager/">Manager</a>' in response.text
