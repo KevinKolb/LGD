@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The little house: the site's icon everywhere (favicon.ico is the same house). -->
+  <g stroke="#00391e" stroke-width="2" stroke-linejoin="round">
+    <rect x="15" y="29" width="34" height="28" fill="#418fde"/>
+    <path d="M32 5 L6 29 H58 Z" fill="#006747"/>
+    <rect x="27" y="40" width="10" height="17" fill="#006747"/>
+  </g>
+</svg>
