@@ -166,19 +166,22 @@ def test_generated_file_on_disk_matches_a_fresh_run(real_output):
 
 
 def test_every_site_page_gets_a_home_button():
-    """shared/footer.js floats Home on every page but home itself; the
-    legal pages put their Back in its group, before the script runs."""
+    """Home is a plain footer link, first, on every page but home itself;
+    only the document-style legal pages also float it, beside their Back
+    (the user, 2026-09-29)."""
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
     footer = (root / "shared" / "footer.js").read_text(encoding="utf-8")
-    assert 'home.textContent = "Home";' in footer
-    assert "if (here === root) return;" in footer
+    assert '[{ path: "", text: "Home" }].concat(LINKS)' in footer
+    assert "const links = onHome ? LINKS :" in footer
+    assert "if (onHome || !group) return;" in footer
     for page in ("login", "resident", "applicant", "admin", "manager"):
-        assert "shared/footer.js" in (root / page / "index.html").read_text(encoding="utf-8"), page
+        html = (root / page / "index.html").read_text(encoding="utf-8")
+        assert "shared/footer.js" in html, page
+        assert 'class="site-float"' not in html, page
     for page in ("legal_research.html", "legal_review.html"):
         html = (root / "manager" / page).read_text(encoding="utf-8")
         assert html.index('<div class="site-float">') < html.index('src="../shared/footer.js"'), page
-
 
 def test_the_footer_lists_applicant_first_and_no_sign_in():
     """Applicant, Resident, Manager, Admin; no Sign in link - pages that

@@ -28,8 +28,14 @@
     : window.location.href;
   const root = src.replace(/shared\/footer\.js(?:\?.*)?$/, "");
 
+  const here = window.location.href.split(/[?#]/)[0].replace(/index\.html$/, "");
+  const onHome = here === root;
+
+  // Home is an ordinary footer link, first, on every page but home itself
+  // (the user, 2026-09-29: "like everything else").
   const footer = document.createElement("footer");
-  for (const link of LINKS) {
+  const links = onHome ? LINKS : [{ path: "", text: "Home" }].concat(LINKS);
+  for (const link of links) {
     const anchor = document.createElement("a");
     anchor.href = root + link.path;
     anchor.textContent = link.text;
@@ -37,13 +43,13 @@
   }
   document.body.append(footer);
 
-  // A floating Home button, bottom right, on every page but home itself.
-  // A page with its own floating buttons (the legal pages' Back) puts them
-  // in a .site-float group, and Home joins it on the left; otherwise the
-  // group is made here. The printable documents do not load this script -
-  // they are self-contained files - and carry their own Home the same way.
-  const here = window.location.href.split(/[?#]/)[0].replace(/index\.html$/, "");
-  if (here === root) return;
+  // The document-style pages - the legal research log and checklist - also
+  // float Home beside their own Back button: they put Back in a .site-float
+  // group before this script, and Home joins it on the left. Ordinary pages
+  // have no group and float nothing. (The printable documents do not load
+  // this script; they float Back and Print only.)
+  const group = document.querySelector(".site-float");
+  if (onHome || !group) return;
   const style = document.createElement("style");
   style.textContent = `
     .site-float {
@@ -66,12 +72,6 @@
     }
     @media print { .site-float { display: none; } }`;
   document.head.append(style);
-  let group = document.querySelector(".site-float");
-  if (!group) {
-    group = document.createElement("div");
-    group.className = "site-float";
-    document.body.append(group);
-  }
   const home = document.createElement("a");
   home.href = root;
   home.className = "home-button";

@@ -255,11 +255,12 @@ popup closes, so it can never print a lease before its apartment is
 picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
 `render_head` opens, which keeps the popup and buttons out of the zoom.
 
-**Every site page has a Home button** (the user, 2026-09-29). `shared/footer.js`,
-which every site page loads, floats Home bottom right on every page but the
-home page itself; a page with its own floating buttons (the legal pages'
-Back) puts them in a `.site-float` group *before* the script tag, and Home
-joins it on the left. The documents don't load that script (they are
+**Every site page has a Home link** (the user, 2026-09-29). `shared/footer.js`,
+which every site page loads, puts "Home" first in the footer, as a plain
+link like the others, on every page but the home page itself. Only the
+document-style legal pages float it too: they put their Back in a
+`.site-float` group *before* the script tag, and Home joins it on the left;
+a page with no such group floats nothing. The documents don't load that script (they are
 self-contained files), and **the documents have no Home** (the user,
 the same day, after one was added): they float Back and Print only, and
 Back returns to the page that opened them. While a document's popup is
