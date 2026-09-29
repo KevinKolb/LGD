@@ -24,7 +24,7 @@
 </script>
 <link rel="icon" href="favicon.ico?v=1">
 <link rel="stylesheet" href="shared/site.css">
-<title>Resident Portal</title>
+<title>Lower Garden District Properties, Inc. Portal</title>
 <style>
   :root {
     --bg: #f2f2f2;
@@ -109,6 +109,24 @@
     border-color: var(--accent2);
     color: var(--ink);
   }
+  /* Below the line, the staff areas, filled with Tulane light blue - with
+     dark ink labels, since white does not read on a blue this pale. */
+  .links-divider {
+    width: 100%;
+    margin: 6px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+  }
+  .links a.staff {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: var(--ink);
+  }
+  .links a.staff:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
   /* Layout comes from /shared/site.css. Here the title and card are
      centered as one unit by auto margins - one above the title, one below
      the card - rather than by justify-content, so the shared footer can
@@ -169,13 +187,14 @@
 </header>
 
 <main>
-  <h2>Resident Portal</h2>
+  <h2>Lower Garden District Properties, Inc. Portal</h2>
   <p class="hint">Choose your role.</p>
   <div class="links">
     <a href="applicant/">Applicant</a>
     <a href="resident/">Resident</a>
-    <a href="manager/">Manager</a>
-    <a href="admin/">Admin</a>
+    <hr class="links-divider">
+    <a class="staff" href="manager/">Manager</a>
+    <a class="staff" href="admin/">Admin</a>
   </div>
 </main>
 
