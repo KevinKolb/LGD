@@ -241,29 +241,60 @@
     });
   }
 
+  // Most senior first: `role` is the first of these a person holds.
+  const ROLE_ORDER = ["admin", "manager", "resident", "applicant"];
+
+  async function readRows(current, path) {
+    const response = await fetch(SUPABASE_URL + "/rest/v1/" + path, {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: "Bearer " + current.access_token,
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  }
+
   /**
-   * This person's row from the `users` table: username, display_name, role,
-   * manager_id, person_id. Row level security is what limits it to their
-   * own row - the query asks for the whole table and gets exactly one row
-   * back, or none if the account has not been confirmed yet.
+   * This person's row from the `people` table - everyone is one row there,
+   * logins included, with a yes/no column per role (the user, 2026-09-29:
+   * someone can be applicant and resident, or manager and admin). Row level
+   * security limits the query to their own row, or none if the account has
+   * not been confirmed yet.
+   *
+   * Returns { username, display_name, email, manager_id, person_id, roles,
+   * role, role_label }: `roles` is every role held, `role` the most senior
+   * one, `role_label` all of them for showing ("admin, manager").
+   *
+   * Until supabase/migrations/001 has merged the old `webusers` table into
+   * `people`, the role columns do not exist and that query fails; the old
+   * table is read instead, so signing in never waits on a migration.
    */
   async function profile() {
     const current = await session();
     if (!current) return null;
-    const response = await fetch(
-      SUPABASE_URL +
-        "/rest/v1/webusers?select=username,display_name,role,manager_id,person_id,email",
-      {
-        headers: {
-          apikey: SUPABASE_PUBLISHABLE_KEY,
-          Authorization: "Bearer " + current.access_token,
-          Accept: "application/json",
-        },
-      }
-    );
-    if (!response.ok) return null;
-    const rows = await response.json();
-    return rows.length ? rows[0] : null;
+    let roles;
+    let row;
+    const people = await readRows(current,
+      "people?select=id,username,full_name,email,manager_id," +
+        "is_applicant,is_resident,is_manager,is_admin");
+    if (people) {
+      if (!people.length) return null;
+      row = people[0];
+      roles = ROLE_ORDER.filter((name) => row["is_" + name]);
+      row = { username: row.username, display_name: row.full_name, email: row.email,
+              manager_id: row.manager_id, person_id: row.id };
+    } else {
+      const old = await readRows(current,
+        "webusers?select=username,display_name,role,manager_id,person_id,email");
+      if (!old || !old.length) return null;
+      const { role, ...rest } = old[0];
+      row = rest;
+      roles = [{ landlord: "manager", tenant: "resident" }[role] || role];
+    }
+    if (!roles.length) roles = ["applicant"];
+    return { ...row, roles, role: roles[0], role_label: roles.join(", ") };
   }
 
   /**
@@ -353,11 +384,12 @@
    *   { ok: false, reason: "signed-out" } - nobody is signed in (this has
    *                                         already started navigating to
    *                                         the login page)
-   *   { ok: false, reason: "unconfirmed" }- signed in, but no `users` row
+   *   { ok: false, reason: "unconfirmed" }- signed in, but no `people` row
    *                                         yet, so the emailed link has
    *                                         not been clicked
    *   { ok: false, reason: "forbidden", profile } - signed in as someone
-   *                                         without the role this page needs
+   *                                         holding none of the roles this
+   *                                         page needs
    *
    * The three failures are deliberately distinct: telling a signed-in
    * applicant "you do not have access" is right, while bouncing them to a
@@ -371,7 +403,7 @@
     }
     const who = await profile();
     if (!who) return { ok: false, reason: "unconfirmed" };
-    if (!roles.includes(who.role)) {
+    if (!who.roles.some((role) => roles.includes(role))) {
       return { ok: false, reason: "forbidden", profile: who };
     }
     return { ok: true, profile: who };

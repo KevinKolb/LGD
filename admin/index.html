@@ -155,7 +155,9 @@ function usersSection(users, managers) {
   );
   const body = el("tbody");
   for (const u of users) {
-    const scope = u.role === "admin" ? "All managers" : (byId[u.manager_id] || u.manager_id || "—");
+    // role is every role this person holds, e.g. "admin, manager".
+    const isAdmin = (u.roles || [u.role]).includes("admin");
+    const scope = isAdmin ? "All managers" : (byId[u.manager_id] || u.manager_id || "—");
     body.append(el("tr", {},
       el("td", { text: u.username }), el("td", { text: u.role }),
       el("td", { text: scope })));

@@ -81,9 +81,14 @@ CREATE INDEX IF NOT EXISTS properties_manager ON properties (manager_id, address
 -- does not: the `managers` table only exists on the Postgres backend, since
 -- locally that data lives in accounts.json. The real foreign key is added by
 -- supabase/migrations/001_auth_people_rls.sql, where the target table exists.
+--
+-- A person holds any mix of four roles, as yes/no columns (the user,
+-- 2026-09-29: "User can be applicant and resident ... Can be manager and
+-- admin too. All one table."). On the Postgres backend their login lives on
+-- this same row too - username, password_hash, auth_id - added by
+-- supabase/migrations/001 (locally, logins are in accounts.json).
 CREATE TABLE IF NOT EXISTS people (
     id           TEXT PRIMARY KEY,
-    role         TEXT NOT NULL,
     full_name    TEXT NOT NULL,
     first_name   TEXT,
     last_name    TEXT,
@@ -91,10 +96,15 @@ CREATE TABLE IF NOT EXISTS people (
     phone        TEXT,
     property_id  TEXT REFERENCES properties(id),
     manager_id  TEXT,
-    created_at   TEXT NOT NULL
+    created_at   TEXT NOT NULL,
+    is_applicant BOOLEAN NOT NULL DEFAULT FALSE,
+    is_resident  BOOLEAN NOT NULL DEFAULT FALSE,
+    is_manager   BOOLEAN NOT NULL DEFAULT FALSE,
+    is_admin     BOOLEAN NOT NULL DEFAULT FALSE,
+    -- An applicant taken off the manager's list, still in the directory.
+    archived_at  TEXT
 );
 CREATE INDEX IF NOT EXISTS people_property ON people (property_id);
-CREATE INDEX IF NOT EXISTS people_role ON people (role);
 CREATE INDEX IF NOT EXISTS people_manager ON people (manager_id);
 
 -- News a manager/admin posts, from the manager dashboard. created_at is
@@ -119,9 +129,11 @@ APPLICATION_COLUMNS = [
     "roommates_json", "created_at",
 ]
 PERSON_COLUMNS = [
-    "id", "role", "full_name", "first_name", "last_name", "email", "phone",
+    "id", "full_name", "first_name", "last_name", "email", "phone",
     "property_id", "manager_id", "created_at",
+    "is_applicant", "is_resident", "is_manager", "is_admin", "archived_at",
 ]
+ROLES = ("applicant", "resident", "manager", "admin")
 NEWS_COLUMNS = ["id", "manager_id", "headline", "article", "created_by", "created_at"]
 
 # The same DDL is valid on both backends. Kept as one derived constant so a
@@ -171,6 +183,13 @@ ADDED_COLUMNS = [
     # from supabase/migrations/002_manager_adds_applicants.sql as well.
     ("people", "first_name", "TEXT"),
     ("people", "last_name", "TEXT"),
+    # The four roles as columns, replacing the single `role` (2026-09-29) -
+    # read across once and dropped by _role_columns_sql below.
+    ("people", "is_applicant", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("people", "is_resident", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("people", "is_manager", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("people", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("people", "archived_at", "TEXT"),
     # The live applications table was created before the application form
     # grew these three, and CREATE TABLE IF NOT EXISTS will not add them.
     # Found on 2026-09-08 by comparing the deployed table against SCHEMA:
@@ -180,6 +199,21 @@ ADDED_COLUMNS = [
     ("applications", "property_interest", "TEXT"),
     ("applications", "consent_to_text", "INTEGER NOT NULL DEFAULT 0"),
     ("applications", "roommates_json", "TEXT NOT NULL DEFAULT '[]'"),
+]
+
+# The single people.role, read into the four role columns and dropped - on
+# either backend, once (only while the column is there). On Postgres,
+# supabase/migrations/001 does the same and also merges `webusers` in; the
+# two agree, so it does not matter which runs first. landlord and tenant
+# are that column's pre-rename spellings.
+ROLE_COLUMN_MIGRATION = [
+    "UPDATE people SET "
+    "is_applicant = (is_applicant OR role = 'applicant'), "
+    "is_resident = (is_resident OR role IN ('resident', 'tenant')), "
+    "is_manager = (is_manager OR role IN ('manager', 'landlord')), "
+    "is_admin = (is_admin OR role = 'admin')",
+    "DROP INDEX IF EXISTS people_role",
+    "ALTER TABLE people DROP COLUMN role",
 ]
 
 SUPERSEDED_TABLES = [
@@ -227,6 +261,10 @@ def _sqlite_init(db_path: str) -> None:
                 connection.execute(
                     f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"
                 )
+        people_columns = [row[1] for row in connection.execute("PRAGMA table_info(people)")]
+        if "role" in people_columns:
+            for statement in ROLE_COLUMN_MIGRATION:
+                connection.execute(statement)
 
 
 def _sqlite_record_application(db_path: str, row: dict[str, Any]) -> None:
@@ -338,6 +376,14 @@ async def _pg_pool(dsn: str):
                         f'ALTER TABLE "{table}" '
                         f'ADD COLUMN IF NOT EXISTS "{column}" {column_type}'
                     )
+                has_role = await connection.fetchval(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name = 'people' AND column_name = 'role'"
+                )
+                if has_role:
+                    async with connection.transaction():
+                        for statement in ROLE_COLUMN_MIGRATION:
+                            await connection.execute(statement)
             _pools[dsn] = pool
     return _pools[dsn]
 
@@ -497,32 +543,31 @@ async def list_news(db_path: str, *,
     return await asyncio.to_thread(_sqlite_list_news, db_path, manager_id)
 
 
-async def create_person(db_path: str, *, role: str, full_name: str,
+async def create_person(db_path: str, *, full_name: str, role: str | None = None,
+                        roles: tuple[str, ...] = (),
                         email: str | None = None, phone: str | None = None,
                         property_id: str | None = None,
                         manager_id: str | None = None) -> str:
-    """Add someone to the directory. Returns their generated id.
+    """Add someone to the directory, holding `role` and/or `roles`. Returns
+    their generated id.
 
-    Creating a *login* is what has to create one of these (every user has a
-    person), but the reverse is not true and never will be: an applicant who
-    filled in the form, or a resident who has never signed in, is a person
-    with no user. This is the "other ways to create people" half.
-
-    On the Supabase backend a login inserted directly into `users` gets its
-    person row from a database trigger instead, so that the rule holds even
-    for rows this code never sees - see
-    supabase/migrations/001_auth_people_rls.sql.
+    Every login is a person, but not every person has a login: an applicant
+    a manager added, or a resident who has never signed in, is a person
+    with none. On Supabase a website signup makes its person itself, in a
+    trigger - see supabase/migrations/001_auth_people_rls.sql.
     """
+    held = set(roles) | ({role} if role else set())
+    held = {"manager" if r == "landlord" else "resident" if r == "tenant" else r for r in held}
     person_id = secrets.token_hex(12)
     row = {
         "id": person_id,
-        "role": role,
         "full_name": full_name,
         "email": email,
         "phone": phone,
         "property_id": property_id,
         "manager_id": manager_id,
         "created_at": _now(),
+        **{f"is_{name}": name in held for name in ROLES},
     }
     if _is_postgres(db_path):
         await _pg_create_person(db_path, row)
@@ -532,7 +577,8 @@ async def create_person(db_path: str, *, role: str, full_name: str,
 
 
 class ApplicantError(ValueError):
-    """Why an applicant could not be added - worded for the manager page."""
+    """Why an applicant could not be added or changed - worded for the
+    manager page."""
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -560,37 +606,101 @@ def clean_applicant(first_name: str, last_name: str, email: str, mobile: str) ->
     return {"first_name": first, "last_name": last, "email": email, "mobile": mobile}
 
 
-def _sqlite_email_taken(db_path: str, email: str) -> bool:
+def applicant_view(row: dict[str, Any]) -> dict[str, Any]:
+    """One applicant as the manager page shows them - the same fields as
+    lgd_applicant_json in migration 002."""
+    return {
+        "id": row["id"],
+        "first_name": row.get("first_name") or row["full_name"],
+        "last_name": row.get("last_name") or "",
+        "email": row.get("email"),
+        "mobile": row.get("phone"),
+        "created_at": row["created_at"],
+        "archived": row.get("archived_at") is not None,
+        "is_resident": bool(row.get("is_resident")),
+    }
+
+
+def _sqlite_rows(db_path: str, query: str, params: tuple = ()) -> list[dict[str, Any]]:
     with _connect(db_path) as connection:
-        return connection.execute(
-            "SELECT 1 FROM people WHERE lower(email) = ?", (email,)
-        ).fetchone() is not None
+        return [dict(row) for row in connection.execute(query, params).fetchall()]
 
 
-async def _pg_email_taken(dsn: str, email: str) -> bool:
+def _sqlite_write(db_path: str, query: str, params: tuple) -> None:
+    with _connect(db_path) as connection:
+        connection.execute(query, params)
+
+
+async def _pg_rows(dsn: str, query: str, *args: Any) -> list[dict[str, Any]]:
     pool = await _pg_pool(dsn)
     async with pool.acquire() as connection:
-        return await connection.fetchval(
-            "SELECT 1 FROM people WHERE lower(email) = $1", email
-        ) is not None
+        return [dict(row) for row in await connection.fetch(query, *args)]
+
+
+async def _pg_write(dsn: str, query: str, *args: Any) -> None:
+    pool = await _pg_pool(dsn)
+    async with pool.acquire() as connection:
+        await connection.execute(query, *args)
+
+
+async def _rows(db_path: str, query: str, *args: Any) -> list[dict[str, Any]]:
+    """A SELECT on either backend, written with ? placeholders."""
+    if _is_postgres(db_path):
+        numbered = query
+        for index in range(1, len(args) + 1):
+            numbered = numbered.replace("?", f"${index}", 1)
+        return await _pg_rows(db_path, numbered, *args)
+    return await asyncio.to_thread(_sqlite_rows, db_path, query, args)
+
+
+async def _write(db_path: str, query: str, *args: Any) -> None:
+    if _is_postgres(db_path):
+        numbered = query
+        for index in range(1, len(args) + 1):
+            numbered = numbered.replace("?", f"${index}", 1)
+        await _pg_write(db_path, numbered, *args)
+    else:
+        await asyncio.to_thread(_sqlite_write, db_path, query, args)
+
+
+async def _person(db_path: str, person_id: str) -> dict[str, Any] | None:
+    rows = await _rows(db_path, "SELECT * FROM people WHERE id = ?", person_id)
+    return rows[0] if rows else None
 
 
 async def create_applicant(db_path: str, *, first_name: str, last_name: str,
-                           email: str, mobile: str,
-                           manager_id: str | None) -> dict[str, Any]:
+                           email: str, mobile: str, manager_id: str | None,
+                           is_admin: bool = False) -> dict[str, Any]:
     """A manager adds someone who is applying: stored now, to fill in their
     application later, and adopted by their login when they sign up with
-    the same email (the Supabase trigger in migration 002 does that part).
-    Raises ApplicantError with a reason fit to show the manager."""
+    the same email (migration 001's trigger does that part on Supabase).
+
+    Someone already in the directory with that email - a resident applying
+    for another apartment - becomes an applicant too rather than a second
+    person (the user: "User can be applicant and resident"). Raises
+    ApplicantError with a reason fit to show the manager."""
     clean = clean_applicant(first_name, last_name, email, mobile)
-    taken = (await _pg_email_taken(db_path, clean["email"]) if _is_postgres(db_path)
-             else await asyncio.to_thread(_sqlite_email_taken, db_path, clean["email"]))
-    if taken:
-        raise ApplicantError("Someone with that email is already in the directory.")
+    existing = await _rows(
+        db_path, "SELECT * FROM people WHERE lower(email) = ? ORDER BY created_at LIMIT 1",
+        clean["email"])
+    if existing:
+        person = existing[0]
+        if (not is_admin and person.get("manager_id") is not None
+                and person["manager_id"] != manager_id):
+            raise ApplicantError("That email belongs to someone at another company.")
+        if person.get("is_applicant") and person.get("archived_at") is None:
+            raise ApplicantError("That person is already on the applicant list.")
+        await _write(
+            db_path,
+            "UPDATE people SET is_applicant = ?, archived_at = NULL, "
+            "first_name = COALESCE(first_name, ?), last_name = COALESCE(last_name, ?), "
+            "phone = COALESCE(phone, ?), manager_id = COALESCE(manager_id, ?) WHERE id = ?",
+            True, clean["first_name"], clean["last_name"], clean["mobile"], manager_id,
+            person["id"])
+        return applicant_view(await _person(db_path, person["id"]))
     person_id = secrets.token_hex(12)
     row = {
         "id": person_id,
-        "role": "applicant",
         "full_name": f"{clean['first_name']} {clean['last_name']}",
         "first_name": clean["first_name"],
         "last_name": clean["last_name"],
@@ -599,48 +709,41 @@ async def create_applicant(db_path: str, *, first_name: str, last_name: str,
         "property_id": None,
         "manager_id": manager_id,
         "created_at": _now(),
+        "is_applicant": True, "is_resident": False, "is_manager": False, "is_admin": False,
+        "archived_at": None,
     }
     if _is_postgres(db_path):
         await _pg_create_person(db_path, row)
     else:
         await asyncio.to_thread(_sqlite_create_person, db_path, row)
-    return {"id": person_id, "first_name": row["first_name"], "last_name": row["last_name"],
-            "email": row["email"], "mobile": row["phone"], "created_at": row["created_at"]}
+    return applicant_view(row)
 
 
-def _sqlite_list_applicants(db_path: str, manager_id: str | None) -> list[dict[str, Any]]:
-    query = "SELECT * FROM people WHERE role = 'applicant'"
-    params: tuple = ()
+async def list_applicants(db_path: str, *, manager_id: str | None,
+                          archived: bool = False) -> list[dict[str, Any]]:
+    """Applicants, newest first - the current ones, or the archived ones:
+    one company's, or everyone's when `manager_id` is None (an admin)."""
+    query = ("SELECT * FROM people WHERE is_applicant = ? AND "
+             + ("archived_at IS NOT NULL" if archived else "archived_at IS NULL"))
+    args: list[Any] = [True]
     if manager_id is not None:
         query += " AND manager_id = ?"
-        params = (manager_id,)
-    with _connect(db_path) as connection:
-        rows = connection.execute(query + " ORDER BY created_at DESC LIMIT 500", params).fetchall()
-    return [dict(row) for row in rows]
+        args.append(manager_id)
+    query += " ORDER BY COALESCE(archived_at, created_at) DESC LIMIT 500"
+    return [applicant_view(row) for row in await _rows(db_path, query, *args)]
 
 
-async def _pg_list_applicants(dsn: str, manager_id: str | None) -> list[dict[str, Any]]:
-    pool = await _pg_pool(dsn)
-    query = "SELECT * FROM people WHERE role = 'applicant'"
-    args: list = []
-    if manager_id is not None:
-        query += " AND manager_id = $1"
-        args = [manager_id]
-    async with pool.acquire() as connection:
-        rows = await connection.fetch(query + " ORDER BY created_at DESC LIMIT 500", *args)
-    return [dict(row) for row in rows]
-
-
-async def list_applicants(db_path: str, *, manager_id: str | None) -> list[dict[str, Any]]:
-    """Applicants, newest first: one company's, or everyone's when
-    `manager_id` is None (an admin)."""
-    rows = (await _pg_list_applicants(db_path, manager_id) if _is_postgres(db_path)
-            else await asyncio.to_thread(_sqlite_list_applicants, db_path, manager_id))
-    return [{"id": row["id"],
-             "first_name": row.get("first_name") or row["full_name"],
-             "last_name": row.get("last_name") or "",
-             "email": row.get("email"), "mobile": row.get("phone"),
-             "created_at": row["created_at"]} for row in rows]
+async def set_applicant_archived(db_path: str, *, person_id: str, archived: bool,
+                                 manager_id: str | None) -> dict[str, Any]:
+    """Archive an applicant (off the manager's list, kept in the directory)
+    or bring one back. `manager_id` None is an admin, who may touch any."""
+    person = await _person(db_path, person_id)
+    if (person is None or not person.get("is_applicant")
+            or (manager_id is not None and person.get("manager_id") != manager_id)):
+        raise ApplicantError("No such applicant.")
+    await _write(db_path, "UPDATE people SET archived_at = ? WHERE id = ?",
+                 _now() if archived else None, person_id)
+    return applicant_view(await _person(db_path, person_id))
 
 
 async def find_person(db_path: str, person_id: str) -> dict[str, Any] | None:

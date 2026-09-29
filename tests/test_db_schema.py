@@ -57,8 +57,9 @@ async def test_init_creates_properties_and_people(db_path) -> None:
         "id", "manager_id", "address", "apt", "city", "state", "created_at",
     ]
     assert columns(db_path, "people") == [
-        "id", "role", "full_name", "first_name", "last_name", "email", "phone",
+        "id", "full_name", "first_name", "last_name", "email", "phone",
         "property_id", "manager_id", "created_at",
+        "is_applicant", "is_resident", "is_manager", "is_admin", "archived_at",
     ]
 
 
@@ -71,8 +72,8 @@ async def test_a_person_links_to_their_property(db_path) -> None:
             "VALUES ('p1', 'lgd', '1556 Camp Street', 'B', '2026-09-07')"
         )
         connection.execute(
-            "INSERT INTO people (id, role, full_name, property_id, created_at) "
-            "VALUES ('r1', 'resident', 'Jane Doe', 'p1', '2026-09-07')"
+            "INSERT INTO people (id, is_resident, full_name, property_id, created_at) "
+            "VALUES ('r1', TRUE, 'Jane Doe', 'p1', '2026-09-07')"
         )
         row = connection.execute(
             "SELECT r.full_name, p.address, p.apt, p.city, p.state "
@@ -94,8 +95,8 @@ async def test_a_person_cannot_point_at_a_missing_property(db_path) -> None:
     try:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO people (id, role, full_name, property_id, created_at) "
-                "VALUES ('r1', 'resident', 'Jane Doe', 'no-such-property', "
+                "INSERT INTO people (id, is_resident, full_name, property_id, created_at) "
+                "VALUES ('r1', TRUE, 'Jane Doe', 'no-such-property', "
                 "'2026-09-07')"
             )
     finally:
@@ -111,8 +112,8 @@ async def test_a_person_with_no_property_is_allowed(db_path) -> None:
     try:
         for role in ("manager", "admin", "applicant"):
             connection.execute(
-                "INSERT INTO people (id, role, full_name, created_at) "
-                f"VALUES ('{role}-1', '{role}', 'No Fixed Unit', '2026-09-07')"
+                f"INSERT INTO people (id, is_{role}, full_name, created_at) "
+                f"VALUES ('{role}-1', TRUE, 'No Fixed Unit', '2026-09-07')"
             )
         connection.commit()
         count = connection.execute(
@@ -140,7 +141,38 @@ async def test_init_replaces_the_old_shaped_tables(db_path) -> None:
     assert "manager" not in columns(db_path, "properties")
     assert columns(db_path, "tenants") == []     # superseded by people
     assert columns(db_path, "residents") == []   # renamed to people
-    assert "role" in columns(db_path, "people")
+    assert "is_resident" in columns(db_path, "people")
+
+
+async def test_the_old_role_column_becomes_the_role_columns(db_path) -> None:
+    """One table, four yes/no roles (the user, 2026-09-29): a database with
+    the single `role` column keeps everyone's role, and loses the column."""
+    connection = sqlite3.connect(db_path)
+    connection.executescript("""
+        CREATE TABLE people (
+            id TEXT PRIMARY KEY, role TEXT NOT NULL, full_name TEXT NOT NULL,
+            email TEXT, phone TEXT, property_id TEXT, manager_id TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX people_role ON people (role);
+        INSERT INTO people (id, role, full_name, created_at) VALUES
+            ('a', 'admin', 'Kevin', 'x'), ('m', 'landlord', 'Pam', 'x'),
+            ('r', 'tenant', 'Jane', 'x'), ('p', 'applicant', 'Walk-in', 'x');
+    """)
+    connection.commit()
+    connection.close()
+
+    await db.init(db_path)
+    await db.init(db_path)
+
+    assert "role" not in columns(db_path, "people")
+    connection = sqlite3.connect(db_path)
+    try:
+        rows = {row[0]: row[1:] for row in connection.execute(
+            "SELECT id, is_applicant, is_resident, is_manager, is_admin FROM people")}
+    finally:
+        connection.close()
+    assert rows == {"a": (0, 0, 0, 1), "m": (0, 0, 1, 0), "r": (0, 1, 0, 0), "p": (1, 0, 0, 0)}
 
 
 async def test_the_migration_is_idempotent(db_path) -> None:

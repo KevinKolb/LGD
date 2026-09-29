@@ -444,7 +444,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   if (result.ok) {
     const firstName = (result.profile.display_name || "").split(" ")[0];
     unlock(
-      result.profile.role === "admin"
+      result.profile.roles.includes("admin")
         ? `Welcome, ${firstName} (admin)`
         : `Welcome, ${firstName}`,
       "supabase"
@@ -461,7 +461,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     return;
   }
   refuse(
-    `Signed in as ${result.profile.display_name} (${result.profile.role}). ` +
+    `Signed in as ${result.profile.display_name} (${result.profile.role_label}). ` +
       "This area is for managers.",
     { offerSignOut: true }
   );

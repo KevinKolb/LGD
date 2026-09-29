@@ -56,6 +56,30 @@ def normalize_role(role: str) -> str:
     return LEGACY_ROLES.get(role, role)
 
 
+# A person can hold several roles at once (the user, 2026-09-29: "User can
+# be applicant and resident ... Can be manager and admin too"). In the
+# database they are four yes/no columns on `people`; here, a set. This is
+# the order they are listed in, and the first one held is the person's
+# `role` - kept for everything that only needs one word to show.
+ROLE_ORDER = (ROLE_ADMIN, ROLE_MANAGER, ROLE_RESIDENT, ROLE_APPLICANT)
+
+
+def roles_from_entry(entry: dict) -> list[str]:
+    """The roles a login entry holds: a "roles" list, or the single "role"
+    every file written before 2026-09-29 has."""
+    raw = entry.get("roles")
+    if raw is None:
+        raw = [entry.get("role", ROLE_MANAGER)]
+    elif isinstance(raw, str):
+        raw = [raw]
+    return [normalize_role(str(role)) for role in raw]
+
+
+def roles_from_flags(row) -> frozenset[str]:
+    """The roles a `people` row holds, from its four yes/no columns."""
+    return frozenset(role for role in ROLE_ORDER if row[f"is_{role}"])
+
+
 class ConfigError(RuntimeError):
     """Raised when configuration is missing or self-contradictory."""
 
@@ -90,6 +114,8 @@ class User:
 
     username: str
     display_name: str
+    # The person's first role in ROLE_ORDER - see `roles` for all of them.
+    # Pass either; the other is worked out.
     role: str
     password_hash: str
     # None for admins, who are not tied to one manager.
@@ -104,19 +130,38 @@ class User:
     # database itself. Optional here only because a local accounts.json
     # written before that migration will not carry it.
     person_id: str | None = None
+    # Every role this person holds - any mix of admin, manager, resident and
+    # applicant. Empty means just `role`.
+    roles: frozenset = frozenset()
+
+    def __post_init__(self) -> None:
+        roles = frozenset(normalize_role(r) for r in (self.roles or {self.role}) if r)
+        # A login with no role at all is treated as the least one, never as
+        # an error: a role the loader rejects fails startup for every user.
+        roles = roles or frozenset({ROLE_APPLICANT})
+        object.__setattr__(self, "roles", roles)
+        if self.role not in roles:
+            primary = next((r for r in ROLE_ORDER if r in roles), sorted(roles)[0])
+            object.__setattr__(self, "role", primary)
+
+    @property
+    def role_label(self) -> str:
+        """Every role, in order, for showing: "manager, admin"."""
+        known = [r for r in ROLE_ORDER if r in self.roles]
+        return ", ".join(known + sorted(self.roles - set(ROLE_ORDER)))
 
     @property
     def is_admin(self) -> bool:
-        return self.role == ROLE_ADMIN
+        return ROLE_ADMIN in self.roles
 
     @property
     def is_resident(self) -> bool:
-        return self.role == ROLE_RESIDENT
+        return ROLE_RESIDENT in self.roles
 
     @property
     def may_use_dashboard(self) -> bool:
         """Managers and admins only - not residents, not applicants."""
-        return self.role in DASHBOARD_ROLES
+        return bool(self.roles & DASHBOARD_ROLES)
 
     def may_use_manager(self, manager_id: str) -> bool:
         """Admins may act for any manager; everyone else only for their own."""
@@ -155,16 +200,17 @@ def _load_accounts(path: Path) -> tuple[tuple[Manager, ...], tuple[User, ...]]:
     users: list[User] = []
     for entry in raw.get("webusers") or raw.get("users") or []:
         username = str(entry["username"])
-        role = normalize_role(str(entry.get("role", ROLE_MANAGER)))
-        if role not in VALID_ROLES:
-            raise ConfigError(
-                f"User {username!r} has role {role!r}; expected one of "
-                f"{sorted(VALID_ROLES)}."
-            )
+        roles = roles_from_entry(entry)
+        for role in roles:
+            if role not in VALID_ROLES:
+                raise ConfigError(
+                    f"User {username!r} has role {role!r}; expected one of "
+                    f"{sorted(VALID_ROLES)}."
+                )
         manager_id = entry.get("manager_id") or entry.get("landlord_id")
         manager_id = str(manager_id) if manager_id else None
 
-        if role in MANAGER_SCOPED_ROLES:
+        if set(roles) & MANAGER_SCOPED_ROLES:
             if not manager_id:
                 raise ConfigError(f"User {username!r} needs a manager_id.")
             if manager_id not in known_ids:
@@ -185,7 +231,8 @@ def _load_accounts(path: Path) -> tuple[tuple[Manager, ...], tuple[User, ...]]:
             User(
                 username=username,
                 display_name=str(entry.get("display_name", username)),
-                role=role,
+                role=roles[0],
+                roles=frozenset(roles),
                 password_hash=password_hash,
                 manager_id=manager_id,
                 email=str(email) if email else None,
@@ -223,12 +270,13 @@ def _validate_accounts(
         raise ConfigError(f"{source} lists no managers.")
     known_ids = {manager.id for manager in managers}
     for user in users:
-        if user.role not in VALID_ROLES:
-            raise ConfigError(
-                f"User {user.username!r} has role {user.role!r}; expected "
-                f"one of {sorted(VALID_ROLES)}."
-            )
-        if user.role in MANAGER_SCOPED_ROLES:
+        for role in user.roles:
+            if role not in VALID_ROLES:
+                raise ConfigError(
+                    f"User {user.username!r} has role {role!r}; expected "
+                    f"one of {sorted(VALID_ROLES)}."
+                )
+        if user.roles & MANAGER_SCOPED_ROLES:
             if not user.manager_id:
                 raise ConfigError(f"User {user.username!r} needs a manager_id.")
             if user.manager_id not in known_ids:
@@ -250,6 +298,73 @@ def _validate_accounts(
     return managers, tuple(users)
 
 
+async def _people_logins(connection) -> list["User"]:
+    """Logins as they are kept since 2026-09-29: on `people` itself, one row
+    per person, with four role columns (supabase/migrations/001). Only rows
+    that can actually sign in - a password hash or a Supabase identity - are
+    logins; everyone else in the directory is just a person."""
+    # Startup must not depend on a migration having run: bring the columns
+    # this reads into being, idempotently, the way app/db.py does for its
+    # own tables. The full shape - and the merge of `webusers` into `people`
+    # - is supabase/migrations/001_auth_people_rls.sql.
+    for column, column_type in (
+        ("username", "TEXT"), ("password_hash", "TEXT NOT NULL DEFAULT ''"),
+        ("auth_id", "UUID"), ("is_applicant", "BOOLEAN NOT NULL DEFAULT FALSE"),
+        ("is_resident", "BOOLEAN NOT NULL DEFAULT FALSE"),
+        ("is_manager", "BOOLEAN NOT NULL DEFAULT FALSE"),
+        ("is_admin", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ):
+        await connection.execute(
+            f"ALTER TABLE people ADD COLUMN IF NOT EXISTS {column} {column_type}"
+        )
+    rows = await connection.fetch(
+        "SELECT id, username, full_name, email, manager_id, password_hash, auth_id, "
+        "is_applicant, is_resident, is_manager, is_admin FROM people "
+        "WHERE password_hash <> '' OR auth_id IS NOT NULL"
+    )
+    return [
+        User(
+            username=row["username"] or row["email"] or row["id"],
+            display_name=row["full_name"] or row["username"] or row["id"],
+            role="",
+            roles=roles_from_flags(row),
+            password_hash=row["password_hash"] or "",
+            manager_id=row["manager_id"],
+            email=row["email"],
+            auth_id=str(row["auth_id"]) if row["auth_id"] else None,
+            person_id=row["id"],
+        )
+        for row in rows
+    ]
+
+
+async def _webusers_logins(connection) -> list["User"]:
+    """Logins as they were kept until 2026-09-29, in a separate `webusers`
+    table - still read, so the app starts against a database the merge in
+    supabase/migrations/001 has not reached yet."""
+    for column, column_type in (("email", "TEXT"), ("auth_id", "UUID"), ("person_id", "TEXT")):
+        await connection.execute(
+            f"ALTER TABLE webusers ADD COLUMN IF NOT EXISTS {column} {column_type}"
+        )
+    rows = await connection.fetch(
+        "SELECT username, display_name, role, manager_id, password_hash, "
+        "email, auth_id, person_id FROM webusers"
+    )
+    return [
+        User(
+            username=row["username"],
+            display_name=row["display_name"] or row["username"],
+            role=normalize_role(row["role"]),
+            password_hash=row["password_hash"] or "",
+            manager_id=row["manager_id"],
+            email=row["email"],
+            auth_id=str(row["auth_id"]) if row["auth_id"] else None,
+            person_id=row["person_id"],
+        )
+        for row in rows
+    ]
+
+
 async def preload_accounts_from_postgres(dsn: str) -> None:
     """Query Postgres once and cache the result for every later, synchronous
     `Settings.load()` call to read. Call this during the app's async startup
@@ -262,41 +377,14 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
     # for Supabase's transaction-mode connection pooler.
     connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
-        # users.email was added after the first deployment, so a live table
-        # can predate it. `accounts init` (which is what creates these
-        # tables) is not re-run against an existing deployment, and the
-        # SELECT below hard-fails startup on a table without the column -
-        # so bring it up to date here, idempotently, the same way
-        # app/db.py runs CREATE TABLE IF NOT EXISTS on every pool.
-        await connection.execute(
-            "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS email TEXT"
-        )
-        # Same reasoning for the two columns that link a login to Supabase
-        # Auth and to its `people` row. The full version of this migration -
-        # with the triggers and the row level security that go with it -
-        # lives in supabase/migrations/001_auth_people_rls.sql; these two
-        # lines exist so that merely *starting* the app against a database
-        # that has not had it applied yet cannot fail on a missing column.
-        await connection.execute(
-            "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS auth_id UUID"
-        )
-        await connection.execute(
-            "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS person_id TEXT"
-        )
-        # Roles were renamed landlord -> manager and tenant -> resident.
-        # Idempotent, and only a tidy-up: normalize_role already maps the
-        # old strings on the way in, so a login works either way.
-        for old_role, new_role in LEGACY_ROLES.items():
-            await connection.execute(
-                "UPDATE webusers SET role = $1 WHERE role = $2", new_role, old_role
-            )
         manager_rows = await connection.fetch(
             "SELECT id, name, signer_name, email FROM managers"
         )
-        user_rows = await connection.fetch(
-            "SELECT username, display_name, role, manager_id, password_hash, "
-            "email, auth_id, person_id FROM webusers"
-        )
+        merged = await connection.fetchval("SELECT to_regclass('public.webusers') IS NULL")
+        if merged:
+            users = await _people_logins(connection)
+        else:
+            users = await _webusers_logins(connection)
     finally:
         await connection.close()
 
@@ -307,19 +395,6 @@ async def preload_accounts_from_postgres(dsn: str) -> None:
         )
         for row in manager_rows
     )
-    users = [
-        User(
-            username=row["username"],
-            display_name=row["display_name"] or row["username"],
-            role=normalize_role(row["role"]),
-            password_hash=row["password_hash"] or "",
-            manager_id=row["manager_id"],
-            email=row["email"],
-            auth_id=str(row["auth_id"]) if row["auth_id"] else None,
-            person_id=row["person_id"],
-        )
-        for row in user_rows
-    ]
     _accounts_cache = _validate_accounts(
         managers, users, source="The Postgres accounts tables"
     )

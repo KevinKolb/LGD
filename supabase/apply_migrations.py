@@ -62,30 +62,34 @@ async def report(connection) -> None:
         state = "RLS on " if row["relrowsecurity"] else "RLS OFF"
         print(f"  {row['relname']:<16} {state}  {row['policies']} policy/policies")
 
-    print("\nLogins:")
+    print("\nLogins (people who can sign in):")
     users = await connection.fetch(
-        "SELECT username, role, manager_id, email, person_id, auth_id, "
-        "(password_hash <> '') AS has_hash FROM webusers ORDER BY username"
+        "SELECT username, manager_id, auth_id, (password_hash <> '') AS has_hash, "
+        "is_applicant, is_resident, is_manager, is_admin "
+        "FROM people WHERE username IS NOT NULL OR auth_id IS NOT NULL "
+        "ORDER BY username"
     )
     for user in users:
+        roles = ", ".join(
+            name for name in ("applicant", "resident", "manager", "admin")
+            if user[f"is_{name}"]
+        ) or "NO ROLE"
         linked = "supabase auth" if user["auth_id"] else "no auth identity"
         basic = "pbkdf2" if user["has_hash"] else "-"
-        print(
-            f"  {user['username']:<24} {user['role']:<9} "
-            f"person={'yes' if user['person_id'] else 'MISSING':<7} "
-            f"{linked:<16} basic={basic}"
-        )
+        print(f"  {user['username'] or '(no username)':<24} {roles:<28} {linked:<16} basic={basic}")
 
-    orphans = await connection.fetchval(
-        "SELECT count(*) FROM webusers WHERE person_id IS NULL"
+    counts = await connection.fetchrow(
+        "SELECT count(*) AS people, count(*) FILTER (WHERE is_applicant) AS applicants, "
+        "count(*) FILTER (WHERE is_resident) AS residents FROM people"
     )
-    people = await connection.fetchval("SELECT count(*) FROM people")
-    print(f"\n  people rows: {people}   logins with no person: {orphans}")
+    print(f"\n  people rows: {counts['people']}   applicants: {counts['applicants']}"
+          f"   residents: {counts['residents']}")
+    leftover = await connection.fetchval("SELECT to_regclass('public.webusers') IS NOT NULL")
+    print("  webusers table:", "STILL THERE - 001 has not merged it" if leftover else "gone (merged into people)")
 
     triggers = await connection.fetch(
         "SELECT tgname FROM pg_trigger WHERE NOT tgisinternal "
-        "AND tgname IN ('webusers_create_person', 'on_auth_user_confirmed') "
-        "ORDER BY tgname"
+        "AND tgname IN ('on_auth_user_confirmed') ORDER BY tgname"
     )
     print("  triggers:", ", ".join(t["tgname"] for t in triggers) or "NONE")
 

@@ -28,6 +28,9 @@ class FakeConnection:
         self.altered: list[str] = []
 
     async def fetchval(self, sql: str, *args: Any) -> Any:
+        if "column_name = 'role'" in sql:
+            # A people table from before the four role columns.
+            return 1 if "people" in self.stale_tables else None
         if "information_schema.columns" in sql:
             table, _column = args
             return 1 if table in self.stale_tables else None

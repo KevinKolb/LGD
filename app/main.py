@@ -259,6 +259,7 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
             "username": user.username,
             "display_name": user.display_name,
             "role": user.role,
+            "roles": sorted(user.roles),
             "is_admin": user.is_admin,
         },
         # Only the managers this user may act for. Emails stay server-side.
@@ -329,7 +330,8 @@ async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
         "users": [
             {
                 "username": u.username, "display_name": u.display_name,
-                "role": u.role, "manager_id": u.manager_id,
+                "role": u.role_label, "roles": sorted(u.roles),
+                "manager_id": u.manager_id,
             }
             for u in settings.users
         ],
@@ -471,6 +473,7 @@ async def api_add_applicant(
             email=applicant.email,
             mobile=applicant.mobile,
             manager_id=user.manager_id,
+            is_admin=user.is_admin,
         )
     except db.ApplicantError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -478,17 +481,40 @@ async def api_add_applicant(
 
 
 @app.get("/api/applicants")
-async def api_list_applicants(user: User = Depends(current_user)) -> dict[str, Any]:
+async def api_list_applicants(archived: bool = False,
+                              user: User = Depends(current_user)) -> dict[str, Any]:
     """This company's applicants, or every company's for an admin, newest
-    first, each saying whether they have a login yet."""
+    first - the current ones, or with ?archived=true the archived ones -
+    each saying whether they have a login yet."""
     require_dashboard_role(user)
     settings = get_settings()
     manager_id = None if user.is_admin else user.manager_id
-    applicants = await db.list_applicants(settings.db_path, manager_id=manager_id)
+    applicants = await db.list_applicants(settings.db_path, manager_id=manager_id,
+                                          archived=archived)
     with_login = {u.person_id for u in settings.users if u.person_id}
     for applicant in applicants:
         applicant["has_login"] = applicant["id"] in with_login
     return {"applicants": applicants}
+
+
+class ArchiveRequest(BaseModel):
+    archived: bool
+
+
+@app.post("/api/applicants/{person_id}/archive")
+async def api_archive_applicant(person_id: str, payload: ArchiveRequest,
+                                user: User = Depends(current_user)) -> dict[str, Any]:
+    """Archive an applicant - off the list, kept in the directory - or bring
+    one back. Only within the caller's own company, unless an admin."""
+    require_dashboard_role(user)
+    settings = get_settings()
+    try:
+        applicant = await db.set_applicant_archived(
+            settings.db_path, person_id=person_id, archived=payload.archived,
+            manager_id=None if user.is_admin else user.manager_id)
+    except db.ApplicantError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    return {"applicant": applicant}
 
 
 @app.get("/healthz", include_in_schema=False)

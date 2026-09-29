@@ -46,7 +46,7 @@ def test_the_same_email_is_refused_the_second_time(client) -> None:
     add(client, STEVE)
     response = add(client, STEVE, email="JANE.DOE@example.com")
     assert response.status_code == 422
-    assert response.json()["detail"] == "Someone with that email is already in the directory."
+    assert response.json()["detail"] == "That person is already on the applicant list."
 
 
 @pytest.mark.parametrize("changes, reason", [
@@ -77,10 +77,11 @@ def test_a_signed_out_visitor_cannot_add_one(client) -> None:
 
 def test_the_migration_only_lets_signed_in_staff_call_it() -> None:
     sql = MIGRATION.read_text(encoding="utf-8")
-    for function in ("create_applicant(text, text, text, text)", "list_applicants()"):
+    for function in ("create_applicant(text, text, text, text)", "list_applicants(boolean)",
+                     "set_applicant_archived(text, boolean)"):
         assert f"revoke all on function public.{function} from public, anon;" in sql
         assert f"grant execute on function public.{function} to authenticated;" in sql
-    assert sql.count("caller.role not in ('manager', 'admin')") == 2
+    assert sql.count("not (caller.is_manager or caller.is_admin)") == 3
     assert "security definer" in sql
 
 
@@ -88,16 +89,18 @@ def test_the_migration_files_applicants_under_the_callers_company() -> None:
     sql = MIGRATION.read_text(encoding="utf-8")
     body = sql[sql.index("create or replace function public.create_applicant("):]
     body = body[:body.index("$fn$;")]
-    assert "'applicant'" in body
+    assert "is_applicant = true" in body and "is_applicant, created_at" in body
     assert "caller.manager_id" in body
     assert "manager_id text" not in body.split("returns json")[0]  # never a browser-sent company
 
 
 def test_a_later_login_adopts_the_waiting_person() -> None:
-    sql = MIGRATION.read_text(encoding="utf-8")
-    trigger = sql[sql.index("create or replace function public.webwebusers_create_person()"):]
-    assert "lower(p.email) = lower(new.email)" in trigger
-    assert "not exists (select 1 from public.webusers w where w.person_id = p.id)" in trigger
+    """Since the merge the login is the person: 001's signup trigger gives
+    the waiting row its auth_id instead of making a second person."""
+    sql = (MIGRATION.parent / "001_auth_people_rls.sql").read_text(encoding="utf-8")
+    trigger = sql[sql.index("create or replace function public.handle_auth_user_confirmed()"):]
+    trigger = trigger[:trigger.index("$fn$;")]
+    assert "where lower(email) = lower(new.email) and auth_id is null" in trigger
 
 
 def test_the_manager_page_has_the_applicant_form_as_step_1() -> None:

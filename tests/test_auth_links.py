@@ -160,7 +160,7 @@ async def test_create_person_round_trips(tmp_path) -> None:
     )
     person = await db.find_person(db_path, person_id)
     assert person["full_name"] == "Jane Doe"
-    assert person["role"] == ROLE_RESIDENT
+    assert person["is_resident"] and not person["is_applicant"]
     assert person["manager_id"] == "lgd"
     assert person["property_id"] is None  # nobody has been placed in a unit
 
@@ -196,10 +196,11 @@ def test_link_people_gives_every_login_a_person(tmp_path, monkeypatch) -> None:
 
     connection = sqlite3.connect(tmp_path / "records.db")
     try:
-        rows = dict(connection.execute("SELECT full_name, role FROM people"))
+        rows = {name: (bool(admin), bool(manager)) for name, admin, manager in
+                connection.execute("SELECT full_name, is_admin, is_manager FROM people")}
     finally:
         connection.close()
-    assert rows == {"Kevin Kolb": ROLE_ADMIN, "Pam Hartnett": ROLE_MANAGER}
+    assert rows == {"Kevin Kolb": (True, False), "Pam Hartnett": (False, True)}
 
 
 def test_link_people_is_safe_to_run_twice(tmp_path, monkeypatch) -> None:

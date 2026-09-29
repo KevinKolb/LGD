@@ -21,13 +21,14 @@ import asyncio
 import getpass
 import json
 import os
+import secrets
 import sys
 from pathlib import Path
 from typing import Any
 
 from app import db
 from app.auth import hash_password
-from app.config import REPO_ROOT, ROLE_ADMIN, ROLE_MANAGER
+from app.config import REPO_ROOT, ROLE_ADMIN, ROLE_MANAGER, ROLE_ORDER, roles_from_entry
 
 DEFAULT_PATH = REPO_ROOT / "accounts.json"
 MIN_PASSWORD_LENGTH = 12
@@ -40,21 +41,16 @@ CREATE TABLE IF NOT EXISTS managers (
     signer_name  TEXT NOT NULL,
     email        TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS webusers (
-    username       TEXT PRIMARY KEY,
-    display_name   TEXT NOT NULL,
-    role           TEXT NOT NULL,
-    manager_id    TEXT REFERENCES managers(id),
-    password_hash  TEXT NOT NULL DEFAULT '',
-    email          TEXT,
-    -- The Supabase Auth identity that checks this person's password on the
-    -- website, and their row in the `people` directory. Both are filled in
-    -- by supabase/migrations/001_auth_people_rls.sql and its triggers; this
-    -- CREATE only matters for a database being made from scratch.
-    auth_id        UUID,
-    person_id      TEXT
-);
 """
+# Logins used to have a `webusers` table of their own here. Since
+# 2026-09-29 they live on `people` - one table for everyone, four role
+# columns (the user: "All one table") - so on Postgres this module reads and
+# writes people; see supabase/migrations/001_auth_people_rls.sql. Locally
+# they stay in accounts.json, where each can list several "roles".
+PEOPLE_LOGIN_COLUMNS = (
+    ("username", "TEXT"), ("password_hash", "TEXT NOT NULL DEFAULT ''"),
+    ("auth_id", "UUID"),
+)
 
 # Placeholder contact details, not anyone's real information: this file is
 # committed to the repo (and so is public if the repo is), while the actual
@@ -79,14 +75,14 @@ STARTER: dict[str, Any] = {
         {
             "username": "kevin",
             "display_name": "Kevin Kolb",
-            "role": ROLE_ADMIN,
+            "roles": [ROLE_ADMIN],
             "password_hash": "",
             "email": "replace-me@example.com",
         },
         {
             "username": "pam",
             "display_name": "REPLACE ME",
-            "role": ROLE_MANAGER,
+            "roles": [ROLE_MANAGER],
             "manager_id": "lgd",
             "password_hash": "",
             "email": "replace-me@example.com",
@@ -94,7 +90,7 @@ STARTER: dict[str, Any] = {
         {
             "username": "gay",
             "display_name": "REPLACE ME",
-            "role": ROLE_MANAGER,
+            "roles": [ROLE_MANAGER],
             "manager_id": "robertson",
             "password_hash": "",
             "email": "replace-me@example.com",
@@ -157,7 +153,7 @@ async def set_password_hash(username: str, new_hash: str) -> bool:
         connection = await asyncpg.connect(dsn, statement_cache_size=0)
         try:
             result = await connection.execute(
-                "UPDATE webusers SET password_hash = $1 WHERE username = $2",
+                "UPDATE people SET password_hash = $1 WHERE username = $2",
                 new_hash, username,
             )
         finally:
@@ -206,12 +202,13 @@ def cmd_list(path: Path) -> int:
     print("\nUsers")
     for user in data.get("webusers", []):
         scope = "all managers"
-        if user.get("role") != ROLE_ADMIN:
+        roles = roles_from_entry(user)
+        if ROLE_ADMIN not in roles:
             manager = managers.get(user.get("manager_id"), {})
             scope = manager.get("name", user.get("manager_id", "?"))
         state = "password set" if user.get("password_hash") else "NO PASSWORD"
         email = user.get("email") or "no email"
-        print(f"  {user['username']:<12} {user.get('role', ''):<9} {scope:<26} {state:<14} {email}")
+        print(f"  {user['username']:<12} {', '.join(roles):<16} {scope:<26} {state:<14} {email}")
     print()
     return 0
 
@@ -271,7 +268,7 @@ def cmd_link_people(path: Path) -> int:
         person_id = asyncio.run(
             db.create_person(
                 db_path,
-                role=user.get("role", ROLE_MANAGER),
+                roles=tuple(roles_from_entry(user)),
                 full_name=user.get("display_name") or user["username"],
                 email=user.get("email"),
                 manager_id=user.get("manager_id"),
@@ -308,7 +305,7 @@ async def _pg_set_email(dsn: str, username: str, email: str) -> int:
     connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
         result = await connection.execute(
-            "UPDATE webusers SET email = $1 WHERE username = $2", email, username
+            "UPDATE people SET email = $1 WHERE username = $2", email, username
         )
     finally:
         await connection.close()
@@ -319,46 +316,41 @@ async def _pg_set_email(dsn: str, username: str, email: str) -> int:
     print()
     print(
         "That address can now claim this account: sign up with it at the "
-        "site's login page and confirm the email, and this row - role and "
-        "manager included - becomes that login. See "
+        "site's login page and confirm the email, and this person - roles "
+        "and company included - gets that login. See "
         "supabase/migrations/001_auth_people_rls.sql."
     )
     return 0
 
 
 async def _pg_link_people(dsn: str) -> int:
-    """Report on the users <-> people link. Unlike the local backend, nothing
-    needs doing here: the database creates the person row itself, in a
-    BEFORE INSERT trigger on `users`. This just says whether that is true."""
+    """Nothing to link on Postgres any more: since the merge in
+    supabase/migrations/001 a login *is* a row of people. This reports
+    whether that merge has happened."""
     import asyncpg
 
     connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
-        has_column = await connection.fetchval(
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name = 'webusers' AND column_name = 'person_id'"
-        )
-        if not has_column:
-            print("This database has not had supabase/migrations applied yet.",
-                  file=sys.stderr)
-            print("Run: python supabase/apply_migrations.py", file=sys.stderr)
-            return 1
-        rows = await connection.fetch(
-            "SELECT u.username, u.person_id, p.full_name FROM webusers u "
-            "LEFT JOIN people p ON p.id = u.person_id ORDER BY u.username"
-        )
+        unmerged = await connection.fetchval("SELECT to_regclass('public.webusers') IS NOT NULL")
+        rows = [] if unmerged else await connection.fetch(
+            "SELECT username, full_name FROM people WHERE username IS NOT NULL ORDER BY username")
     finally:
         await connection.close()
-    missing = 0
+    if unmerged:
+        print("This database still has a separate webusers table.", file=sys.stderr)
+        print("Run: python supabase/apply_migrations.py", file=sys.stderr)
+        return 1
     for row in rows:
-        if row["person_id"]:
-            print(f"  {row['username']:<24} -> {row['full_name']}")
-        else:
-            missing += 1
-            print(f"  {row['username']:<24} -> NO PERSON ROW")
-    print()
-    print(f"{len(rows) - missing} of {len(rows)} login(s) linked.")
-    return 1 if missing else 0
+        print(f"  {row['username']:<24} -> {row['full_name']}")
+    print(f"\n{len(rows)} login(s), each one a row of people.")
+    return 0
+
+
+async def _pg_ensure_login_columns(connection) -> None:
+    await connection.execute(ACCOUNTS_SCHEMA)
+    for column, column_type in PEOPLE_LOGIN_COLUMNS:
+        await connection.execute(
+            f"ALTER TABLE people ADD COLUMN IF NOT EXISTS {column} {column_type}")
 
 
 async def _pg_init(dsn: str, force: bool) -> int:
@@ -368,16 +360,17 @@ async def _pg_init(dsn: str, force: bool) -> int:
     # for Supabase's transaction-mode connection pooler.
     connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
-        await connection.execute(ACCOUNTS_SCHEMA)
+        await connection.execute(db.POSTGRES_SCHEMA)
+        await _pg_ensure_login_columns(connection)
         existing = await connection.fetchval("SELECT count(*) FROM managers")
         if existing and not force:
             print(f"Postgres already has {existing} manager row(s). "
                   "Pass --force to overwrite them.", file=sys.stderr)
             return 1
         async with connection.transaction():
-            # Overwrite entirely, same as init does to the JSON file - order
-            # matters, since users.manager_id references managers.
-            await connection.execute("DELETE FROM webusers")
+            # Overwrite entirely, same as init does to the JSON file - the
+            # logins first, since people.manager_id references managers.
+            await connection.execute("DELETE FROM people WHERE username IS NOT NULL")
             await connection.execute("DELETE FROM managers")
             for manager in STARTER["managers"]:
                 await connection.execute(
@@ -387,16 +380,18 @@ async def _pg_init(dsn: str, force: bool) -> int:
                     manager["signer_name"], manager["email"],
                 )
             for user in STARTER["webusers"]:
+                roles = set(roles_from_entry(user))
                 await connection.execute(
-                    "INSERT INTO webusers "
-                    "(username, display_name, role, manager_id, password_hash, email) "
-                    "VALUES ($1, $2, $3, $4, '', $5)",
-                    user["username"], user["display_name"], user["role"],
-                    user.get("manager_id"), user.get("email"),
+                    "INSERT INTO people (id, full_name, email, manager_id, username, "
+                    "password_hash, is_applicant, is_resident, is_manager, is_admin, "
+                    "created_at) VALUES ($1, $2, $3, $4, $5, '', $6, $7, $8, $9, $10)",
+                    secrets.token_hex(12), user["display_name"], user.get("email"),
+                    user.get("manager_id"), user["username"],
+                    *(role in roles for role in db.ROLES), db._now(),
                 )
     finally:
         await connection.close()
-    print(f"Wrote starter managers/users rows to {dsn.split('@')[-1]}")
+    print(f"Wrote starter managers and logins to {dsn.split('@')[-1]}")
     print("\nNobody can log in yet. Set a password for each user:\n")
     for user in STARTER["webusers"]:
         print(f"    python -m app.accounts set-password {user['username']}")
@@ -415,8 +410,9 @@ async def _pg_list(dsn: str) -> int:
             "SELECT id, name, signer_name, email FROM managers ORDER BY id"
         )
         user_rows = await connection.fetch(
-            "SELECT username, display_name, role, manager_id, password_hash, "
-            "email FROM webusers ORDER BY username"
+            "SELECT username, full_name, manager_id, password_hash, email, auth_id, "
+            "is_applicant, is_resident, is_manager, is_admin FROM people "
+            "WHERE username IS NOT NULL ORDER BY username"
         )
     finally:
         await connection.close()
@@ -429,13 +425,15 @@ async def _pg_list(dsn: str) -> int:
 
     print("\nUsers")
     for row in user_rows:
+        roles = [role for role in ROLE_ORDER if row[f"is_{role}"]]
         scope = "all managers"
-        if row["role"] != ROLE_ADMIN:
+        if ROLE_ADMIN not in roles:
             manager = managers.get(row["manager_id"])
             scope = manager["name"] if manager else (row["manager_id"] or "?")
-        state = "password set" if row["password_hash"] else "NO PASSWORD"
+        state = ("password set" if row["password_hash"]
+                 else "website login" if row["auth_id"] else "NO PASSWORD")
         email = row["email"] or "no email"
-        print(f"  {row['username']:<12} {row['role']:<9} {scope:<26} {state:<14} {email}")
+        print(f"  {row['username']:<12} {', '.join(roles) or '-':<16} {scope:<26} {state:<14} {email}")
     print()
     return 0
 
@@ -448,11 +446,11 @@ async def _pg_set_password(dsn: str, username: str) -> int:
     connection = await asyncpg.connect(dsn, statement_cache_size=0)
     try:
         row = await connection.fetchrow(
-            "SELECT username FROM webusers WHERE username = $1", username
+            "SELECT username FROM people WHERE username = $1", username
         )
         if row is None:
             known_rows = await connection.fetch(
-                "SELECT username FROM webusers ORDER BY username"
+                "SELECT username FROM people WHERE username IS NOT NULL ORDER BY username"
             )
             known = ", ".join(r["username"] for r in known_rows)
             print(f"No user {username!r}. Known users: {known}", file=sys.stderr)
@@ -468,7 +466,7 @@ async def _pg_set_password(dsn: str, username: str) -> int:
             return 1
 
         await connection.execute(
-            "UPDATE webusers SET password_hash = $1 WHERE username = $2",
+            "UPDATE people SET password_hash = $1 WHERE username = $2",
             hash_password(password), username,
         )
     finally:

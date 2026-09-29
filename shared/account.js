@@ -90,7 +90,7 @@
     const popup = el("div", { id: "account-popup" });
     popup.append(
       el("p", { class: "who", text: profile ? profile.display_name : "Signed in" }),
-      el("p", { class: "who-detail", text: profile ? `${email} — ${profile.role}` : email })
+      el("p", { class: "who-detail", text: profile ? `${email} — ${profile.role_label}` : email })
     );
 
     const passwordSection = el("section", {});

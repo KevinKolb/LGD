@@ -42,12 +42,23 @@ def reset_cache():
 
 
 class FakeConnection:
+    """`user_rows` are `webusers` rows (a database from before the merge)
+    unless `people_rows` is given, which makes it a merged database: logins
+    on `people`, roles as four yes/no columns."""
+
     def __init__(self, manager_rows: list[dict[str, Any]],
-                user_rows: list[dict[str, Any]]) -> None:
+                user_rows: list[dict[str, Any]],
+                people_rows: list[dict[str, Any]] | None = None) -> None:
         self._manager_rows = manager_rows
         self._user_rows = user_rows
+        self._people_rows = people_rows
         self.executed: list[str] = []
         self.updates: list[tuple[Any, ...]] = []
+
+    async def fetchval(self, sql: str) -> Any:
+        if "to_regclass('public.webusers') IS NULL" in sql:
+            return self._people_rows is not None
+        raise AssertionError(f"unexpected fetchval: {sql!r}")
 
     async def execute(self, sql: str, *args: Any) -> None:
         self.executed.append(" ".join(sql.split()))
@@ -59,6 +70,8 @@ class FakeConnection:
             return self._manager_rows
         if "FROM webusers" in sql:
             return self._user_rows
+        if "FROM people" in sql:
+            return self._people_rows
         raise AssertionError(f"unexpected fetch: {sql!r}")
 
     async def close(self) -> None:
@@ -96,15 +109,15 @@ async def test_preload_adds_the_email_column_to_an_older_users_table(monkeypatch
     assert "ALTER TABLE webusers ADD COLUMN IF NOT EXISTS email TEXT" in connection.executed
 
 
-async def test_preload_migrates_the_old_role_names(monkeypatch) -> None:
-    """manager -> manager and tenant -> resident, in the stored data."""
-    connection = FakeConnection([MANAGER_ROW], [USER_ROW])
-    _patch_connect(monkeypatch, connection)
-
-    await config.preload_accounts_from_postgres(DSN)
-
-    assert ("manager", "landlord") in connection.updates
-    assert ("resident", "tenant") in connection.updates
+async def test_the_merge_maps_the_old_role_names() -> None:
+    """landlord -> manager and tenant -> resident: done once, by the merge
+    of webusers into people in supabase/migrations/001, which reads the old
+    spellings into the role columns. Loading still maps them too (below)."""
+    from pathlib import Path
+    sql = (Path(__file__).resolve().parent.parent / "supabase" / "migrations"
+           / "001_auth_people_rls.sql").read_text(encoding="utf-8")
+    assert "is_manager    = u.role in ('manager', 'landlord')" in sql
+    assert "is_resident   = u.role in ('resident', 'tenant')" in sql
 
 
 async def test_preload_still_accepts_a_pre_rename_role(monkeypatch) -> None:
@@ -170,3 +183,51 @@ async def test_preload_rejects_no_managers(monkeypatch) -> None:
 
     with pytest.raises(ConfigError):
         await config.preload_accounts_from_postgres(DSN)
+
+
+PERSON_LOGIN = {
+    "id": "p-kevin", "username": "kevin", "full_name": "Kevin Kolb",
+    "email": "kevin@example.com", "manager_id": "lgd", "password_hash": "",
+    "auth_id": "00000000-0000-0000-0000-000000000001",
+    "is_applicant": False, "is_resident": False, "is_manager": True, "is_admin": True,
+}
+
+
+async def test_after_the_merge_logins_come_from_people_with_every_role(monkeypatch) -> None:
+    """One table (the user, 2026-09-29): a login is a row of people, and a
+    person can be manager and admin at once."""
+    connection = FakeConnection([MANAGER_ROW], [], people_rows=[PERSON_LOGIN])
+    _patch_connect(monkeypatch, connection)
+
+    await config.preload_accounts_from_postgres(DSN)
+
+    _managers, users = config._accounts_cache
+    kevin = users[0]
+    assert kevin.roles == {"manager", "admin"}
+    assert kevin.role == "admin" and kevin.is_admin and kevin.may_use_dashboard
+    assert kevin.person_id == "p-kevin"
+    assert kevin.role_label == "admin, manager"
+    assert any("ALTER TABLE people ADD COLUMN IF NOT EXISTS is_admin" in sql
+               for sql in connection.executed)
+
+
+async def test_a_login_with_no_role_column_set_is_an_applicant(monkeypatch) -> None:
+    """Never a startup failure: a role the loader rejects locks out everyone."""
+    nobody = {**PERSON_LOGIN, "username": "new", "is_manager": False, "is_admin": False}
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [], people_rows=[PERSON_LOGIN, nobody]))
+
+    await config.preload_accounts_from_postgres(DSN)
+
+    _managers, users = config._accounts_cache
+    assert {u.username: u.role for u in users}["new"] == "applicant"
+
+
+async def test_before_the_merge_logins_still_come_from_webusers(monkeypatch) -> None:
+    """Startup must not wait on a migration: until 001 has merged the
+    tables, the old one is read."""
+    _patch_connect(monkeypatch, FakeConnection([MANAGER_ROW], [USER_ROW]))
+
+    await config.preload_accounts_from_postgres(DSN)
+
+    _managers, users = config._accounts_cache
+    assert users[0].username == "kevin" and users[0].roles == {"admin"}

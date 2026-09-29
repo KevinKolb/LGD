@@ -381,7 +381,7 @@
 
     const profile = await auth.profile();
     document.getElementById("signedin-who").textContent = profile
-      ? `${profile.display_name} (${profile.role})`
+      ? `${profile.display_name} (${profile.role_label})`
       : "Your account is confirmed, but has no profile yet.";
     show("signedin");
   })();

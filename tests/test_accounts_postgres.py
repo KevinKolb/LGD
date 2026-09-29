@@ -26,7 +26,8 @@ class _NullTransaction:
 
 
 class FakeConnection:
-    """A tiny in-memory stand-in for the two tables accounts.py touches."""
+    """A tiny in-memory stand-in for what accounts.py touches: managers, and
+    the logins on people (one table for everyone since 2026-09-29)."""
 
     def __init__(self) -> None:
         self.managers: dict[str, dict[str, Any]] = {}
@@ -34,9 +35,10 @@ class FakeConnection:
 
     async def execute(self, sql: str, *args: Any) -> None:
         text = " ".join(sql.split())
-        if text.startswith("CREATE TABLE"):
+        if text.startswith(("CREATE TABLE", "CREATE INDEX", "ALTER TABLE people ADD COLUMN IF NOT EXISTS")) \
+                or "CREATE TABLE IF NOT EXISTS" in text:
             return
-        if text.startswith("DELETE FROM webusers"):
+        if text.startswith("DELETE FROM people WHERE username IS NOT NULL"):
             self.users.clear()
             return
         if text.startswith("DELETE FROM managers"):
@@ -49,15 +51,17 @@ class FakeConnection:
                 "signer_name": signer_name, "email": email,
             }
             return
-        if text.startswith("INSERT INTO webusers"):
-            username, display_name, role, manager_id, email = args
+        if text.startswith("INSERT INTO people"):
+            (person_id, full_name, email, manager_id, username,
+             is_applicant, is_resident, is_manager, is_admin, _created) = args
             self.users[username] = {
-                "username": username, "display_name": display_name,
-                "role": role, "manager_id": manager_id, "password_hash": "",
-                "email": email,
+                "id": person_id, "username": username, "full_name": full_name,
+                "manager_id": manager_id, "password_hash": "", "email": email,
+                "auth_id": None, "is_applicant": is_applicant, "is_resident": is_resident,
+                "is_manager": is_manager, "is_admin": is_admin,
             }
             return
-        if text.startswith("UPDATE webusers SET password_hash"):
+        if text.startswith("UPDATE people SET password_hash"):
             password_hash, username = args
             self.users[username]["password_hash"] = password_hash
             return
@@ -71,14 +75,14 @@ class FakeConnection:
     async def fetch(self, sql: str, *args: Any) -> list[dict[str, Any]]:
         if "FROM managers" in sql:
             return sorted(self.managers.values(), key=lambda r: r["id"])
-        if "SELECT username FROM webusers" in sql:
+        if "SELECT username FROM people" in sql:
             return [{"username": u} for u in sorted(self.users)]
-        if "FROM webusers" in sql:
+        if "FROM people" in sql:
             return sorted(self.users.values(), key=lambda r: r["username"])
         raise AssertionError(f"unexpected fetch: {sql!r}")
 
     async def fetchrow(self, sql: str, *args: Any) -> dict[str, Any] | None:
-        if "FROM webusers WHERE username" in sql:
+        if "FROM people WHERE username" in sql:
             return self.users.get(args[0])
         raise AssertionError(f"unexpected fetchrow: {sql!r}")
 
@@ -112,6 +116,10 @@ async def test_init_writes_starter_managers_and_users(fake_connection) -> None:
     assert set(fake_connection.managers) == {"lgd", "robertson"}
     assert set(fake_connection.users) == {"kevin", "pam", "gay"}
     assert all(u["password_hash"] == "" for u in fake_connection.users.values())
+    # Roles are columns: kevin is an admin, pam a manager.
+    assert fake_connection.users["kevin"]["is_admin"] is True
+    assert fake_connection.users["pam"]["is_manager"] is True
+    assert fake_connection.users["pam"]["is_admin"] is False
 
 
 async def test_init_refuses_to_clobber_existing_rows_without_force(
