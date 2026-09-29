@@ -701,11 +701,27 @@ __PROPERTIES_JSON__
       section.hidden = !chosen[section.getAttribute("data-doc")];
     });
   }
-  // The manager page can pre-tick documents: ?docs=lease,deposit
+  // The manager page picks the documents: ?docs=lease,deposit. They were
+  // chosen there, so the popup does not ask again - it hides its own
+  // checkboxes and asks only about the apartment, naming the documents.
   var preset = new URLSearchParams(window.location.search).get("docs");
   if (preset !== null && docChoices.length) {
     var wanted = preset.split(",");
-    docChoices.forEach(function (box) { box.checked = wanted.indexOf(box.value) !== -1; });
+    var names = [];
+    docChoices.forEach(function (box) {
+      box.checked = wanted.indexOf(box.value) !== -1;
+      if (box.checked) { names.push(box.getAttribute("data-name")); }
+    });
+    if (names.length) {
+      document.querySelector(".doc-choices").hidden = true;
+      var list = names.length === 1 ? names[0]
+        : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+      document.getElementById("picker-title").textContent = names.length === 1
+        ? "Which apartment is this " + list + " for?"
+        : "Which apartment are the " + list + " for?";
+      baseTitle = list.charAt(0).toUpperCase() + list.slice(1);
+      document.title = baseTitle;
+    }
   }
   docChoices.forEach(function (box) { box.addEventListener("change", showQuestions); });
   showQuestions();
@@ -796,6 +812,7 @@ def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
     if documents:
         boxes = "\n".join(
             f'      <label class="doc-choice"><input type="checkbox" data-doc-choice value="{html.escape(key)}"'
+            f' data-name="{html.escape(name.lower())}"'
             f'{" checked" if ticked else ""}> {html.escape(name)}</label>'
             for key, name, ticked in documents)
         choices = f'    <fieldset class="doc-choices">\n      <legend>Documents</legend>\n{boxes}\n    </fieldset>'

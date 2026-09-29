@@ -67,8 +67,19 @@ def test_the_popup_asks_each_question_once(real_output):
 
 
 def test_the_popup_offers_each_document_as_a_checkbox(real_output):
-    boxes = re.findall(r'<input type="checkbox" data-doc-choice value="(\w+)"( checked)?>', real_output)
-    assert boxes == [("application", ""), ("lease", " checked"), ("deposit", " checked")]
+    boxes = re.findall(r'<input type="checkbox" data-doc-choice value="(\w+)" data-name="([\w ]+)"( checked)?>',
+                       real_output)
+    assert boxes == [("application", "application", ""), ("lease", "lease", " checked"),
+                     ("deposit", "security deposit", " checked")]
+
+
+def test_documents_chosen_on_the_manager_page_are_not_asked_again(real_output):
+    """?docs= means the manager page already chose; the popup hides its own
+    checkboxes and asks only about the apartment."""
+    script = real_output[real_output.index("var preset = "):]
+    script = script[:script.index("docChoices.forEach(function (box) { box.addEventListener")]
+    assert 'document.querySelector(".doc-choices").hidden = true;' in script
+    assert '"Which apartment are the " + list + " for?"' in script
 
 
 def test_the_addendum_is_left_out(real_output):
@@ -103,9 +114,21 @@ def test_the_page_script_parses(real_output, tmp_path):
         assert result.returncode == 0, result.stderr
 
 
-def test_the_manager_page_links_it():
+def test_the_manager_page_opens_the_ticked_forms_here():
+    """Step 1 is one checkbox per form and one View button, which opens this
+    page with the ticked forms named: one form or several, same way."""
     page = MANAGER_PAGE.read_text(encoding="utf-8")
-    assert 'href="../documents/print/documents_print.html#view">View documents</a>' in page
+    assert '<form id="documents-form" action="../documents/print/documents_print.html">' in page
+    boxes = re.findall(r'<input type="checkbox" name="doc" value="(\w+)">', page)
+    assert boxes == ["application", "lease", "deposit"]
+    assert '?docs=${docs.join(",")}#view' in page
+
+
+def test_the_manager_page_steps_are_plain_numbers():
+    """Numbered 1, 2, ... - no 2a/2b."""
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    steps = re.findall(r'<span class="step" aria-hidden="true">([^<]+)</span>', page)
+    assert steps == [str(n) for n in range(1, len(steps) + 1)]
 
 
 def test_single_document_pages_have_no_checkboxes():

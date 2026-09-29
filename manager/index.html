@@ -109,6 +109,20 @@
     line-height: 1;
     padding-bottom: 1px;
   }
+  /* One row per form in step 1: the whole row is the checkbox's label, so
+     it is an easy target on a phone. */
+  .doc-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .doc-row:last-of-type { border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  .doc-row input { width: 22px; height: 22px; margin: 1px 0 0; flex: 0 0 auto; accent-color: var(--accent); }
+  .doc-row .note { display: block; margin-top: 2px; font-size: 13px; }
+  button.button-link:disabled { opacity: .5; cursor: not-allowed; }
   .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .note { color: var(--muted); font-size: 12px; }
   button:disabled { opacity: .45; cursor: not-allowed; }
@@ -212,69 +226,41 @@
   <section>
     <div class="step-head">
       <span class="step" aria-hidden="true">1</span>
-      <h2>Application</h2>
+      <h2>Documents</h2>
     </div>
     <p class="hint">
-      The rental application, to hand to someone before a lease exists. You pick the
-      address and unit first, or leave it blank.
+      Tick one form or several, then View. You answer the questions once &mdash;
+      the address and unit for every form &mdash; and each form is filled in and
+      starts on its own sheet of paper, ready to print.
     </p>
-    <div class="actions">
-      <a class="button-link secondary" id="view-application-link"
-         href="../documents/print/application_print.html#view">View application</a>
-    </div>
+    <form id="documents-form" action="../documents/print/documents_print.html">
+      <label class="doc-row">
+        <input type="checkbox" name="doc" value="application">
+        <span><strong>Application</strong>
+          <span class="note">To hand to someone before a lease exists. Also asks the rent,
+          term and deposit, all optional.</span></span>
+      </label>
+      <label class="doc-row">
+        <input type="checkbox" name="doc" value="lease">
+        <span><strong>Lease</strong>
+          <span class="note">The standard residential lease, unsigned. The yard, walls and
+          parking sections show that apartment's wording.</span></span>
+      </label>
+      <label class="doc-row">
+        <input type="checkbox" name="doc" value="deposit">
+        <span><strong>Security deposit</strong>
+          <span class="note">The receipt, and the conditions for getting the deposit
+          back. Goes with the lease.</span></span>
+      </label>
+      <div class="actions">
+        <button type="submit" class="button-link" id="view-documents" disabled>Tick a form to view it</button>
+      </div>
+    </form>
   </section>
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">2a</span>
-      <h2>Paper lease</h2>
-    </div>
-    <p class="hint">
-      The standard residential lease, unsigned &mdash; to print and fill in by
-      hand, or just to look over. You pick the address and unit first, and the
-      yard, walls and parking sections show that apartment's wording.
-    </p>
-    <div class="actions">
-      <a class="button-link secondary" id="view-lease-link"
-         href="../documents/print/lease_print.html#view">View paper lease</a>
-    </div>
-  </section>
-
-  <section>
-    <div class="step-head">
-      <span class="step" aria-hidden="true">2b</span>
-      <h2>Security deposit</h2>
-    </div>
-    <p class="hint">
-      The security deposit agreement that goes with the lease &mdash; the receipt, and
-      the conditions for getting the deposit back. You pick the address and unit first.
-    </p>
-    <div class="actions">
-      <a class="button-link secondary" id="view-deposit-link"
-         href="../documents/print/security_deposit_print.html#view">View security deposit</a>
-    </div>
-  </section>
-
-  <section>
-    <div class="step-head">
-      <span class="step" aria-hidden="true">2c</span>
-      <h2>Several documents at once</h2>
-    </div>
-    <p class="hint">
-      Tick any of the application, lease and security deposit, answer the questions
-      once &mdash; the address and unit for all of them, plus the application's rent,
-      term and deposit if it is ticked &mdash; and they open together, filled in, each
-      starting on a new sheet of paper.
-    </p>
-    <div class="actions">
-      <a class="button-link secondary" id="view-packet-link"
-         href="../documents/print/documents_print.html#view">View documents</a>
-    </div>
-  </section>
-
-  <section>
-    <div class="step-head">
-      <span class="step" aria-hidden="true">3</span>
+      <span class="step" aria-hidden="true">2</span>
       <h2>Legal</h2>
     </div>
     <p class="hint">
@@ -399,6 +385,39 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       "This area is for managers.",
     { offerSignOut: true }
   );
+})();
+</script>
+<script>
+"use strict";
+// --- Step 1: open the ticked forms together -------------------------------
+//
+// Every form, one or several, opens in the one combined page, with the
+// forms named in the address (?docs=lease,deposit) so its popup asks only
+// about the apartment. #view: open to read, printing from its Print button.
+(function () {
+  const form = document.getElementById("documents-form");
+  const button = document.getElementById("view-documents");
+  const NAMES = { application: "application", lease: "lease", deposit: "security deposit" };
+  function ticked() {
+    return Array.from(form.querySelectorAll("input[name=doc]:checked")).map((box) => box.value);
+  }
+  function update() {
+    const docs = ticked();
+    button.disabled = docs.length === 0;
+    button.textContent = docs.length === 0 ? "Tick a form to view it"
+      : docs.length === 1 ? `View ${NAMES[docs[0]]}`
+      : `View ${docs.length} forms`;
+  }
+  form.addEventListener("change", update);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const docs = ticked();
+    if (!docs.length) return;
+    window.location.href = `${form.getAttribute("action")}?docs=${docs.join(",")}#view`;
+  });
+  // Coming Back to this page can restore the ticks; keep the button in step.
+  window.addEventListener("pageshow", update);
+  update();
 })();
 </script>
 <script src="../shared/account.js"></script>

@@ -44,7 +44,7 @@ def test_dashboard_serves_the_paper_lease(client) -> None:
     response = client.get("/manager/")
     assert response.status_code == 200
     assert "Manager Dashboard" in response.text
-    assert "View paper lease" in response.text
+    assert '<input type="checkbox" name="doc" value="lease">' in response.text
     # Printing is done from the document's own floating Print button.
     assert "Print paper lease" not in response.text
 

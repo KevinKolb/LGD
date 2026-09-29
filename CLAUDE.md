@@ -67,8 +67,9 @@ matches the lease's §20 and §17 for the same apartment - `ITEM_OPTIONS` in
 the generator, "(A) ... (B) ..." in the text, the same `data-option` tags as
 the lease. A build error if either document lacks a version the other has.
 Wording changes are logged in
-[`documents/security_deposit_history.md`](documents/security_deposit_history.md). The manager page links
-it as step 2b, beside the lease (2a). Tests:
+[`documents/security_deposit_history.md`](documents/security_deposit_history.md). It is one of the
+three forms ticked in the manager page's step 1 (see "Several documents at
+once"). Tests:
 `tests/test_generate_print_deposit.py`.
 
 Everything document-related now sits under `documents/`, and the split
@@ -246,7 +247,7 @@ margin and share the leftover width in proportion to their underscore counts
 in `application.md` - so the form's layout is still edited there, by the
 relative length of each blank. A long block with a blank (the holding
 deposit's "$____") stays prose with an inline blank (`ROW_MAX_TEXT`).
-Manager page step 1. Changes are logged in
+Ticked in the manager page's step 1. Changes are logged in
 [`documents/application_history.md`](documents/application_history.md).
 
 - A block beginning `(parking=limited)` in `application.md` is tagged like
@@ -283,8 +284,19 @@ on one page, each from its own generator's `render_body` - never copied, so
 it cannot drift from the single pages. The popup gains a checkbox per
 document (`?docs=lease,deposit` pre-ticks them) and asks each question once:
 the address and unit for all, the application's `OFFICE_FIELDS` only while
-it is ticked (`data-for-docs`). Unticked documents are hidden. Manager page
-step 2c. **Regenerate it after editing any of the three masters or
+it is ticked (`data-for-docs`). Unticked documents are hidden.
+
+**This is how every form opens from the manager page** (settled 2026-09-29,
+when the user asked for the clearest way to do several documents and for
+steps numbered 1, 2, ... with no letters). Step 1, Documents, is one
+checkbox per form and one View button; one form or several, it opens this
+page as `documents_print.html?docs=lease,deposit#view`. Since the manager
+page already chose, the popup hides its own checkboxes and asks only
+"Which apartment are the lease and security deposit for?". A form alone
+prints exactly as its own page does (checked at every address), so the
+single-document pages are no longer linked from the manager page; they
+stay as files, and `app/main.py` still serves the lease one. Step 2 is
+Legal. **Regenerate it after editing any of the three masters or
 `properties.json`**, alongside that document's own page. The addendum is
 left out: no longer in use, and it names a fixed address.
 
@@ -523,7 +535,7 @@ read in full versus only seen via a search tool's summary. Append to it, don't
 replace it, whenever a clause decision draws on outside research — it's meant to
 survive as a reference trail, including for potential litigation.
 
-The manager page links to it from step 3, Legal (beside the legal checklist), and it is read there as an ordinary
+The manager page links to it from step 2, Legal (beside the legal checklist), and it is read there as an ordinary
 page on this site — not as a raw file on a code host, which is what the link
 used to do. [`manager/legal_research.html`](manager/legal_research.html) is a
 **generated file** — never hand-edit it. Regenerate it after every append to
