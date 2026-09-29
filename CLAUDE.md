@@ -312,7 +312,8 @@ it is ticked (`data-for-docs`). Unticked documents are hidden.
 when the user asked for the clearest way to do several documents and for
 steps numbered 1, 2, ... with no letters). Step 1, Paper Documents
 Generator (renamed from "Documents" the same day), is one
-checkbox per form and one View button; one form or several, it opens this
+checkbox per form and one "Make documents" button (the user's wording, greyed
+out until a form is ticked); one form or several, it opens this
 page as `documents_print.html?docs=lease,deposit#view`. Since the manager
 page already chose, the popup hides its own checkboxes and asks only
 "Which apartment are the lease and security deposit for?". A form alone

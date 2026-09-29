@@ -231,7 +231,7 @@
       <h2>Paper Documents Generator</h2>
     </div>
     <p class="hint">
-      Tick one form or several, then View. You answer the questions once &mdash;
+      Tick one form or several, then Make documents. You answer the questions once &mdash;
       the address and unit for every form &mdash; and each form is filled in and
       starts on its own sheet of paper, ready to print.
     </p>
@@ -255,7 +255,7 @@
           back. Goes with the lease.</span></span>
       </label>
       <div class="actions">
-        <button type="submit" class="button-link" id="view-documents" disabled>Tick a form to view it</button>
+        <button type="submit" class="button-link" id="view-documents" disabled>Make documents</button>
       </div>
     </form>
   </section>
@@ -399,16 +399,13 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
 (function () {
   const form = document.getElementById("documents-form");
   const button = document.getElementById("view-documents");
-  const NAMES = { application: "application", lease: "lease", deposit: "security deposit" };
   function ticked() {
     return Array.from(form.querySelectorAll("input[name=doc]:checked")).map((box) => box.value);
   }
   function update() {
     const docs = ticked();
+    // Always "Make documents"; greyed out until at least one form is ticked.
     button.disabled = docs.length === 0;
-    button.textContent = docs.length === 0 ? "Tick a form to view it"
-      : docs.length === 1 ? `View ${NAMES[docs[0]]}`
-      : `View ${docs.length} forms`;
   }
   form.addEventListener("change", update);
   form.addEventListener("submit", (event) => {

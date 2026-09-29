@@ -145,3 +145,9 @@ def test_the_manager_page_opens_everything_in_this_tab_and_has_no_print_links():
     page = MANAGER_PAGE.read_text(encoding="utf-8")
     assert 'target="_blank"' not in page
     assert not re.search(r'id="print-[\w-]+-link"', page)
+
+
+def test_the_manager_page_button_says_make_documents():
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert 'id="view-documents" disabled>Make documents</button>' in page
+    assert "button.textContent" not in page
