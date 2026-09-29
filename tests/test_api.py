@@ -112,12 +112,20 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
 
 
 def test_applicant_page_is_public_with_no_login(client) -> None:
-    """For now it says "Coming soon" (the user, 2026-09-29); the working
-    form is kept, unpublished, in _saved/applicant_form.html."""
+    """It opens on Apply and Check application status; the old online form
+    is kept, unpublished, in _saved/applicant_form.html."""
     response = client.get("/applicant/", auth=None)
     assert response.status_code == 200
-    assert "Coming soon" in response.text
+    assert 'id="choose-apply">Apply</button>' in response.text
     assert "application-form" not in response.text
+
+
+def test_the_home_page_lets_the_applicant_link_through() -> None:
+    """Enabled on 2026-09-29 (the user: "enable the applicant page"): the
+    home page's Coming soon box is for the resident link only now."""
+    from pathlib import Path
+    page = (Path(__file__).resolve().parent.parent / "index.html").read_text(encoding="utf-8")
+    assert 'const open = ["/applicant/", "/manager/", "/admin/", "/login/"];' in page
 
 
 def test_the_applicant_form_is_saved_for_later() -> None:

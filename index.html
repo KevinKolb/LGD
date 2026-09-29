@@ -193,9 +193,10 @@
 <script>
 "use strict";
 
-// Everything here is a placeholder for now except the manager area, so
-// every other link says so rather than leading somewhere half-built.
-// Delegated from document, so it covers every link on the page.
+// The resident area is still a placeholder, so its link says so rather
+// than leading somewhere half-built. Delegated from document, so it covers
+// every link on the page. The applicant page opened on 2026-09-29 (the
+// user: "enable the applicant page").
 (function () {
   const modal = document.getElementById("soon-modal");
 
@@ -206,10 +207,12 @@
   document.addEventListener("click", (event) => {
     const link = event.target.closest("a");
     if (!link) return;
-    // The parts that actually work: the manager and admin areas (each asks
-    // you to sign in), and signing in.
+    // The parts that actually work: the applicant page (Apply, and
+    // application status), the manager and admin areas (each asks you to
+    // sign in), and signing in.
     const path = new URL(link.href, window.location.href).pathname;
-    if (path.endsWith("/manager/") || path.endsWith("/admin/") || path.endsWith("/login/")) return;
+    const open = ["/applicant/", "/manager/", "/admin/", "/login/"];
+    if (open.some((ending) => path.endsWith(ending))) return;
     event.preventDefault();
     modal.hidden = false;
   });
