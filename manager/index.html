@@ -125,6 +125,44 @@
   .doc-row .note { display: block; margin-top: 2px; font-size: 13px; }
   button.button-link:disabled { opacity: .5; cursor: not-allowed; }
   .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  /* Step 1's form: two fields a row, one on a phone. */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 560px) { .field-grid { grid-template-columns: 1fr; } }
+  .field-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  .field-grid input {
+    font: inherit;
+    /* 16px or more, or an iPhone zooms the page in on tapping a box. */
+    font-size: 16px;
+    color: var(--ink);
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+  }
+  .field-grid input:focus { outline: 2px solid var(--accent2); border-color: var(--accent); }
+  .form-msg { font-size: 13px; }
+  .form-msg.error { color: var(--danger); }
+  .form-msg.ok { color: var(--ok); }
+  .applicant-list { list-style: none; margin: 18px 0 0; padding: 0; }
+  .applicant-list li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .applicant-list li:last-child { border-bottom: 1px solid var(--line); }
+  .applicant-list .who { font-weight: 600; }
+  .applicant-list .contact { color: var(--muted); font-size: 13px; }
+  .applicant-list .login { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .applicant-list .login.yes { color: var(--ok); }
+  .applicant-list .empty { color: var(--muted); font-size: 13px; justify-content: flex-start; }
   .note { color: var(--muted); font-size: 12px; }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.secondary {
@@ -225,9 +263,41 @@
 </header>
 
 <main hidden>
-  <section>
+  <section id="applicants">
     <div class="step-head">
       <span class="step" aria-hidden="true">1</span>
+      <h2>Applicants</h2>
+    </div>
+    <p class="hint">
+      Add someone who is applying. They are kept for filling in their
+      application, and when they sign up on this site with the same email,
+      their login is linked to what you entered here.
+    </p>
+    <form id="applicant-form" novalidate>
+      <div class="field-grid">
+        <label>First name
+          <input id="applicant-first" name="first_name" autocomplete="off" maxlength="100" required>
+        </label>
+        <label>Last name
+          <input id="applicant-last" name="last_name" autocomplete="off" maxlength="100" required>
+        </label>
+        <label>Email
+          <input id="applicant-email" name="email" type="email" autocomplete="off" maxlength="254" required>
+        </label>
+        <label>Mobile
+          <input id="applicant-mobile" name="mobile" type="tel" inputmode="tel" autocomplete="off" maxlength="40" required>
+        </label>
+      </div>
+      <div class="actions">
+        <button type="submit" class="button-link" id="add-applicant">Add applicant</button>
+        <span class="form-msg" id="applicant-msg" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+    <ul class="applicant-list" id="applicant-list" aria-label="Applicants"></ul>
+  </section>
+  <section>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">2</span>
       <h2>Paper Documents Generator</h2>
     </div>
     <p class="hint">
@@ -262,7 +332,7 @@
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">2</span>
+      <span class="step" aria-hidden="true">3</span>
       <h2>Legal</h2>
     </div>
     <p class="hint">
@@ -316,11 +386,18 @@
 // supabase/migrations/001_auth_people_rls.sql.
 const ALLOWED_ROLES = ["manager", "admin"];
 
-function unlock(greeting) {
+// Which way this page reaches its data, once someone is let in: "api" when
+// the FastAPI app served it (HTTP Basic has already checked the login),
+// "supabase" on GitHub Pages. The sections below wait for this.
+window.LGD_DASHBOARD = null;
+
+function unlock(greeting, backend) {
   document.getElementById("gate").hidden = true;
   document.querySelector("header").hidden = false;
   document.querySelector("main").hidden = false;
   if (greeting) document.getElementById("whoami").textContent = greeting;
+  window.LGD_DASHBOARD = { backend };
+  document.dispatchEvent(new CustomEvent("lgd-dashboard-ready"));
 }
 
 function refuse(text, { offerSignIn = false, offerSignOut = false } = {}) {
@@ -346,7 +423,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       const config = await response.json();
       const firstName =
         (config.user.display_name || config.user.username || "").split(" ")[0];
-      unlock(config.user.is_admin ? `Welcome, ${firstName} (admin)` : `Welcome, ${firstName}`);
+      unlock(config.user.is_admin ? `Welcome, ${firstName} (admin)` : `Welcome, ${firstName}`, "api");
       return;
     }
   } catch (error) {
@@ -369,7 +446,8 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     unlock(
       result.profile.role === "admin"
         ? `Welcome, ${firstName} (admin)`
-        : `Welcome, ${firstName}`
+        : `Welcome, ${firstName}`,
+      "supabase"
     );
     return;
   }
@@ -422,6 +500,140 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   // Coming Back to this page can restore the ticks; keep the button in step.
   window.addEventListener("pageshow", update);
   update();
+})();
+</script>
+<script>
+"use strict";
+// --- Step 1: add an applicant -------------------------------------------
+//
+// First, last, email and mobile, stored as a person with role "applicant"
+// in the manager's own company - for filling in their application later,
+// and adopted by their login when they sign up with the same email. On
+// GitHub Pages this calls the database's create_applicant / list_applicants
+// (supabase/migrations/002_manager_adds_applicants.sql), which check that
+// the caller is a manager or admin; served by the FastAPI app it calls
+// /api/applicants, which checks the same.
+(function () {
+  const form = document.getElementById("applicant-form");
+  const message = document.getElementById("applicant-msg");
+  const list = document.getElementById("applicant-list");
+  const button = document.getElementById("add-applicant");
+  const fields = {
+    first_name: document.getElementById("applicant-first"),
+    last_name: document.getElementById("applicant-last"),
+    email: document.getElementById("applicant-email"),
+    mobile: document.getElementById("applicant-mobile"),
+  };
+
+  function say(text, kind) {
+    message.textContent = text;
+    message.className = "form-msg" + (kind ? " " + kind : "");
+  }
+
+  async function api(path, options) {
+    const response = await fetch(path, options);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = payload.detail;
+      throw new Error(typeof detail === "string" ? detail
+        : "Please check the four boxes and try again.");
+    }
+    return payload;
+  }
+
+  async function add(values) {
+    if (window.LGD_DASHBOARD.backend === "api") {
+      return (await api("/api/applicants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      })).applicant;
+    }
+    return window.LGD.auth.rpc("create_applicant", values);
+  }
+
+  async function fetchAll() {
+    if (window.LGD_DASHBOARD.backend === "api") {
+      return (await api("/api/applicants")).applicants;
+    }
+    return window.LGD.auth.rpc("list_applicants", {});
+  }
+
+  function render(applicants) {
+    list.textContent = "";
+    if (!applicants.length) {
+      const item = document.createElement("li");
+      item.className = "empty";
+      item.textContent = "No applicants yet.";
+      list.append(item);
+      return;
+    }
+    for (const person of applicants) {
+      const item = document.createElement("li");
+      const who = document.createElement("span");
+      who.className = "who";
+      who.textContent = `${person.first_name} ${person.last_name}`.trim();
+      const contact = document.createElement("span");
+      contact.className = "contact";
+      contact.textContent = [person.email, person.mobile].filter(Boolean).join(" · ");
+      const login = document.createElement("span");
+      login.className = "login" + (person.has_login ? " yes" : "");
+      login.textContent = person.has_login ? "Has a login" : "No login yet";
+      const left = document.createElement("span");
+      left.append(who, document.createElement("br"), contact);
+      item.append(left, login);
+      list.append(item);
+    }
+  }
+
+  async function refresh() {
+    try {
+      render(await fetchAll());
+    } catch (error) {
+      list.textContent = "";
+      const item = document.createElement("li");
+      item.className = "empty";
+      item.textContent = "The applicant list could not be loaded: " + error.message;
+      list.append(item);
+    }
+  }
+
+  // A US number, however it was typed, reads (504) 555-1234.
+  fields.mobile.addEventListener("blur", () => {
+    let digits = fields.mobile.value.replace(/[^0-9]/g, "");
+    if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
+    if (digits.length === 10) {
+      fields.mobile.value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const values = {};
+    for (const [key, input] of Object.entries(fields)) values[key] = input.value.trim();
+    const missing = Object.entries(values).find(([, value]) => !value);
+    if (missing) {
+      say("First name, last name, email and mobile are all needed.", "error");
+      fields[missing[0]].focus();
+      return;
+    }
+    button.disabled = true;
+    say("Adding…");
+    try {
+      const created = await add(values);
+      say(`${created.first_name} ${created.last_name} added.`, "ok");
+      form.reset();
+      fields.first_name.focus();
+      await refresh();
+    } catch (error) {
+      say(error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  if (window.LGD_DASHBOARD) refresh();
+  else document.addEventListener("lgd-dashboard-ready", refresh, { once: true });
 })();
 </script>
 <script src="../shared/account.js"></script>

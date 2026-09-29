@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import secrets
 import sqlite3
 from datetime import datetime, timezone
@@ -84,6 +85,8 @@ CREATE TABLE IF NOT EXISTS people (
     id           TEXT PRIMARY KEY,
     role         TEXT NOT NULL,
     full_name    TEXT NOT NULL,
+    first_name   TEXT,
+    last_name    TEXT,
     email        TEXT,
     phone        TEXT,
     property_id  TEXT REFERENCES properties(id),
@@ -116,8 +119,8 @@ APPLICATION_COLUMNS = [
     "roommates_json", "created_at",
 ]
 PERSON_COLUMNS = [
-    "id", "role", "full_name", "email", "phone", "property_id", "manager_id",
-    "created_at",
+    "id", "role", "full_name", "first_name", "last_name", "email", "phone",
+    "property_id", "manager_id", "created_at",
 ]
 NEWS_COLUMNS = ["id", "manager_id", "headline", "article", "created_by", "created_at"]
 
@@ -163,6 +166,11 @@ def _now_central() -> str:
 # down on 2026-09-07.
 ADDED_COLUMNS = [
     ("people", "manager_id", "TEXT"),
+    # A manager adding an applicant gives first and last name separately
+    # (2026-09-29); full_name stays, as "first last". Supabase gets these
+    # from supabase/migrations/002_manager_adds_applicants.sql as well.
+    ("people", "first_name", "TEXT"),
+    ("people", "last_name", "TEXT"),
     # The live applications table was created before the application form
     # grew these three, and CREATE TABLE IF NOT EXISTS will not add them.
     # Found on 2026-09-08 by comparing the deployed table against SCHEMA:
@@ -521,6 +529,118 @@ async def create_person(db_path: str, *, role: str, full_name: str,
     else:
         await asyncio.to_thread(_sqlite_create_person, db_path, row)
     return person_id
+
+
+class ApplicantError(ValueError):
+    """Why an applicant could not be added - worded for the manager page."""
+
+
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def clean_applicant(first_name: str, last_name: str, email: str, mobile: str) -> dict[str, str]:
+    """The same checks, and the same wording, as create_applicant in
+    supabase/migrations/002_manager_adds_applicants.sql - the website calls
+    that; this app's own API calls this."""
+    first, last = first_name.strip(), last_name.strip()
+    email, mobile = email.strip().lower(), mobile.strip()
+    if not (first and last and email and mobile):
+        raise ApplicantError("First name, last name, email and mobile are all needed.")
+    if len(first) > 100 or len(last) > 100 or len(email) > 254 or len(mobile) > 40:
+        raise ApplicantError("One of those is too long.")
+    if not EMAIL_PATTERN.match(email):
+        raise ApplicantError("That email address does not look right.")
+    digits = re.sub(r"[^0-9]", "", mobile)
+    if len(digits) < 10:
+        raise ApplicantError("The mobile number needs at least 10 digits.")
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) == 10:
+        mobile = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    return {"first_name": first, "last_name": last, "email": email, "mobile": mobile}
+
+
+def _sqlite_email_taken(db_path: str, email: str) -> bool:
+    with _connect(db_path) as connection:
+        return connection.execute(
+            "SELECT 1 FROM people WHERE lower(email) = ?", (email,)
+        ).fetchone() is not None
+
+
+async def _pg_email_taken(dsn: str, email: str) -> bool:
+    pool = await _pg_pool(dsn)
+    async with pool.acquire() as connection:
+        return await connection.fetchval(
+            "SELECT 1 FROM people WHERE lower(email) = $1", email
+        ) is not None
+
+
+async def create_applicant(db_path: str, *, first_name: str, last_name: str,
+                           email: str, mobile: str,
+                           manager_id: str | None) -> dict[str, Any]:
+    """A manager adds someone who is applying: stored now, to fill in their
+    application later, and adopted by their login when they sign up with
+    the same email (the Supabase trigger in migration 002 does that part).
+    Raises ApplicantError with a reason fit to show the manager."""
+    clean = clean_applicant(first_name, last_name, email, mobile)
+    taken = (await _pg_email_taken(db_path, clean["email"]) if _is_postgres(db_path)
+             else await asyncio.to_thread(_sqlite_email_taken, db_path, clean["email"]))
+    if taken:
+        raise ApplicantError("Someone with that email is already in the directory.")
+    person_id = secrets.token_hex(12)
+    row = {
+        "id": person_id,
+        "role": "applicant",
+        "full_name": f"{clean['first_name']} {clean['last_name']}",
+        "first_name": clean["first_name"],
+        "last_name": clean["last_name"],
+        "email": clean["email"],
+        "phone": clean["mobile"],
+        "property_id": None,
+        "manager_id": manager_id,
+        "created_at": _now(),
+    }
+    if _is_postgres(db_path):
+        await _pg_create_person(db_path, row)
+    else:
+        await asyncio.to_thread(_sqlite_create_person, db_path, row)
+    return {"id": person_id, "first_name": row["first_name"], "last_name": row["last_name"],
+            "email": row["email"], "mobile": row["phone"], "created_at": row["created_at"]}
+
+
+def _sqlite_list_applicants(db_path: str, manager_id: str | None) -> list[dict[str, Any]]:
+    query = "SELECT * FROM people WHERE role = 'applicant'"
+    params: tuple = ()
+    if manager_id is not None:
+        query += " AND manager_id = ?"
+        params = (manager_id,)
+    with _connect(db_path) as connection:
+        rows = connection.execute(query + " ORDER BY created_at DESC LIMIT 500", params).fetchall()
+    return [dict(row) for row in rows]
+
+
+async def _pg_list_applicants(dsn: str, manager_id: str | None) -> list[dict[str, Any]]:
+    pool = await _pg_pool(dsn)
+    query = "SELECT * FROM people WHERE role = 'applicant'"
+    args: list = []
+    if manager_id is not None:
+        query += " AND manager_id = $1"
+        args = [manager_id]
+    async with pool.acquire() as connection:
+        rows = await connection.fetch(query + " ORDER BY created_at DESC LIMIT 500", *args)
+    return [dict(row) for row in rows]
+
+
+async def list_applicants(db_path: str, *, manager_id: str | None) -> list[dict[str, Any]]:
+    """Applicants, newest first: one company's, or everyone's when
+    `manager_id` is None (an admin)."""
+    rows = (await _pg_list_applicants(db_path, manager_id) if _is_postgres(db_path)
+            else await asyncio.to_thread(_sqlite_list_applicants, db_path, manager_id))
+    return [{"id": row["id"],
+             "first_name": row.get("first_name") or row["full_name"],
+             "last_name": row.get("last_name") or "",
+             "email": row.get("email"), "mobile": row.get("phone"),
+             "created_at": row["created_at"]} for row in rows]
 
 
 async def find_person(db_path: str, person_id: str) -> dict[str, Any] | None:

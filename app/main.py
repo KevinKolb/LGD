@@ -446,6 +446,51 @@ async def api_list_news(user: User = Depends(current_user)) -> dict[str, Any]:
     return {"news": news}
 
 
+class ApplicantRequest(BaseModel):
+    first_name: str = Field(max_length=100)
+    last_name: str = Field(max_length=100)
+    email: str = Field(max_length=254)
+    mobile: str = Field(max_length=40)
+
+
+@app.post("/api/applicants", status_code=201)
+async def api_add_applicant(
+    applicant: ApplicantRequest,
+    user: User = Depends(current_user),
+) -> dict[str, Any]:
+    """A manager/admin adds an applicant from the manager page. Always the
+    caller's own company - never a company the request names. The website
+    does the same through Supabase (migration 002's create_applicant)."""
+    require_dashboard_role(user)
+    settings = get_settings()
+    try:
+        created = await db.create_applicant(
+            settings.db_path,
+            first_name=applicant.first_name,
+            last_name=applicant.last_name,
+            email=applicant.email,
+            mobile=applicant.mobile,
+            manager_id=user.manager_id,
+        )
+    except db.ApplicantError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"applicant": {**created, "has_login": False}}
+
+
+@app.get("/api/applicants")
+async def api_list_applicants(user: User = Depends(current_user)) -> dict[str, Any]:
+    """This company's applicants, or every company's for an admin, newest
+    first, each saying whether they have a login yet."""
+    require_dashboard_role(user)
+    settings = get_settings()
+    manager_id = None if user.is_admin else user.manager_id
+    applicants = await db.list_applicants(settings.db_path, manager_id=manager_id)
+    with_login = {u.person_id for u in settings.users if u.person_id}
+    for applicant in applicants:
+        applicant["has_login"] = applicant["id"] in with_login
+    return {"applicants": applicants}
+
+
 @app.get("/healthz", include_in_schema=False)
 async def healthz() -> dict[str, str]:
     return {"status": "ok"}

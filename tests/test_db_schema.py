@@ -57,8 +57,8 @@ async def test_init_creates_properties_and_people(db_path) -> None:
         "id", "manager_id", "address", "apt", "city", "state", "created_at",
     ]
     assert columns(db_path, "people") == [
-        "id", "role", "full_name", "email", "phone", "property_id",
-        "manager_id", "created_at",
+        "id", "role", "full_name", "first_name", "last_name", "email", "phone",
+        "property_id", "manager_id", "created_at",
     ]
 
 

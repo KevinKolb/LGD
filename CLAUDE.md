@@ -406,6 +406,44 @@ loses its backslash and breaks the entire script - it did, once, while the
 picker was being built. `test_the_page_script_parses` runs every script
 through `node --check` when node is installed.
 
+## A manager adds an applicant (the first "less print" feature)
+
+The manager page's step 1, Applicants (2026-09-29; Paper Documents
+Generator became step 2, Legal step 3), takes first name, last name, email
+and mobile and stores a `people` row with role `applicant`, in the
+manager's own company - for filling in their application later, and for
+their login. `people` gained `first_name` / `last_name` (`full_name` stays,
+as "first last"); the mobile is `phone`, stored as `(504) 555-1234` for any
+US number.
+
+On the live site (GitHub Pages) the browser still cannot write `people` -
+001's default deny stands. It calls two SECURITY DEFINER functions from
+`supabase/migrations/002_manager_adds_applicants.sql` through
+`LGD.auth.rpc()`: `create_applicant` and `list_applicants`. They check the
+caller is a signed-in manager or admin, always file the row under the
+caller's own `manager_id` (never one the browser sends), and are granted
+to `authenticated` only. Served by the FastAPI app, the page calls
+`/api/applicants` instead (`db.create_applicant` / `db.list_applicants`,
+same checks and the same wording, in `db.clean_applicant`).
+
+**The login half:** 002 also replaces 001's `webwebusers_create_person` so a
+new login *adopts* an unclaimed person with the same email instead of
+making a second one - so when the applicant signs up with the address the
+manager typed and confirms it, their login links to that record. The
+manager page shows "Has a login" / "No login yet". Sending them an invite
+email is not built yet: creating an auth account needs Supabase's secret
+key, which must never reach a browser, so it needs a server-side step (an
+Edge Function, or the FastAPI app).
+
+**002 must be applied to the live database before the form works there**
+(`python supabase/apply_migrations.py`). It was checked against a local
+Postgres 16 with a stand-in `auth` schema: applied twice cleanly (so it is
+safe to re-run), anonymous callers refused, a signed-in applicant refused,
+each manager seeing only their company, an admin seeing all, and a
+signup with the same email linking to the manager's record with no
+duplicate person. `list_applicants` skips people whose login was promoted
+to manager or admin, since their directory row still says `applicant`.
+
 ## Saved for later: `_saved/`
 
 Finished work that is not live yet goes in `_saved/`, with a line in its

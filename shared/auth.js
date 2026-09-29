@@ -267,6 +267,43 @@
   }
 
   /**
+   * Call one of the database's own functions (PostgREST /rest/v1/rpc/...)
+   * as the signed-in person - e.g. create_applicant from the manager page.
+   * The function itself checks who is calling and what they may do (see
+   * supabase/migrations/002_manager_adds_applicants.sql); this only carries
+   * the session. Throws AuthError with the database's own message, which
+   * those functions word for the person reading it.
+   */
+  async function rpc(name, args) {
+    const current = await session();
+    if (!current) throw new AuthError("You have been signed out. Sign in again.");
+    let response;
+    try {
+      response = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + encodeURIComponent(name), {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: "Bearer " + current.access_token,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(args || {}),
+      });
+    } catch (error) {
+      throw new AuthError("Could not reach the server. Check your connection.");
+    }
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      throw new AuthError(
+        (payload && (payload.message || payload.hint)) ||
+          `Request failed (HTTP ${response.status}).`
+      );
+    }
+    return payload;
+  }
+
+  /**
    * Complete a link emailed by Supabase (confirmation, or password
    * recovery). Those links come back to the page with the tokens in the URL
    * *fragment*, which never reaches a server - which is exactly why this
@@ -352,6 +389,7 @@
     sendPasswordReset,
     updatePassword,
     profile,
+    rpc,
     consumeLinkFromUrl,
     requireRole,
     goToLogin,
