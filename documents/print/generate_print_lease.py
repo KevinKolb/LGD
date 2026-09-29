@@ -781,19 +781,31 @@ __PROPERTIES_JSON__
     });
   });
 
-  // Dates start blank. The Today switch fills in today's date, which stays
+  // Dates start blank, or at their default (the lease start: the first of
+  // next month). The Today switch fills in today's date, which stays
   // editable; changing the date to another day turns the switch off, and
-  // turning it off clears today's date (the user, 2026-09-29).
+  // turning it off puts back the blank or the default (the user, 2026-09-29).
   function isoToday() {
     var now = new Date();
     var pad = function (n) { return (n < 10 ? "0" : "") + n; };
     return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
   }
+  // "2026-10-01": the first of next month, a lease's usual start.
+  function isoNextMonth() {
+    var now = new Date();
+    var first = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return first.getFullYear() + "-" + pad(first.getMonth() + 1) + "-01";
+  }
+  function dateDefault(date) {
+    return date.getAttribute("data-default") === "next-month" ? isoNextMonth() : "";
+  }
   document.querySelectorAll("input[data-today-for]").forEach(function (toggle) {
     var date = document.getElementById(toggle.getAttribute("data-today-for"));
+    date.value = dateDefault(date);
     toggle.addEventListener("change", function () {
       if (toggle.checked) { date.value = isoToday(); }
-      else if (date.value === isoToday()) { date.value = ""; }
+      else if (date.value === isoToday()) { date.value = dateDefault(date); }
     });
     date.addEventListener("input", function () { toggle.checked = date.value === isoToday(); });
   });
@@ -1068,6 +1080,10 @@ QUESTIONS = {
 # someone types their own: the deposit is a month's rent, the occupants
 # are the lessees.
 FOLLOWS = {"deposit": "rent", "occupants": "lessee"}
+# A date that starts filled in rather than blank: a lease usually starts on
+# the first of next month (the user, 2026-09-29). Today and typing still
+# work as for any date; turning Today off goes back to this.
+DATE_DEFAULTS = {"start": "next-month"}
 
 # The lease's blanks, in the order they appear in documents/lease.md, and
 # the key that fills each (None: filled otherwise, or by hand).
@@ -1115,9 +1131,11 @@ def render_question(key: str, for_docs: str = "") -> str:
                    '<option value="month">months</option><option value="year">years</option>'
                    '</select></span>')
     elif kind == "date":
-        # Blank until chosen; the Today switch fills in today's date, which
+        # Blank until chosen - or, for a date in DATE_DEFAULTS, starting at
+        # that - and the Today switch fills in today's date; either way it
         # stays editable (the user, 2026-09-29).
-        control = (f'<span class="date-row"><input type="date" id="{field}" data-q="{key}">'
+        default = f' data-default="{DATE_DEFAULTS[key]}"' if key in DATE_DEFAULTS else ""
+        control = (f'<span class="date-row"><input type="date" id="{field}" data-q="{key}"{default}>'
                    f'<span class="today"><input type="checkbox" class="switch" id="{field}-today"'
                    f' data-today-for="{field}"><label for="{field}-today">Today</label></span></span>')
     else:

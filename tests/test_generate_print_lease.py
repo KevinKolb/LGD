@@ -645,3 +645,13 @@ def test_values_worked_out_from_the_answers(real_output):
     assert "new Date(start.getFullYear(), start.getMonth() + months, start.getDate() - 1)" in real_output
     assert '"deposit-words": inWords(answer("deposit"))' in real_output
     assert '"signed-city": property.city || "New Orleans"' in real_output
+
+
+def test_the_lease_starts_on_the_first_of_next_month_by_default(real_output):
+    """The user, 2026-09-29: the start date opens at the first of next
+    month; Today and typing still work, and Today off goes back to it. The
+    signing date still opens blank."""
+    assert '<input type="date" id="q-start" data-q="start" data-default="next-month">' in real_output
+    assert '<input type="date" id="q-signed" data-q="signed">' in real_output
+    assert "new Date(now.getFullYear(), now.getMonth() + 1, 1)" in real_output
+    assert "date.value = dateDefault(date);" in real_output

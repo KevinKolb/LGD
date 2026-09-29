@@ -212,8 +212,10 @@ migration), net rent is rent less the $50 deduction, the deposit is also
 written out ("One thousand two hundred and 00/100") on the deposit form,
 and the lease ends on the last day of the month before start + term. The
 signing date fills both the lease's "this ___ day of ___" and the
-deposit form's "Received ... on ___". Dates start blank; a Today switch
-fills in today's date, still editable. The deposit follows the rent and
+deposit form's "Received ... on ___". Dates start blank - except the
+lease start, which opens at the first of next month (`DATE_DEFAULTS`) - and
+a Today switch fills in today's date, still editable; turning it off puts
+back the blank or the default. The deposit follows the rent and
 the occupants follow the lessees until typed over (`FOLLOWS`).
 
 Blanks are tagged **by position** in the lease and deposit (`LEASE_FILLS`,
