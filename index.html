@@ -63,26 +63,15 @@
     width: calc(100% - 48px);
     text-align: center;
   }
-  .site-title {
-    text-align: center;
-    padding: 0 24px;
-    max-width: 560px;
-  }
-  .site-title h1 {
-    /* Fluid rather than fixed: the name is long enough to overflow a
-       narrow phone at any size that reads as "large" on a desktop. */
-    margin: 0 0 22px;
-    font-size: clamp(22px, 5.2vw, 34px);
-    line-height: 1.15;
-    letter-spacing: 0.01em;
-    color: var(--accent);
-  }
-  main h2 {
+  /* The company name, and "Portal" on its own line beneath it. */
+  main h1 {
     margin: 0 0 6px;
     font-size: 20px;
+    line-height: 1.25;
     letter-spacing: 0.02em;
     color: var(--accent);
   }
+  main h1 .portal { display: block; }
   p.hint {
     margin: 0 0 28px;
     color: var(--muted);
@@ -127,14 +116,12 @@
     border-color: var(--accent);
     color: #fff;
   }
-  /* Layout comes from /shared/site.css. Here the title and card are
-     centered as one unit by auto margins - one above the title, one below
-     the card - rather than by justify-content, so the shared footer can
+  /* Layout comes from /shared/site.css. Here the card is centered by auto
+     margins rather than by justify-content, so the shared footer can
      still sit at the very bottom without stealing the free space the
      centering depends on. */
   body { justify-content: normal; }
-  .site-title { margin: auto auto 0; }
-  main { margin: 0 auto auto; }
+  main { margin: auto; }
   /* The shared footer reserves room below itself for the bottom of the
      page; here the version line sits in that space instead. */
   footer { margin-top: 0; justify-content: center; padding-bottom: 8px; }
@@ -182,12 +169,8 @@
 </style>
 </head>
 <body>
-<header class="site-title">
-  <h1>Lower Garden District Properties, Inc.</h1>
-</header>
-
 <main>
-  <h2>Portal</h2>
+  <h1>Lower Garden District Properties, Inc.<span class="portal">Portal</span></h1>
   <p class="hint">Choose your role.</p>
   <div class="links">
     <a href="applicant/">Applicant</a>
