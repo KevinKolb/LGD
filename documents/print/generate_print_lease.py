@@ -723,6 +723,23 @@ __PROPERTIES_JSON__
     clean();
   });
 
+  // The deposit starts as the month's rent: leaving the rent box copies its
+  // amount into the deposit box (the user, 2026-09-29). The deposit stays
+  // editable, and once someone types their own figure there, a later
+  // change to the rent leaves it alone - it only follows the rent while it
+  // is empty or still holds the amount last copied in.
+  var rentBox = document.getElementById("picker-field-rent");
+  var depositBox = document.getElementById("picker-field-deposit");
+  if (rentBox && depositBox) {
+    var copied = null;
+    rentBox.addEventListener("change", function () {
+      if (depositBox.value === "$" || depositBox.value === copied) {
+        depositBox.value = rentBox.value;
+        copied = rentBox.value;
+      }
+    });
+  }
+
   // Term boxes: a whole number only; months or years is the select beside it.
   document.querySelectorAll("input[data-term]").forEach(function (input) {
     input.addEventListener("input", function () {

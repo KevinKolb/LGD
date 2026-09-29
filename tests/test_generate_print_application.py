@@ -166,3 +166,13 @@ def test_the_term_is_months_or_years_never_both(real_output):
             '<option value="month">months</option><option value="year">years</option></select>') in popup
     assert 'input.value.replace(/[^0-9]/g, "")' in real_output
     assert 'value = value + " " + unit + (value === "1" ? "" : "s");' in real_output
+
+
+def test_the_deposit_follows_the_rent_until_edited(real_output):
+    """Leaving the rent box copies its amount into the deposit box, which
+    stays editable: it follows the rent only while empty or still holding
+    the amount last copied (the user, 2026-09-29)."""
+    script = real_output[real_output.index('var rentBox = document.getElementById("picker-field-rent");'):]
+    script = script[:script.index("// Term boxes")]
+    assert 'rentBox.addEventListener("change"' in script
+    assert 'if (depositBox.value === "$" || depositBox.value === copied)' in script
