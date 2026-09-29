@@ -601,3 +601,15 @@ def test_documents_float_back_and_print_but_no_home(real_output):
     assert "Home" not in buttons
     assert 'id="picker-home"' not in real_output
     assert 'id="home-button"' not in real_output
+
+
+def test_numbers_use_lining_figures(real_output):
+    """Every digit the height of a capital: Gelasio defaults to old-style
+    figures, where "3,000" reads as a big 3 and small zeros (the user,
+    2026-09-29). Also in the page-number lines."""
+    body = real_output[real_output.index("  body {\n    font-family"):]
+    body = body[:body.index("}")]
+    assert "font-variant-numeric: lining-nums;" in body
+    assert 'font-feature-settings: "lnum" 1;' in body
+    page = real_output[real_output.index("@page {"):real_output.index("html, body {")]
+    assert page.count("font-variant-numeric: lining-nums;") == 2

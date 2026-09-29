@@ -141,6 +141,14 @@ Three details that all matter, each with a test in
   `window.print()` on `load` can fire while the page is still in a fallback
   face, which paginates on the wrong widths.
 
+**Numbers use Gelasio's lining figures** (`font-variant-numeric:
+lining-nums`, the user, 2026-09-29): by default Gelasio, like Georgia, has
+old-style figures, where 0, 1 and 2 are x-height and other digits drop
+below the line, so "3,000" read as a big 3 and small zeros. The lining set
+is in the embedded font itself, the same widths but a slightly wider zero;
+every document printed on the same pages with the same text per page
+before and after.
+
 Don't add a font-family anywhere in that generator without putting
 `"Gelasio"` first, and don't drop the font file thinking it's an asset the
 page merely prefers.

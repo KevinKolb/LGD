@@ -195,6 +195,7 @@ HTML_HEAD = """<!doctype html>
       content: "__COMPANY__ — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
+      font-variant-numeric: lining-nums;
       font-size: 9pt;
       color: #444;
     }
@@ -202,6 +203,7 @@ HTML_HEAD = """<!doctype html>
       content: "__COMPANY__ — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
+      font-variant-numeric: lining-nums;
       font-size: 9pt;
       color: #444;
     }
@@ -222,6 +224,14 @@ HTML_HEAD = """<!doctype html>
   }
   body {
     font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
+    /* Lining figures: every digit the height of a capital. Gelasio, like
+       Georgia, defaults to old-style figures, where 0, 1 and 2 are
+       x-height and 3, 4, 5, 7 and 9 drop below the line - so "3,000" read
+       as a big 3 and small zeros (the user, 2026-09-29). Gelasio carries
+       lining figures itself (its "lnum" feature), the same widths but a
+       slightly wider zero, so this changes the digits' shape only. */
+    font-variant-numeric: lining-nums;
+    font-feature-settings: "lnum" 1;
     font-size: 11.5pt;
     line-height: 1.4;
     max-width: 7.5in;
