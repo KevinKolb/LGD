@@ -193,7 +193,10 @@ yard come from `properties.json` alone - the popup had a parking override,
 removed on 2026-09-28 at the user's request. Nothing of the lease shows
 until one is picked, and the print dialog only opens after. Picking fills
 in the premises blank, bold and underlined, and applies the options.
-"Leave it blank" gives the old fully blank form.
+The button is "Generate document" ("Generate documents" for several). There
+is no longer a "Leave it blank" button (removed 2026-09-29 by the user), so
+a document is always generated for an apartment; the code for a blank form
+(version labels, hand-ticked parking radios) is still there, unreached.
 
 **Viewing is paper, and everything is one tab** (set by the user on
 2026-09-29: "everything will be on standard paper"). On screen each
@@ -285,7 +288,7 @@ Ticked in the manager page's step 1. Changes are logged in
   `TERM_FIELDS` gives it a whole-number box and a months/years select
   (`render_picker_footer(..., terms=)`), filled as "12 months" or "1 year".
 - While the popup is open, Back is one of its buttons rather than floating
-  (it covered "Leave it blank" on a short screen); it floats once the
+  (it covered the popup's buttons on a short screen); it floats once the
   popup closes.
 
 Two originals, both never edited: `application_original.pdf` (with the

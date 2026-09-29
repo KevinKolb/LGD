@@ -497,8 +497,7 @@
     </label>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
-      <button type="submit" id="picker-fill">Fill in this apartment</button>
-      <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
+      <button type="submit" id="picker-fill">Generate document</button>
       <a class="secondary" id="picker-back" href="../../manager/">Back</a>
     </div>
   </form>
@@ -639,7 +638,8 @@
   // premises line and, in each address-dependent section, hides every
   // version that does not apply. The sections themselves - number and
   // title - always show, so section numbers are the same on every lease.
-  // "Leave it blank" prints every version, labelled, as a blank form.
+  // (There was a "Leave it blank" button for an unfilled form, removed on
+  // 2026-09-29 by the user: a document is always for an apartment.)
   var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties;
   var baseTitle = document.title;
   var picker = document.getElementById("picker");
@@ -761,8 +761,11 @@
       });
     });
     var none = docChoices.length > 0 && Object.keys(chosen).length === 0;
-    document.getElementById("picker-fill").disabled = none || !properties.length;
-    document.getElementById("picker-blank").disabled = none;
+    var fill = document.getElementById("picker-fill");
+    fill.disabled = none || !properties.length;
+    // "Generate document", or "Generate documents" for more than one.
+    var count = docChoices.length ? Object.keys(chosen).length : 1;
+    fill.textContent = count > 1 ? "Generate documents" : "Generate document";
   }
   function showDocs() {
     if (!docChoices.length) { return; }
@@ -858,7 +861,6 @@
     });
     finish();
   });
-  document.getElementById("picker-blank").addEventListener("click", finish);
 
   // On a blank lease the PARKING radio buttons work by hand: picking one
   // crosses out the other. (The security deposit shares this script and

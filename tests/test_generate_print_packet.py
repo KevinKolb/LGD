@@ -153,3 +153,13 @@ def test_the_manager_page_button_says_make_documents():
     # One ticked: its name; more: the count.
     assert "`Make ${NAMES[docs[0]]}`" in page
     assert "`Make ${docs.length} documents`" in page
+
+
+def test_the_popup_button_says_generate_and_has_no_blank_option(real_output):
+    """"Generate document(s)", singular or plural with the forms chosen;
+    no "Leave it blank" and no Home in the popup (the user, 2026-09-29)."""
+    popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
+    assert '<button type="submit" id="picker-fill">Generate document</button>' in popup
+    assert "picker-blank" not in real_output and "Leave it blank" not in popup
+    assert "Home" not in popup
+    assert 'fill.textContent = count > 1 ? "Generate documents" : "Generate document";' in real_output
