@@ -146,22 +146,6 @@
     body { padding: 16px; box-shadow: none; }
     table { font-size: 9pt; }
   }
-  /* Opened in the same tab from the manager page; this takes you back. */
-  .back-button {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    z-index: 20;
-    padding: 10px 20px;
-    border: 1px solid #1f5d4c;
-    border-radius: 999px;
-    background: #fff;
-    color: #1f5d4c;
-    font: inherit;
-    text-decoration: none;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
-  }
-  @media print { .back-button { display: none; } }
 </style>
 </head>
 <body>
@@ -437,6 +421,8 @@ All open since 2026-09-06.</p>
   Hidden from print (this note, not the disclaimer).
 </div>
 
-<a class="back-button" href="index.html">Back</a>
+<!-- Back to the manager page; shared/footer.js adds Home beside it. -->
+<div class="site-float"><a class="back-button" href="index.html">Back</a></div>
+<script src="../shared/footer.js"></script>
 </body>
 </html>

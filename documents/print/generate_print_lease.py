@@ -400,6 +400,11 @@ HTML_HEAD = """<!doctype html>
   }
   .float-buttons a { text-decoration: none; background: #fff; color: #1f5d4c; }
   .float-buttons button:hover { background: #174a3c; }
+  /* Three of them fit a small phone without covering most of the page. */
+  @media screen and (max-width: 420px) {
+    .float-buttons { right: 10px; bottom: 10px; gap: 8px; }
+    .float-buttons a, .float-buttons button { padding: 7px 14px; font-size: 11pt; }
+  }
   .execution-block {
     /* "Executed in duplicate at ___ this ___ day of ___" and the four
        signature lines are one unit: those signatures execute that sentence.
@@ -552,6 +557,7 @@ LEASE_FOOTER_NOTE = """
 DOC_BUTTONS = """
 </main>
 <div class="float-buttons">
+  <a href="../../" id="home-button">Home</a>
   <a href="../../manager/" id="back-button">Back</a>
   <button type="button" id="print-button" hidden>Print</button>
 </div>
@@ -598,6 +604,7 @@ __EXTRA_FIELDS__
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Fill in this apartment</button>
       <button type="button" class="secondary" id="picker-blank">Leave it blank</button>
+      <a class="secondary" id="picker-home" href="../../">Home</a>
       <a class="secondary" id="picker-back" href="../../manager/">Back</a>
     </div>
   </form>
@@ -768,11 +775,14 @@ __PROPERTIES_JSON__
   docChoices.forEach(function (box) { box.addEventListener("change", showQuestions); });
   showQuestions();
 
-  // Back sits in the popup while it is open - floating, it would cover
-  // the popup's own buttons on a short screen - and floats once it closes.
-  // Both behave the same: the popup's one just clicks the floating one.
+  // Home and Back sit in the popup while it is open - floating, they would
+  // cover the popup's own buttons on a short screen - and float once it
+  // closes. The popup's Back just clicks the floating one, so both behave
+  // the same.
   var floatingBack = document.getElementById("back-button");
+  var floatingHome = document.getElementById("home-button");
   floatingBack.hidden = true;
+  floatingHome.hidden = true;
   document.getElementById("picker-back").addEventListener("click", function (event) {
     event.preventDefault();
     floatingBack.click();
@@ -782,6 +792,7 @@ __PROPERTIES_JSON__
     showDocs();
     picker.hidden = true;
     floatingBack.hidden = false;
+    floatingHome.hidden = false;
     document.getElementById("print-button").hidden = false;
     if (window.location.hash === "#view") { return; }
     pageLoaded.then(function () {

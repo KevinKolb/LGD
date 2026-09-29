@@ -229,6 +229,11 @@
   }
   .float-buttons a { text-decoration: none; background: #fff; color: #1f5d4c; }
   .float-buttons button:hover { background: #174a3c; }
+  /* Three of them fit a small phone without covering most of the page. */
+  @media screen and (max-width: 420px) {
+    .float-buttons { right: 10px; bottom: 10px; gap: 8px; }
+    .float-buttons a, .float-buttons button { padding: 7px 14px; font-size: 11pt; }
+  }
   .execution-block {
     /* "Executed in duplicate at ___ this ___ day of ___" and the four
        signature lines are one unit: those signatures execute that sentence.
@@ -371,6 +376,7 @@
 </div>
 </main>
 <div class="float-buttons">
+  <a href="../../" id="home-button">Home</a>
   <a href="../../manager/" id="back-button">Back</a>
   <button type="button" id="print-button" hidden>Print</button>
 </div>

@@ -163,3 +163,18 @@ def test_generation_is_deterministic(gen):
 def test_generated_file_on_disk_matches_a_fresh_run(real_output):
     output_path = REPO_ROOT / "manager" / "legal_research.html"
     assert output_path.read_text(encoding="utf-8") == real_output
+
+
+def test_every_site_page_gets_a_home_button():
+    """shared/footer.js floats Home on every page but home itself; the
+    legal pages put their Back in its group, before the script runs."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    footer = (root / "shared" / "footer.js").read_text(encoding="utf-8")
+    assert 'home.textContent = "Home";' in footer
+    assert "if (here === root) return;" in footer
+    for page in ("login", "resident", "applicant", "admin", "manager"):
+        assert "shared/footer.js" in (root / page / "index.html").read_text(encoding="utf-8"), page
+    for page in ("legal_research.html", "legal_review.html"):
+        html = (root / "manager" / page).read_text(encoding="utf-8")
+        assert html.index('<div class="site-float">') < html.index('src="../shared/footer.js"'), page
