@@ -44,3 +44,11 @@ in git history.
     security deposit, which fill those blanks when typed in.
 
 - **2026-09-28 - Pets question: "NO" became "No"** (the user), to match "Yes".
+
+- **2026-09-29 - Money labels formatted the same** (the user): every label
+  for an amount now ends in "$" before its blank, as "Security deposit $"
+  already did - "Monthly rental rate" became "Monthly rental rate $",
+  "Monthly rent" became "Monthly rent $", and "Monthly salary" became
+  "Monthly salary $". The holding deposit's "the sum of $____" already had
+  it. In the popup, the rent and deposit boxes accept only digits, "$" and
+  ".", start with "$", and keep a single "$" however many are typed.

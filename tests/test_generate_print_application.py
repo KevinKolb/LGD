@@ -135,3 +135,23 @@ def test_the_page_script_parses(real_output, tmp_path):
         path.write_text(script, encoding="utf-8")
         result = subprocess.run([node, "--check", str(path)], capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
+
+
+def test_every_money_label_ends_in_a_dollar_sign(real_output):
+    """Formatted the same (the user, 2026-09-29): each amount's label ends
+    in "$" before its blank, as "Security deposit $" always did."""
+    for label in ("Monthly rental rate $", "Security deposit $", "Monthly rent $", "Monthly salary $"):
+        assert f'<span class="label">{label}</span>' in real_output, label
+
+
+def test_money_boxes_take_only_digits_a_point_and_one_dollar_sign(real_output):
+    popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
+    for target in ("field-rent", "field-deposit"):
+        assert (f'data-fills="{target}" data-money inputmode="decimal" value="$">') in popup
+    # Term of lease is not an amount.
+    assert 'data-fills="field-term">' in popup
+    script = real_output[real_output.index('document.querySelectorAll("input[data-money]")'):]
+    assert 'before.replace(/[^0-9.]/g, "")' in script
+    assert 'var cleaned = "$" + amount;' in script
+    # What fills the form drops the "$" - its printed label has one.
+    assert 'value = value.replace(/^[$]/, "");' in real_output

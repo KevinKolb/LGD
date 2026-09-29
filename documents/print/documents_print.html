@@ -379,16 +379,16 @@
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">APPLICATION FOR APARTMENT</p>
 <p class="field row"><span class="label">Address of property</span><span class="blank fixed" data-premises style="flex-grow: 20"></span><span class="label">Desired Date of occupancy</span><span class="blank fixed" style="flex-grow: 12"></span></p>
-<p class="field row"><span class="label">Monthly rental rate</span><span class="blank fixed" id="field-rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" id="field-term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" id="field-deposit" style="flex-grow: 6"></span></p>
+<p class="field row"><span class="label">Monthly rental rate $</span><span class="blank fixed" id="field-rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" id="field-term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" id="field-deposit" style="flex-grow: 6"></span></p>
 <p class="field row"><span class="label">Name of Applicant</span><span class="blank fixed" style="flex-grow: 37"></span></p>
 <p class="field row"><span class="label">Date of birth</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">Social Security #</span><span class="blank fixed" style="flex-grow: 14"></span></p>
 <p class="field row"><span class="label">Telephone #</span><span class="blank fixed" style="flex-grow: 16"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 25"></span></p>
 <p class="field row"><span class="label">Present address</span><span class="blank fixed" style="flex-grow: 27"></span><span class="label">City, State, Zip</span><span class="blank fixed" style="flex-grow: 14"></span></p>
-<p class="field row"><span class="label">Monthly rent</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">How long</span><span class="blank fixed" style="flex-grow: 12"></span></p>
+<p class="field row"><span class="label">Monthly rent $</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">How long</span><span class="blank fixed" style="flex-grow: 12"></span></p>
 <p class="field row"><span class="label">Previous Landlord</span><span class="blank fixed" style="flex-grow: 30"></span><span class="label">Previous Landlord&#x27;s phone #</span><span class="blank fixed" style="flex-grow: 14"></span></p>
 <p class="field row"><span class="label">Employer</span><span class="blank fixed" style="flex-grow: 19"></span><span class="label">Business Address</span><span class="blank fixed" style="flex-grow: 27"></span></p>
 <p class="field row"><span class="label">Business phone #</span><span class="blank fixed" style="flex-grow: 16"></span><span class="label">Length of employment</span><span class="blank fixed" style="flex-grow: 17"></span></p>
-<p class="field row"><span class="label">Position</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Monthly salary</span><span class="blank fixed" style="flex-grow: 22"></span></p>
+<p class="field row"><span class="label">Position</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Monthly salary $</span><span class="blank fixed" style="flex-grow: 22"></span></p>
 <p class="field row"><span class="label">Name of supervisor</span><span class="blank fixed" style="flex-grow: 18"></span><span class="label">Supervisor phone #</span><span class="blank fixed" style="flex-grow: 15"></span></p>
 <p class="label-line">Other persons who will occupy this apartment with you:</p>
 <p class="field row"><span class="label">Full name</span><span class="blank fixed" style="flex-grow: 23"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 22"></span></p>
@@ -584,13 +584,13 @@
       <select id="picker-unit"></select>
     </label>
     <label data-for-docs="application">Monthly rental rate <span class="optional">(optional)</span>
-      <input type="text" id="picker-field-rent" data-fills="field-rent">
+      <input type="text" id="picker-field-rent" data-fills="field-rent" data-money inputmode="decimal" value="$">
     </label>
     <label data-for-docs="application">Term of lease <span class="optional">(optional)</span>
       <input type="text" id="picker-field-term" data-fills="field-term">
     </label>
-    <label data-for-docs="application">Security deposit $ <span class="optional">(optional)</span>
-      <input type="text" id="picker-field-deposit" data-fills="field-deposit">
+    <label data-for-docs="application">Security deposit <span class="optional">(optional)</span>
+      <input type="text" id="picker-field-deposit" data-fills="field-deposit" data-money inputmode="decimal" value="$">
     </label>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
@@ -813,6 +813,25 @@
   //
   // The dashboard's "View paper lease" button opens this page with #view,
   // which skips the dialog so the lease can just be read on screen.
+  // Money boxes: only digits, "$" and "." - and always exactly one "$",
+  // at the front, supplied rather than typed. Anything else typed or
+  // pasted is dropped, and extra "$" signs collapse into the one.
+  document.querySelectorAll("input[data-money]").forEach(function (input) {
+    function clean() {
+      var before = input.value;
+      var caret = input.selectionStart === null ? before.length : input.selectionStart;
+      var amount = before.replace(/[^0-9.]/g, "");
+      var cleaned = "$" + amount;
+      if (cleaned === before) { return; }
+      // Keep the caret after the same digits it followed.
+      var kept = before.slice(0, caret).replace(/[^0-9.]/g, "").length;
+      input.value = cleaned;
+      input.setSelectionRange(kept + 1, kept + 1);
+    }
+    input.addEventListener("input", clean);
+    clean();
+  });
+
   // The combined page's document checkboxes: an unticked document is
   // hidden, and so is any popup question only it asks. A page of one
   // document has no checkboxes, and this does nothing.
@@ -900,6 +919,8 @@
       if (input.closest("[hidden]")) { return; }  // a document not chosen
       var target = document.getElementById(input.getAttribute("data-fills"));
       var value = input.value.trim();
+      // An amount's printed label already ends in "$"; "$" alone is empty.
+      if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
       if (target && value) {
         target.textContent = value;
         target.classList.add("filled");

@@ -674,6 +674,25 @@ __PROPERTIES_JSON__
   //
   // The dashboard's "View paper lease" button opens this page with #view,
   // which skips the dialog so the lease can just be read on screen.
+  // Money boxes: only digits, "$" and "." - and always exactly one "$",
+  // at the front, supplied rather than typed. Anything else typed or
+  // pasted is dropped, and extra "$" signs collapse into the one.
+  document.querySelectorAll("input[data-money]").forEach(function (input) {
+    function clean() {
+      var before = input.value;
+      var caret = input.selectionStart === null ? before.length : input.selectionStart;
+      var amount = before.replace(/[^0-9.]/g, "");
+      var cleaned = "$" + amount;
+      if (cleaned === before) { return; }
+      // Keep the caret after the same digits it followed.
+      var kept = before.slice(0, caret).replace(/[^0-9.]/g, "").length;
+      input.value = cleaned;
+      input.setSelectionRange(kept + 1, kept + 1);
+    }
+    input.addEventListener("input", clean);
+    clean();
+  });
+
   // The combined page's document checkboxes: an unticked document is
   // hidden, and so is any popup question only it asks. A page of one
   // document has no checkboxes, and this does nothing.
@@ -761,6 +780,8 @@ __PROPERTIES_JSON__
       if (input.closest("[hidden]")) { return; }  // a document not chosen
       var target = document.getElementById(input.getAttribute("data-fills"));
       var value = input.value.trim();
+      // An amount's printed label already ends in "$"; "$" alone is empty.
+      if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
       if (target && value) {
         target.textContent = value;
         target.classList.add("filled");
@@ -791,7 +812,8 @@ __PROPERTIES_JSON__
 
 
 def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
-                         documents: tuple[tuple[str, str, bool], ...] = ()) -> str:
+                         documents: tuple[tuple[str, str, bool], ...] = (),
+                         money: tuple[str, ...] = ()) -> str:
     """The apartment picker, its script and the inlined apartment table -
     shared by every printable document that names the premises.
 
@@ -799,14 +821,18 @@ def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
     pairs, or (label, blank id, doc key) when the combined page asks it
     only for that document: whatever is typed fills the element with that
     id. `documents`, on the combined page only, is (key, name, ticked) per
-    document, offered as checkboxes above the apartment questions."""
+    document, offered as checkboxes above the apartment questions. The
+    blank ids in `money` are amounts: their boxes take only digits, "$"
+    and ".", and always start with one "$"."""
     lines = []
     for field in fields:
         label, target = field[0], field[1]
         for_docs = f' data-for-docs="{html.escape(field[2])}"' if len(field) > 2 else ""
         lines.append(
             f'    <label{for_docs}>{html.escape(label)} <span class="optional">(optional)</span>\n'
-            f'      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}">\n'
+            f'      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}"'
+            + (' data-money inputmode="decimal" value="$"' if target in money else "")
+            + '>\n'
             f"    </label>")
     extra = "\n".join(lines)
     if documents:

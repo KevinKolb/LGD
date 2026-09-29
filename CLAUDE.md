@@ -256,6 +256,13 @@ Ticked in the manager page's step 1. Changes are logged in
 - `OFFICE_FIELDS` (rent, term, deposit) become optional boxes in the popup
   via `render_picker_footer(..., fields)`, which any document can use; typed
   values fill the blank with that id, empty ones stay blank.
+- **Money** (the user, 2026-09-29): every amount's label on the form ends
+  in "$" ("Monthly rental rate $", "Security deposit $", "Monthly rent $",
+  "Monthly salary $"). `MONEY_FIELDS` marks the popup boxes for amounts
+  (`render_picker_footer(..., money=)`): they start as "$", accept only
+  digits, "$" and ".", and collapse any number of "$" into one at the
+  front. The "$" is dropped from what fills the form, since the printed
+  label already has it; a box left at "$" leaves its blank empty.
 
 Two originals, both never edited: `application_original.pdf` (with the
 handwritten edit notes, transcribed in `application_original.ocr`) and

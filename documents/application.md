@@ -2,7 +2,7 @@
 
 Address of property____________________  Desired Date of occupancy____________
 
-Monthly rental rate__________  Term of lease__________  Security deposit $______
+Monthly rental rate $__________  Term of lease__________  Security deposit $______
 
 Name of Applicant_____________________________________
 
@@ -12,7 +12,7 @@ Telephone #________________  Email_________________________
 
 Present address___________________________  City, State, Zip______________
 
-Monthly rent____________  How long____________
+Monthly rent $____________  How long____________
 
 Previous Landlord______________________________  Previous Landlord's phone #______________
 
@@ -20,7 +20,7 @@ Employer___________________  Business Address___________________________
 
 Business phone #________________  Length of employment_________________
 
-Position_______________________  Monthly salary______________________
+Position_______________________  Monthly salary $______________________
 
 Name of supervisor__________________  Supervisor phone #_______________
 

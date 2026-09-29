@@ -642,6 +642,25 @@
   //
   // The dashboard's "View paper lease" button opens this page with #view,
   // which skips the dialog so the lease can just be read on screen.
+  // Money boxes: only digits, "$" and "." - and always exactly one "$",
+  // at the front, supplied rather than typed. Anything else typed or
+  // pasted is dropped, and extra "$" signs collapse into the one.
+  document.querySelectorAll("input[data-money]").forEach(function (input) {
+    function clean() {
+      var before = input.value;
+      var caret = input.selectionStart === null ? before.length : input.selectionStart;
+      var amount = before.replace(/[^0-9.]/g, "");
+      var cleaned = "$" + amount;
+      if (cleaned === before) { return; }
+      // Keep the caret after the same digits it followed.
+      var kept = before.slice(0, caret).replace(/[^0-9.]/g, "").length;
+      input.value = cleaned;
+      input.setSelectionRange(kept + 1, kept + 1);
+    }
+    input.addEventListener("input", clean);
+    clean();
+  });
+
   // The combined page's document checkboxes: an unticked document is
   // hidden, and so is any popup question only it asks. A page of one
   // document has no checkboxes, and this does nothing.
@@ -729,6 +748,8 @@
       if (input.closest("[hidden]")) { return; }  // a document not chosen
       var target = document.getElementById(input.getAttribute("data-fills"));
       var value = input.value.trim();
+      // An amount's printed label already ends in "$"; "$" alone is empty.
+      if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
       if (target && value) {
         target.textContent = value;
         target.classList.add("filled");
