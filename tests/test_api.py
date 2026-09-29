@@ -96,6 +96,11 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     assert "Resident Portal" in response.text
     assert 'href="applicant/"' in response.text
     assert 'href="resident/"' in response.text
+    # The role links, in the footer's order.
+    links = response.text[response.text.index('<div class="links">'):]
+    links = links[:links.index("</div>")]
+    assert [links.index(f'href="{p}/"') for p in ("applicant", "resident", "manager", "admin")] == sorted(
+        links.index(f'href="{p}/"') for p in ("applicant", "resident", "manager", "admin"))
     assert 'src="shared/footer.js"' in response.text
 
 

@@ -172,8 +172,10 @@
   <h2>Resident Portal</h2>
   <p class="hint">Choose your role.</p>
   <div class="links">
-    <a href="resident/">Resident</a>
     <a href="applicant/">Applicant</a>
+    <a href="resident/">Resident</a>
+    <a href="manager/">Manager</a>
+    <a href="admin/">Admin</a>
   </div>
 </main>
 
@@ -205,9 +207,10 @@
   document.addEventListener("click", (event) => {
     const link = event.target.closest("a");
     if (!link) return;
-    // The parts that actually work: the manager area, and signing in.
+    // The parts that actually work: the manager and admin areas (each asks
+    // you to sign in), and signing in.
     const path = new URL(link.href, window.location.href).pathname;
-    if (path.endsWith("/manager/") || path.endsWith("/login/")) return;
+    if (path.endsWith("/manager/") || path.endsWith("/admin/") || path.endsWith("/login/")) return;
     event.preventDefault();
     modal.hidden = false;
   });
