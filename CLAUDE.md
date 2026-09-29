@@ -310,7 +310,8 @@ it is ticked (`data-for-docs`). Unticked documents are hidden.
 
 **This is how every form opens from the manager page** (settled 2026-09-29,
 when the user asked for the clearest way to do several documents and for
-steps numbered 1, 2, ... with no letters). Step 1, Documents, is one
+steps numbered 1, 2, ... with no letters). Step 1, Paper Documents
+Generator (renamed from "Documents" the same day), is one
 checkbox per form and one View button; one form or several, it opens this
 page as `documents_print.html?docs=lease,deposit#view`. Since the manager
 page already chose, the popup hides its own checkboxes and asks only
