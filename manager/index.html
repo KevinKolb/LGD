@@ -399,13 +399,18 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
 (function () {
   const form = document.getElementById("documents-form");
   const button = document.getElementById("view-documents");
+  const NAMES = { application: "application", lease: "lease", deposit: "security deposit" };
   function ticked() {
     return Array.from(form.querySelectorAll("input[name=doc]:checked")).map((box) => box.value);
   }
   function update() {
     const docs = ticked();
-    // Always "Make documents"; greyed out until at least one form is ticked.
+    // "Make documents", greyed out, until a form is ticked; then the form's
+    // name ("Make lease"), then the count ("Make 2 documents").
     button.disabled = docs.length === 0;
+    button.textContent = docs.length === 0 ? "Make documents"
+      : docs.length === 1 ? `Make ${NAMES[docs[0]]}`
+      : `Make ${docs.length} documents`;
   }
   form.addEventListener("change", update);
   form.addEventListener("submit", (event) => {

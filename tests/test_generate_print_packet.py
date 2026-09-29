@@ -150,4 +150,6 @@ def test_the_manager_page_opens_everything_in_this_tab_and_has_no_print_links():
 def test_the_manager_page_button_says_make_documents():
     page = MANAGER_PAGE.read_text(encoding="utf-8")
     assert 'id="view-documents" disabled>Make documents</button>' in page
-    assert "button.textContent" not in page
+    # One ticked: its name; more: the count.
+    assert "`Make ${NAMES[docs[0]]}`" in page
+    assert "`Make ${docs.length} documents`" in page
