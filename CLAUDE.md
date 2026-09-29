@@ -256,7 +256,9 @@ picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
 `render_head` opens, which keeps the popup and buttons out of the zoom.
 
 **Every site page has a Home link** (the user, 2026-09-29). `shared/footer.js`,
-which every site page loads, puts "Home" first in the footer, as a plain
+which every site page but the home page loads (the home page has no
+footer - its links only repeated the card's buttons, the user, same day),
+puts "Home" first in the footer, as a plain
 link like the others, on every page but the home page itself. Only the
 document-style legal pages float it too: they put their Back in a
 `.site-float` group *before* the script tag, and Home joins it on the left;

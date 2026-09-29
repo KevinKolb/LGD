@@ -117,15 +117,12 @@
     color: #fff;
   }
   /* Layout comes from /shared/site.css. Here the card is centered by auto
-     margins rather than by justify-content, so the shared footer can
-     still sit at the very bottom without stealing the free space the
-     centering depends on. */
+     margins rather than by justify-content, so the version line can still
+     sit at the very bottom without stealing the free space the centering
+     depends on. No shared footer on this page (the user, 2026-09-29): its
+     links are the card's own buttons, so it only repeated them. */
   body { justify-content: normal; }
   main { margin: auto; }
-  /* The shared footer reserves room below itself for the bottom of the
-     page; here the version line sits in that space instead. */
-  footer { margin-top: 0; justify-content: center; padding-bottom: 8px; }
-  footer a { color: #b0b0b0; }
   .version {
     margin: 0 0 24px;
     text-align: center;
@@ -188,17 +185,13 @@
   </div>
 </div>
 
-<script src="shared/footer.js"></script>
-<!-- After the footer script, which appends the footer to the body when it
-     runs - so this parses in afterwards and lands underneath it. -->
 <p class="version">Version 1.0</p>
 <script>
 "use strict";
 
 // Everything here is a placeholder for now except the manager area, so
 // every other link says so rather than leading somewhere half-built.
-// Delegated from document, because the footer links this also covers are
-// injected by shared/footer.js rather than written into the page.
+// Delegated from document, so it covers every link on the page.
 (function () {
   const modal = document.getElementById("soon-modal");
 

@@ -89,8 +89,8 @@ def test_print_route_requires_a_login(client) -> None:
 
 def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     """Its two role links are relative, not absolute, so that the page
-    still works when GitHub Pages serves it under a /LGD/ prefix. The
-    Manager and Admin links come from the shared footer script."""
+    still works when GitHub Pages serves it under a /LGD/ prefix. No
+    shared footer here: its links would only repeat the card's buttons."""
     response = client.get("/", auth=None)
     assert response.status_code == 200
     # The company name once, in the card: "... Inc. Portal".
@@ -103,12 +103,12 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     assert '<a class="staff" href="admin/">Admin</a>' in response.text
     assert 'href="applicant/"' in response.text
     assert 'href="resident/"' in response.text
-    # The role links, in the footer's order.
+    # The role links, in the same order as every other page's footer.
     links = response.text[response.text.index('<div class="links">'):]
     links = links[:links.index("</div>")]
     assert [links.index(f'href="{p}/"') for p in ("applicant", "resident", "manager", "admin")] == sorted(
         links.index(f'href="{p}/"') for p in ("applicant", "resident", "manager", "admin"))
-    assert 'src="shared/footer.js"' in response.text
+    assert "shared/footer.js" not in response.text
 
 
 def test_applicant_page_is_public_with_no_login(client) -> None:
