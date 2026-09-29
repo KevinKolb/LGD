@@ -178,3 +178,13 @@ def test_every_site_page_gets_a_home_button():
     for page in ("legal_research.html", "legal_review.html"):
         html = (root / "manager" / page).read_text(encoding="utf-8")
         assert html.index('<div class="site-float">') < html.index('src="../shared/footer.js"'), page
+
+
+def test_the_footer_lists_applicant_first_and_no_sign_in():
+    """Applicant, Resident, Manager, Admin; no Sign in link - pages that
+    need a login send you to sign in themselves."""
+    import re
+    from pathlib import Path
+    footer = (Path(__file__).resolve().parent.parent / "shared" / "footer.js").read_text(encoding="utf-8")
+    links = footer[footer.index("const LINKS = ["):footer.index("];")]
+    assert re.findall(r'text: "([^"]+)"', links) == ["Applicant", "Resident", "Manager", "Admin"]

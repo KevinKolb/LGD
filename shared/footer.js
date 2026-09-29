@@ -8,15 +8,15 @@
  * engine here, and six hand-kept copies of the same markup drift. */
 
 (function () {
-  // Resident first, then applicant; admin always last. Sign in is last of
-  // all and separated from the role links - it is not a fifth area of the
-  // site, it is how you get into the other four.
+  // Applicant first, then resident; admin always last. No "Sign in" link
+  // (removed 2026-09-29, the user): a page that needs a login - manager,
+  // admin - sends a signed-out visitor to the sign-in page itself, and
+  // back to that page afterwards (shared/auth.js, requireRole).
   const LINKS = [
-    { path: "resident/", text: "Resident" },
     { path: "applicant/", text: "Applicant" },
+    { path: "resident/", text: "Resident" },
     { path: "manager/", text: "Manager" },
     { path: "admin/", text: "Admin" },
-    { path: "login/", text: "Sign in" },
   ];
 
   // Where the site root is, worked out from this script's own URL rather
