@@ -255,9 +255,15 @@ drop function if exists public.webwebusers_create_person() cascade;
 -- A person already in the directory with that email and no login yet - an
 -- applicant a manager added, a login made with the CLI - is *adopted*: the
 -- new identity is attached to them, keeping their roles and company, so
--- nothing entered before is lost or doubled. Otherwise a new person is
--- made, an applicant: a real login with no access to the manager or admin
--- areas until an admin gives it more.
+-- nothing entered before is lost or doubled.
+--
+-- Anyone else gets no person at all (the user, 2026-09-29: a login is made
+-- only for an email address already on file). Their Supabase identity
+-- exists, but with no `people` row it reads nothing and every page treats
+-- it as unconfirmed. The applicant page checks first (003's email_on_file)
+-- and never signs such an address up; this is what holds when a signup is
+-- sent some other way. So a new staff member is added as a person first -
+-- as an applicant on the manager page, say - and signs up after.
 create or replace function public.handle_auth_user_confirmed()
 returns trigger
 language plpgsql
@@ -287,22 +293,7 @@ begin
       is_applicant = is_applicant
         or not (is_applicant or is_resident or is_manager or is_admin)
     where id = waiting.id;
-    return new;
   end if;
-
-  insert into public.people
-    (id, full_name, email, username, password_hash, auth_id, is_applicant, created_at)
-  values (
-    public.lgd_new_id(),
-    coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), new.email),
-    new.email,
-    case when exists (select 1 from public.people where username = lower(new.email))
-         then null else lower(new.email) end,
-    '',                      -- no PBKDF2 hash: Supabase Auth holds the password
-    new.id,
-    true,
-    public.lgd_now_text()
-  );
   return new;
 end
 $fn$;

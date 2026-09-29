@@ -183,7 +183,25 @@
    * on why), no session comes back here, and nothing exists in `users` or
    * `people` until the emailed link is clicked.
    */
+  // Said when an address is not in `people` yet (the user, 2026-09-29).
+  const NOT_ON_FILE = "That email address is not yet on file.";
+
+  /**
+   * Whether this email address is already in `people` - someone a manager
+   * added. Asked signed out (supabase/migrations/003's email_on_file), and
+   * answers only yes or no.
+   */
+  async function emailOnFile(email) {
+    return (await request("/rest/v1/rpc/email_on_file", { body: { email: (email || "").trim() } })) === true;
+  }
+
+  /**
+   * Create a login - only for an address already on file; anyone else is
+   * stopped here with NOT_ON_FILE, before Supabase sends any email. (001's
+   * trigger holds the same line for a signup sent any other way.)
+   */
   async function signUp(email, password, fullName) {
+    if (!(await emailOnFile(email))) throw new AuthError(NOT_ON_FILE);
     const body = await request(
       "/auth/v1/signup?redirect_to=" + encodeURIComponent(ROOT + "login/"),
       {
@@ -421,6 +439,8 @@
     sendPasswordReset,
     updatePassword,
     profile,
+    emailOnFile,
+    NOT_ON_FILE,
     rpc,
     consumeLinkFromUrl,
     requireRole,

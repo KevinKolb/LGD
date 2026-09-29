@@ -17,7 +17,7 @@ MIGRATION = ROOT / "supabase" / "migrations" / "002_manager_adds_applicants.sql"
 MANAGER_PAGE = ROOT / "manager" / "index.html"
 
 JANE = {"first_name": " Jane ", "last_name": "Doe", "email": " Jane.Doe@Example.com ",
-        "mobile": "504.555.1234"}
+        "mobile": "504.555.1234", "address": "1558 Camp St.", "unit": "B"}
 
 
 def add(client, auth, **changes):
@@ -31,6 +31,7 @@ def test_a_manager_adds_an_applicant_to_their_own_company(client) -> None:
     assert created["first_name"] == "Jane" and created["last_name"] == "Doe"
     assert created["email"] == "jane.doe@example.com"
     assert created["mobile"] == "(504) 555-1234"
+    assert (created["address"], created["unit"]) == ("1558 Camp St.", "B")
     assert created["has_login"] is False
     listed = client.get("/api/applicants", auth=STEVE).json()["applicants"]
     assert [a["email"] for a in listed] == ["jane.doe@example.com"]
@@ -54,6 +55,7 @@ def test_the_same_email_is_refused_the_second_time(client) -> None:
     ({"first_name": "  "}, "First name, last name, email and mobile are all needed."),
     ({"email": "not-an-email"}, "That email address does not look right."),
     ({"mobile": "555-1234"}, "The mobile number needs at least 10 digits."),
+    ({"address": " "}, "Pick the apartment they are applying for."),
 ])
 def test_bad_details_are_refused_with_a_reason(client, changes, reason) -> None:
     response = add(client, STEVE, **changes)
@@ -78,7 +80,7 @@ def test_a_signed_out_visitor_cannot_add_one(client) -> None:
 
 def test_the_migration_only_lets_signed_in_staff_call_it() -> None:
     sql = MIGRATION.read_text(encoding="utf-8")
-    for function in ("create_applicant(text, text, text, text)", "list_applicants(boolean)",
+    for function in ("create_applicant(text, text, text, text, text, text)", "list_applicants(boolean)",
                      "set_applicant_archived(text, boolean)"):
         assert f"revoke all on function public.{function} from public, anon;" in sql
         assert f"grant execute on function public.{function} to authenticated;" in sql
@@ -109,7 +111,8 @@ def test_the_manager_page_has_the_applicant_form_as_step_1() -> None:
     section = page[page.index('<section id="applicants">'):]
     section = section[:section.index("</section>")]
     assert '<span class="step" aria-hidden="true">1</span>' in section
-    for name in ("first_name", "last_name", "email", "mobile"):
+    assert "Add a person you approve to apply. They will be emailed a link to the application." in section
+    for name in ("first_name", "last_name", "email", "mobile", "address", "unit"):
         assert f'name="{name}"' in section
     assert 'window.LGD.auth.rpc("create_applicant", values)' in page
     assert 'window.LGD.auth.rpc("list_applicants", { archived })' in page
@@ -181,3 +184,30 @@ def test_each_applicant_row_offers_application_email_and_archive() -> None:
     assert 'id="toggle-archived"' in page
     assert 'window.LGD.auth.rpc("list_applicants", { archived })' in page
     assert 'window.LGD.auth.rpc("set_applicant_archived", { person_id: person.id, archived })' in page
+
+
+def test_the_applicants_apartment_is_asked_and_kept(client) -> None:
+    """The manager picks the apartment and unit when adding them (the user,
+    2026-09-29); adding them again for another apartment updates it."""
+    person = add(client, STEVE).json()["applicant"]
+    archive(client, STEVE, person["id"])
+    again = add(client, STEVE, address="1534 Camp St.", unit="").json()["applicant"]
+    assert (again["address"], again["unit"]) == ("1534 Camp St.", "")
+
+
+def test_the_popup_starts_on_the_applicants_apartment() -> None:
+    page = (ROOT / "documents" / "print" / "documents_print.html").read_text(encoding="utf-8")
+    assert "if (property.address === applicant.address) { propertySelect.value = String(index); }" in page
+    assert "if (applicant && applicant.unit) { unitSelect.value = applicant.unit; }" in page
+
+
+def test_the_migration_asks_for_the_apartment() -> None:
+    sql = MIGRATION.read_text(encoding="utf-8")
+    assert "drop function if exists public.create_applicant(text, text, text, text);" in sql
+    assert "'Pick the apartment they are applying for.'" in sql
+    assert "'address', coalesce(p.apply_address, '')" in sql
+
+
+def test_properties_json_is_served_to_the_manager_page(client) -> None:
+    assert client.get("/documents/properties.json", auth=STEVE).json()["properties"]
+    assert client.get("/documents/properties.json", auth=TENANT1).status_code == 404

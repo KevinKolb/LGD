@@ -23,7 +23,10 @@ resident page's contact block, the applicant page's company map, and
 text itself. Since 2026-09-28, also the company name in every printed
 document's header (one `COMPANY_NAME`), and LGD's own buildings in
 `documents/properties.json` (each file carries a `manager_id`, so 2.0 is one
-file per company, or a move into the database).
+file per company, or a move into the database). Since 2026-09-29, also "LGD PORTAL" (the home page's
+title bar and the home-screen name in `shared/manifest.webmanifest`), the
+company name at the top of the rent register, and the applicant email's
+subject and signature on the manager page.
 
 The multi-company scaffolding that already exists should **not** be torn out to
 simplify 1.0: `accounts.json` (and its Postgres equivalent) already hold a
@@ -68,7 +71,7 @@ the generator, "(A) ... (B) ..." in the text, the same `data-option` tags as
 the lease. A build error if either document lacks a version the other has.
 Wording changes are logged in
 [`documents/security_deposit_history.md`](documents/security_deposit_history.md). It is one of the
-three forms ticked in the manager page's step 1 (see "Several documents at
+three forms ticked in the manager page's step 2 (see "Several documents at
 once"). Tests:
 `tests/test_generate_print_deposit.py`.
 
@@ -309,7 +312,7 @@ margin and share the leftover width in proportion to their underscore counts
 in `application.md` - so the form's layout is still edited there, by the
 relative length of each blank. A long block with a blank (the holding
 deposit's "$____") stays prose with an inline blank (`ROW_MAX_TEXT`).
-Ticked in the manager page's step 1. Changes are logged in
+Ticked in the manager page's step 2. Changes are logged in
 [`documents/application_history.md`](documents/application_history.md).
 
 - A block beginning `(parking=limited)` in `application.md` is tagged like
@@ -367,7 +370,7 @@ it is ticked (`data-for-docs`). Unticked documents are hidden.
 
 **This is how every form opens from the manager page** (settled 2026-09-29,
 when the user asked for the clearest way to do several documents and for
-steps numbered 1, 2, ... with no letters). Step 1, Paper Documents
+steps numbered 1, 2, ... with no letters). Step 2, Paper Documents
 Generator (renamed from "Documents" the same day), is one
 checkbox per form and one "Make documents" button (the user's wording, greyed
 out until a form is ticked, then "Make lease" for one, "Make 2 documents"
@@ -377,8 +380,9 @@ page already chose, the popup hides its own checkboxes and asks only
 "Which apartment are the lease and security deposit for?". A form alone
 prints exactly as its own page does (checked at every address), so the
 single-document pages are no longer linked from the manager page; they
-stay as files, and `app/main.py` still serves the lease one. Step 2 is
-Legal. **Regenerate it after editing any of the three masters or
+stay as files, and `app/main.py` still serves the lease one. The steps
+are now 1 Applicants, 2 Paper Documents Generator, 3 Monthly Rent Register,
+4 Legal. **Regenerate it after editing any of the three masters or
 `properties.json`**, alongside that document's own page. The addendum is
 left out: no longer in use, and it names a fixed address.
 
@@ -409,14 +413,28 @@ through `node --check` when node is installed.
 ## A manager adds an applicant (the first "less print" feature)
 
 The manager page's step 1, Applicants (2026-09-29; Paper Documents
-Generator became step 2, Legal step 3), takes first name, last name, email
-and mobile and stores a `people` row with `is_applicant` set, in the
+Generator became step 2), takes first name, last name, email, mobile, and
+the apartment and unit they are applying for, and stores a `people` row with `is_applicant` set, in the
 manager's own company - for filling in their application, and for their
 login. `people` gained `first_name` / `last_name` (`full_name` stays, as
 "first last"); the mobile is `phone`, stored as `(504) 555-1234` for any
 US number. Someone already in `people` with that email (a resident
 applying for another apartment) is not a second person: their row becomes
 an applicant too. Only an applicant already on the current list is refused.
+
+Its wording is the user's: "Add a person you approve to apply. They will
+be emailed a link to the application." Nothing is sent automatically yet:
+the **Email** button below opens the manager's own mail with the link.
+
+**The apartment** (the user, same day: "Manager specifies an apartment and
+a unit when creating an applicant") is two selects from
+`documents/properties.json` - the unit only for a building with units,
+both required. It is stored as text in `people.apply_address` /
+`people.apply_unit`, written as `properties.json` writes it, and is *not*
+`property_id`, which is where a resident lives. The list shows it, the
+Application button's popup starts on it, and the email names it. The
+FastAPI app serves `/documents/properties.json` (manager/admin only) so the
+same relative fetch works on both hosts.
 
 Each applicant in the list has three buttons (the user, same day):
 
@@ -428,10 +446,10 @@ Each applicant in the list has three buttons (the user, same day):
   "Telephone #" and "Email" - later Email blanks are the occupants'). It
   fills only when the stored id matches the address, so a document opened
   any other way never gets a stale applicant.
-- **Email** is a `mailto:` with a subject and a short note. A mailto cannot
-  attach a file, so the manager prints the application to PDF and attaches
-  it. Sending from the site itself would need a mail service and a server
-  step.
+- **Email** is a `mailto:` with a subject, the apartment, and the link to
+  the applicant page to create their login. A mailto cannot attach a file,
+  so the manager prints the application to PDF and attaches it. Sending
+  from the site itself would need a mail service and a server step.
 - **Archive** sets `people.archived_at`: off the list, kept in the
   directory. **Show archived** lists them, each with **Restore**. Adding an
   archived applicant again restores the same row.
@@ -464,6 +482,44 @@ empty database, each applied twice cleanly: anonymous callers refused, a
 signed-in applicant refused, each manager seeing only their company, an
 admin seeing all, archive and restore, and a signup with the same email
 linking to the manager's record with no duplicate person.
+
+## The monthly rent register
+
+`manager/rent_register.html` (the user, 2026-09-29: "a printable page for
+now that lists all units, tenants, email and phones and a place for a
+written date it was received"), step 3 on the manager page. One row per
+unit from `documents/properties.json` (a house with no units is one row),
+so an empty unit still has its row; every tenant of a unit in that row;
+and a blank "Date received" column plus a "Month of ____" line, for the
+pen. One letter-size portrait sheet holds every unit (checked in headless
+Chrome); on a phone the sheet is zoomed down to fit, like the documents.
+
+Tenants are `people` with `is_resident`, matched to a unit through
+`property_id` -> `properties` (`address`, `apt`) - the address written as
+`properties.json` writes it. Someone living at an address that file does
+not have is still listed, at the bottom, not dropped. Data comes from
+003's `list_residents()` on GitHub Pages or `/api/residents` from the
+FastAPI app; both let in only a manager or admin, scoped to their company
+(an admin sees all).
+
+**Putting a resident in a unit has no screen yet** - it is a row in
+`properties` and the person's `property_id`, done in the Supabase SQL
+editor. The first was Kevin Kolb (the user), made admin, manager and
+resident at 1558 Camp St., Unit A on 2026-09-29, by a snippet given to the
+user to paste rather than a committed migration: this repository is
+public, and that snippet holds his phone number.
+
+## The house icon
+
+The little house (`favicon.ico`, and `shared/icons/house.svg` drawn to
+match: Tulane green roof and door `#006747`, blue walls `#418fde`, outline
+`#00391e`) is the icon everywhere, the iPhone home screen included
+(`apple-touch-icon.png`, on white, since iOS turns transparent corners
+black), with 192/512 PNGs and `shared/manifest.webmanifest`. Every page,
+the generated documents and legal research included, carries the same
+five head lines; `tests/test_icons.py` checks each one. The name on a home
+screen is "LGD PORTAL", which is also the home page's title bar (the
+user, 2026-09-29).
 
 ## Saved for later: `_saved/`
 
@@ -540,11 +596,33 @@ has the reverse. Requiring both would lock out whichever was made first. An
 empty hash must never authenticate - `app/main.py` verifies against a decoy
 hash in that case, so it fails exactly like a wrong password, in the same time.
 
-### Public signups create the `applicant` role
+### A login only for an email address on file
 
-Anyone can create an account from the website. They land as `applicant`: a
-real login that can see its own row and nothing else, until an admin promotes
-them. Two consequences worth keeping in mind:
+Since 2026-09-29 (the user: "make sure that email address exists in user
+table already; if not, don't continue ... and say: that email address is
+not yet on file") a login is created only for someone already in `people`
+- an applicant a manager added, or anyone an admin put there. Three places
+hold it:
+
+- The applicant page, which is where a login is created now: email first,
+  checked by `LGD.auth.emailOnFile` (003's `email_on_file`, callable signed
+  out, answering only true/false), and the password boxes appear only
+  after a yes. Otherwise it says exactly "That email address is not yet on
+  file."
+- `LGD.auth.signUp` checks again, so the login page's "Create one" obeys
+  the same rule.
+- 001's `handle_auth_user_confirmed` attaches a confirmed login to the
+  person on file and **creates no person otherwise** - it used to create
+  an applicant. A signup sent straight to Supabase's API still makes an
+  `auth.users` identity, but with no `people` row it reads nothing and
+  every page treats it as unconfirmed. So a new staff member is added as a
+  person first, then signs up.
+
+`email_on_file` does let anyone test whether an address is on file; that
+is what the rule needs, and it says nothing more (no name, no company).
+
+A person on file whose login lands with no role set becomes an `applicant`.
+Two consequences worth keeping in mind:
 
 - `app/config.py` **must accept** `applicant` as a valid role. A role the
   loader rejects is a role that fails startup for every user at once, the
@@ -698,7 +776,7 @@ read in full versus only seen via a search tool's summary. Append to it, don't
 replace it, whenever a clause decision draws on outside research — it's meant to
 survive as a reference trail, including for potential litigation.
 
-The manager page links to it from step 2, Legal (beside the legal checklist), and it is read there as an ordinary
+The manager page links to it from step 4, Legal (beside the legal checklist), and it is read there as an ordinary
 page on this site — not as a raw file on a code host, which is what the link
 used to do. [`manager/legal_research.html`](manager/legal_research.html) is a
 **generated file** — never hand-edit it. Regenerate it after every append to

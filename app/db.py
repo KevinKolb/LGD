@@ -102,7 +102,12 @@ CREATE TABLE IF NOT EXISTS people (
     is_manager   BOOLEAN NOT NULL DEFAULT FALSE,
     is_admin     BOOLEAN NOT NULL DEFAULT FALSE,
     -- An applicant taken off the manager's list, still in the directory.
-    archived_at  TEXT
+    archived_at  TEXT,
+    -- The apartment an applicant is applying for, as documents/properties.json
+    -- writes it ("1558 Camp St.", "A"; unit empty for a single house). Not
+    -- property_id, which is where a resident lives.
+    apply_address TEXT,
+    apply_unit   TEXT
 );
 CREATE INDEX IF NOT EXISTS people_property ON people (property_id);
 CREATE INDEX IF NOT EXISTS people_manager ON people (manager_id);
@@ -132,6 +137,7 @@ PERSON_COLUMNS = [
     "id", "full_name", "first_name", "last_name", "email", "phone",
     "property_id", "manager_id", "created_at",
     "is_applicant", "is_resident", "is_manager", "is_admin", "archived_at",
+    "apply_address", "apply_unit",
 ]
 ROLES = ("applicant", "resident", "manager", "admin")
 NEWS_COLUMNS = ["id", "manager_id", "headline", "article", "created_by", "created_at"]
@@ -190,6 +196,9 @@ ADDED_COLUMNS = [
     ("people", "is_manager", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("people", "is_admin", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("people", "archived_at", "TEXT"),
+    # The apartment an applicant is applying for (2026-09-29).
+    ("people", "apply_address", "TEXT"),
+    ("people", "apply_unit", "TEXT"),
     # The live applications table was created before the application form
     # grew these three, and CREATE TABLE IF NOT EXISTS will not add them.
     # Found on 2026-09-08 by comparing the deployed table against SCHEMA:
@@ -584,15 +593,20 @@ class ApplicantError(ValueError):
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def clean_applicant(first_name: str, last_name: str, email: str, mobile: str) -> dict[str, str]:
+def clean_applicant(first_name: str, last_name: str, email: str, mobile: str,
+                    address: str = "", unit: str = "") -> dict[str, str]:
     """The same checks, and the same wording, as create_applicant in
     supabase/migrations/002_manager_adds_applicants.sql - the website calls
     that; this app's own API calls this."""
     first, last = first_name.strip(), last_name.strip()
     email, mobile = email.strip().lower(), mobile.strip()
+    address, unit = address.strip(), unit.strip()
     if not (first and last and email and mobile):
         raise ApplicantError("First name, last name, email and mobile are all needed.")
-    if len(first) > 100 or len(last) > 100 or len(email) > 254 or len(mobile) > 40:
+    if not address:
+        raise ApplicantError("Pick the apartment they are applying for.")
+    if (len(first) > 100 or len(last) > 100 or len(email) > 254 or len(mobile) > 40
+            or len(address) > 200 or len(unit) > 20):
         raise ApplicantError("One of those is too long.")
     if not EMAIL_PATTERN.match(email):
         raise ApplicantError("That email address does not look right.")
@@ -603,7 +617,8 @@ def clean_applicant(first_name: str, last_name: str, email: str, mobile: str) ->
         digits = digits[1:]
     if len(digits) == 10:
         mobile = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-    return {"first_name": first, "last_name": last, "email": email, "mobile": mobile}
+    return {"first_name": first, "last_name": last, "email": email, "mobile": mobile,
+            "address": address, "unit": unit}
 
 
 def applicant_view(row: dict[str, Any]) -> dict[str, Any]:
@@ -618,6 +633,8 @@ def applicant_view(row: dict[str, Any]) -> dict[str, Any]:
         "created_at": row["created_at"],
         "archived": row.get("archived_at") is not None,
         "is_resident": bool(row.get("is_resident")),
+        "address": row.get("apply_address") or "",
+        "unit": row.get("apply_unit") or "",
     }
 
 
@@ -669,7 +686,8 @@ async def _person(db_path: str, person_id: str) -> dict[str, Any] | None:
 
 
 async def create_applicant(db_path: str, *, first_name: str, last_name: str,
-                           email: str, mobile: str, manager_id: str | None,
+                           email: str, mobile: str, address: str = "", unit: str = "",
+                           manager_id: str | None,
                            is_admin: bool = False) -> dict[str, Any]:
     """A manager adds someone who is applying: stored now, to fill in their
     application later, and adopted by their login when they sign up with
@@ -679,7 +697,7 @@ async def create_applicant(db_path: str, *, first_name: str, last_name: str,
     for another apartment - becomes an applicant too rather than a second
     person (the user: "User can be applicant and resident"). Raises
     ApplicantError with a reason fit to show the manager."""
-    clean = clean_applicant(first_name, last_name, email, mobile)
+    clean = clean_applicant(first_name, last_name, email, mobile, address, unit)
     existing = await _rows(
         db_path, "SELECT * FROM people WHERE lower(email) = ? ORDER BY created_at LIMIT 1",
         clean["email"])
@@ -694,9 +712,10 @@ async def create_applicant(db_path: str, *, first_name: str, last_name: str,
             db_path,
             "UPDATE people SET is_applicant = ?, archived_at = NULL, "
             "first_name = COALESCE(first_name, ?), last_name = COALESCE(last_name, ?), "
-            "phone = COALESCE(phone, ?), manager_id = COALESCE(manager_id, ?) WHERE id = ?",
+            "phone = COALESCE(phone, ?), manager_id = COALESCE(manager_id, ?), "
+            "apply_address = ?, apply_unit = ? WHERE id = ?",
             True, clean["first_name"], clean["last_name"], clean["mobile"], manager_id,
-            person["id"])
+            clean["address"], clean["unit"], person["id"])
         return applicant_view(await _person(db_path, person["id"]))
     person_id = secrets.token_hex(12)
     row = {
@@ -711,6 +730,7 @@ async def create_applicant(db_path: str, *, first_name: str, last_name: str,
         "created_at": _now(),
         "is_applicant": True, "is_resident": False, "is_manager": False, "is_admin": False,
         "archived_at": None,
+        "apply_address": clean["address"], "apply_unit": clean["unit"],
     }
     if _is_postgres(db_path):
         await _pg_create_person(db_path, row)
@@ -731,6 +751,21 @@ async def list_applicants(db_path: str, *, manager_id: str | None,
         args.append(manager_id)
     query += " ORDER BY COALESCE(archived_at, created_at) DESC LIMIT 500"
     return [applicant_view(row) for row in await _rows(db_path, query, *args)]
+
+
+async def list_residents(db_path: str, *, manager_id: str | None) -> list[dict[str, Any]]:
+    """Residents with the unit they live in, for the monthly rent register:
+    one company's, or everyone's when `manager_id` is None (an admin). The
+    same fields as list_residents in supabase/migrations/003."""
+    query = ("SELECT p.id, p.full_name, p.email, p.phone, pr.address, "
+             "COALESCE(pr.apt, '') AS unit FROM people p "
+             "JOIN properties pr ON pr.id = p.property_id WHERE p.is_resident = ?")
+    args: list[Any] = [True]
+    if manager_id is not None:
+        query += " AND p.manager_id = ?"
+        args.append(manager_id)
+    query += " ORDER BY pr.address, pr.apt, p.full_name"
+    return await _rows(db_path, query, *args)
 
 
 async def set_applicant_archived(db_path: str, *, person_id: str, archived: bool,

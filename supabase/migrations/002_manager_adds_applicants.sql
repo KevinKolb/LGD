@@ -26,6 +26,13 @@
 -- directory, and back again with one click.
 alter table public.people add column if not exists archived_at text;
 
+-- The apartment they are applying for, which the manager picks when adding
+-- them (the user, 2026-09-29), as documents/properties.json writes it:
+-- "1558 Camp St." and "A", the unit empty for a single house. Not
+-- property_id, which is where a resident lives.
+alter table public.people add column if not exists apply_address text;
+alter table public.people add column if not exists apply_unit text;
+
 -- The signed-in caller's row, or nothing. SECURITY DEFINER so it can read
 -- `people` past its own row-level policy.
 create or replace function public.lgd_caller()
@@ -52,6 +59,7 @@ as $fn$
     'email', p.email, 'mobile', p.phone, 'created_at', p.created_at,
     'archived', p.archived_at is not null,
     'is_resident', p.is_resident,
+    'address', coalesce(p.apply_address, ''), 'unit', coalesce(p.apply_unit, ''),
     'has_login', p.auth_id is not null or p.password_hash <> ''
   )
 $fn$;
@@ -66,11 +74,18 @@ revoke all on function public.lgd_applicant_json(public.people) from public, ano
 -- for another apartment, say - is not a second person: they become an
 -- applicant too (the user: "User can be applicant and resident"). Only an
 -- applicant already on the list is refused.
+--
+-- The four-argument version, from before the apartment was asked, is
+-- dropped: PostgREST picks a function by its argument names, and two
+-- versions would only leave a stale one callable.
+drop function if exists public.create_applicant(text, text, text, text);
 create or replace function public.create_applicant(
   first_name text,
   last_name text,
   email text,
-  mobile text
+  mobile text,
+  address text,
+  unit text default ''
 )
 returns json
 language plpgsql
@@ -84,6 +99,8 @@ declare
   clean_last text := btrim(coalesce(last_name, ''));
   clean_email text := lower(btrim(coalesce(email, '')));
   clean_mobile text := btrim(coalesce(mobile, ''));
+  clean_address text := btrim(coalesce(address, ''));
+  clean_unit text := btrim(coalesce(unit, ''));
   digits text;
   existing public.people;
   result public.people;
@@ -96,8 +113,12 @@ begin
     raise exception 'First name, last name, email and mobile are all needed.'
       using errcode = '22023';
   end if;
+  if clean_address = '' then
+    raise exception 'Pick the apartment they are applying for.' using errcode = '22023';
+  end if;
   if length(clean_first) > 100 or length(clean_last) > 100
-     or length(clean_email) > 254 or length(clean_mobile) > 40 then
+     or length(clean_email) > 254 or length(clean_mobile) > 40
+     or length(clean_address) > 200 or length(clean_unit) > 20 then
     raise exception 'One of those is too long.' using errcode = '22023';
   end if;
   if clean_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
@@ -135,25 +156,27 @@ begin
       first_name = coalesce(p.first_name, clean_first),
       last_name = coalesce(p.last_name, clean_last),
       phone = coalesce(p.phone, clean_mobile),
-      manager_id = coalesce(p.manager_id, caller.manager_id)
+      manager_id = coalesce(p.manager_id, caller.manager_id),
+      apply_address = clean_address,
+      apply_unit = clean_unit
     where p.id = existing.id
     returning p.* into result;
   else
     insert into public.people
       (id, full_name, first_name, last_name, email, phone, manager_id,
-       is_applicant, created_at)
+       is_applicant, created_at, apply_address, apply_unit)
     values (
       public.lgd_new_id(), clean_first || ' ' || clean_last,
       clean_first, clean_last, clean_email, clean_mobile, caller.manager_id,
-      true, public.lgd_now_text()
+      true, public.lgd_now_text(), clean_address, clean_unit
     )
     returning * into result;
   end if;
   return public.lgd_applicant_json(result);
 end
 $fn$;
-revoke all on function public.create_applicant(text, text, text, text) from public, anon;
-grant execute on function public.create_applicant(text, text, text, text) to authenticated;
+revoke all on function public.create_applicant(text, text, text, text, text, text) from public, anon;
+grant execute on function public.create_applicant(text, text, text, text, text, text) to authenticated;
 
 
 -- ---------------------------------------------------------------------------

@@ -1053,7 +1053,15 @@ __PROPERTIES_JSON__
     propertySelect.add(new Option(property.address, String(index)));
   });
   if (properties.length) {
+    // The apartment the applicant is applying for, picked when the
+    // manager added them, starts selected; still changeable.
+    if (applicant && applicant.address) {
+      properties.forEach(function (property, index) {
+        if (property.address === applicant.address) { propertySelect.value = String(index); }
+      });
+    }
     showUnits();
+    if (applicant && applicant.unit) { unitSelect.value = applicant.unit; }
   } else {
     document.getElementById("picker-fill").disabled = true;
   }

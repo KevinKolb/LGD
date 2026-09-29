@@ -48,6 +48,7 @@ PRINT_DIR = (Path(__file__).resolve().parent.parent / "documents" / "print").res
 RESIDENT_DIR = (Path(__file__).resolve().parent.parent / "resident").resolve()
 APPLICANT_DIR = (Path(__file__).resolve().parent.parent / "applicant").resolve()
 LOGIN_DIR = (Path(__file__).resolve().parent.parent / "login").resolve()
+PROPERTIES_PATH = (Path(__file__).resolve().parent.parent / "documents" / "properties.json").resolve()
 FAVICON_PATH = (Path(__file__).resolve().parent.parent / "favicon.ico").resolve()
 ROOT_INDEX_PATH = (Path(__file__).resolve().parent.parent / "index.html").resolve()
 # The blank, printable lease - generated from documents/lease.md by
@@ -187,6 +188,15 @@ async def print_files(asset: str, user: User = Depends(current_user)):
         media_type="text/html",
         headers={"Cache-Control": "no-store"},
     )
+
+
+@app.get("/documents/properties.json", include_in_schema=False)
+async def properties_file(user: User = Depends(current_user)):
+    """The table of apartments, at the same relative path it has on GitHub
+    Pages, for the manager page's applicant form and the rent register."""
+    require_dashboard_role(user)
+    return FileResponse(PROPERTIES_PATH, media_type="application/json",
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/shared/{asset:path}", include_in_schema=False)
@@ -453,6 +463,8 @@ class ApplicantRequest(BaseModel):
     last_name: str = Field(max_length=100)
     email: str = Field(max_length=254)
     mobile: str = Field(max_length=40)
+    address: str = Field(default="", max_length=200)
+    unit: str = Field(default="", max_length=20)
 
 
 @app.post("/api/applicants", status_code=201)
@@ -472,6 +484,8 @@ async def api_add_applicant(
             last_name=applicant.last_name,
             email=applicant.email,
             mobile=applicant.mobile,
+            address=applicant.address,
+            unit=applicant.unit,
             manager_id=user.manager_id,
             is_admin=user.is_admin,
         )
@@ -495,6 +509,16 @@ async def api_list_applicants(archived: bool = False,
     for applicant in applicants:
         applicant["has_login"] = applicant["id"] in with_login
     return {"applicants": applicants}
+
+
+@app.get("/api/residents")
+async def api_list_residents(user: User = Depends(current_user)) -> dict[str, Any]:
+    """Residents and their units, for the manager page's rent register -
+    this company's, or every company's for an admin."""
+    require_dashboard_role(user)
+    settings = get_settings()
+    manager_id = None if user.is_admin else user.manager_id
+    return {"residents": await db.list_residents(settings.db_path, manager_id=manager_id)}
 
 
 class ArchiveRequest(BaseModel):

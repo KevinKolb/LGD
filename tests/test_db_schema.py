@@ -60,6 +60,7 @@ async def test_init_creates_properties_and_people(db_path) -> None:
         "id", "full_name", "first_name", "last_name", "email", "phone",
         "property_id", "manager_id", "created_at",
         "is_applicant", "is_resident", "is_manager", "is_admin", "archived_at",
+        "apply_address", "apply_unit",
     ]
 
 

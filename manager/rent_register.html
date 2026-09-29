@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.ico?v=2" sizes="any">
+<link rel="icon" href="../shared/icons/house.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
+<link rel="manifest" href="../shared/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="LGD PORTAL">
+<link rel="stylesheet" href="../shared/site.css">
+<title>Rent Register</title>
+<!--
+  The monthly rent register (the user, 2026-09-29): every unit, its tenants
+  with their email and phone, and a line to write the date that month's
+  rent was received. Printable for now - one sheet a month, filled in by
+  hand.
+
+  Units come from documents/properties.json (the same table as the
+  documents' popup), so a unit with nobody in it still gets its row. The
+  tenants come from `people` - residents, matched to a unit by their
+  property_id's address and apt - through list_residents (supabase/
+  migrations/003) on GitHub Pages, or /api/residents from the FastAPI app.
+  Both let in only a manager or an admin.
+-->
+<style>
+  @page {
+    size: letter;
+    margin: 0.5in;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      color: #444;
+    }
+  }
+  :root { --ink: #111; --muted: #6b6a66; --line: #333; --accent: #006747; }
+  html, body { margin: 0; padding: 0; background: #fff; color: var(--ink); }
+  body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.3;
+    padding: 16px 16px 96px;
+  }
+  /* The paper sheet's own width; on a phone it is zoomed down to fit
+     (fitSheet below), like the documents, rather than reflowed. */
+  .register { width: 7.5in; margin: 0 auto; }
+  .company { font-size: 11pt; font-weight: 700; margin: 0; text-align: center; }
+  h1 { font-size: 16pt; margin: 2px 0 10px; text-align: center; letter-spacing: .04em; }
+  .month { text-align: center; margin: 0 0 14px; font-size: 11pt; }
+  .month .blank { display: inline-block; width: 2.4in; border-bottom: 1px solid var(--line); }
+  .status { color: var(--muted); text-align: center; }
+  .status.error { color: #a4262c; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { font-size: 9pt; text-transform: uppercase; letter-spacing: .03em; background: #eef3f1; }
+  /* Room to write a date by hand, and every unit on one sheet of paper. */
+  td { height: 0.3in; }
+  col.apartment { width: 1.8in; } col.tenant { width: 1.45in; }
+  col.phone { width: 1.1in; } col.received { width: 1.2in; }
+  td.apartment { white-space: nowrap; font-weight: 600; }
+  td .line + .line { margin-top: 2px; }
+  td.email { word-break: break-all; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  thead { display: table-header-group; }  /* the header row again on every printed page */
+  tbody.building tr:first-child td { border-top-width: 2px; }
+  .vacant { color: var(--muted); font-style: italic; }
+  .site-float a#print-register { background: var(--accent); color: #fff; border-color: var(--accent); }
+  @media print {
+    footer { display: none; }
+    body { padding: 0; font-size: 9.5pt; }
+    th { background: none; }
+    .status { display: none; }
+    .register { zoom: 1 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="register">
+  <p class="company">Lower Garden District Properties, Inc.</p>
+  <h1>MONTHLY RENT REGISTER</h1>
+  <p class="month">Month of <span class="blank"></span></p>
+  <p class="status" id="status" role="status">Loading…</p>
+  <div>
+    <table id="register" hidden>
+      <colgroup>
+        <col class="apartment"><col class="tenant"><col class="email"><col class="phone"><col class="received">
+      </colgroup>
+      <thead>
+        <tr><th>Apartment</th><th>Tenant</th><th>Email</th><th>Phone</th><th>Date received</th></tr>
+      </thead>
+    </table>
+  </div>
+</div>
+<div class="site-float">
+  <a class="back-button" href="index.html">Back</a>
+  <a class="back-button" href="#" id="print-register" hidden>Print</a>
+</div>
+<script src="../shared/auth.js"></script>
+<script>
+"use strict";
+(function () {
+  const status = document.getElementById("status");
+  const table = document.getElementById("register");
+  const printLink = document.getElementById("print-register");
+
+  function fail(text) {
+    status.textContent = text;
+    status.className = "status error";
+  }
+
+  // Who is asking, and where the data comes from: the FastAPI app when it
+  // served this page (HTTP Basic has already checked the login), Supabase
+  // on GitHub Pages.
+  async function backend() {
+    try {
+      const response = await fetch("/api/config");
+      if (response.ok) return "api";
+    } catch (error) {
+      /* No backend here - the normal case on GitHub Pages. */
+    }
+    const auth = window.LGD.auth;
+    if (!auth.configured) throw new Error("This site is not connected to its login service yet.");
+    const result = await auth.requireRole(["manager", "admin"]);
+    if (result.reason === "signed-out") return null;  // already heading to the login page
+    if (!result.ok) throw new Error("The rent register is for managers.");
+    return "supabase";
+  }
+
+  async function residents(via) {
+    if (via === "api") {
+      const response = await fetch("/api/residents");
+      if (!response.ok) throw new Error("The residents could not be loaded.");
+      return (await response.json()).residents;
+    }
+    return window.LGD.auth.rpc("list_residents", {});
+  }
+
+  function cell(className, lines) {
+    const td = document.createElement("td");
+    if (className) td.className = className;
+    for (const text of lines) {
+      const line = document.createElement("div");
+      line.className = "line";
+      line.textContent = text || "";
+      td.append(line);
+    }
+    return td;
+  }
+
+  // One row per unit (a house with no units is one row), every tenant of
+  // that unit in it, one under the other; a unit with nobody on file
+  // leaves its tenant blank to write in.
+  function render(properties, people) {
+    const key = (address, unit) => `${address}|${unit || ""}`;
+    const byUnit = new Map();
+    for (const person of people) {
+      const k = key(person.address, person.unit);
+      if (!byUnit.has(k)) byUnit.set(k, []);
+      byUnit.get(k).push(person);
+    }
+    const placed = new Set();
+    for (const property of properties) {
+      const body = document.createElement("tbody");
+      body.className = "building";
+      const units = property.units.length ? property.units : [""];
+      for (const unit of units) {
+        const tenants = byUnit.get(key(property.address, unit)) || [];
+        placed.add(key(property.address, unit));
+        const row = document.createElement("tr");
+        row.append(
+          cell("apartment", [unit ? `${property.address}, Unit ${unit}` : property.address]),
+          cell("", tenants.map((t) => t.full_name)),
+          cell("email", tenants.map((t) => t.email)),
+          cell("", tenants.map((t) => t.phone)),
+          cell("received", [])
+        );
+        body.append(row);
+      }
+      table.append(body);
+    }
+    // Anyone living at an address the table of apartments does not have
+    // is still listed, rather than silently left off the register.
+    const stray = people.filter((p) => !placed.has(key(p.address, p.unit)));
+    if (stray.length) {
+      const body = document.createElement("tbody");
+      body.className = "building";
+      for (const person of stray) {
+        const row = document.createElement("tr");
+        row.append(
+          cell("apartment", [person.unit ? `${person.address}, Unit ${person.unit}` : person.address]),
+          cell("", [person.full_name]), cell("email", [person.email]),
+          cell("", [person.phone]), cell("received", [])
+        );
+        body.append(row);
+      }
+      table.append(body);
+    }
+  }
+
+  function fitSheet() {
+    const sheet = document.querySelector(".register");
+    sheet.style.zoom = "";
+    const room = document.documentElement.clientWidth - 32;
+    if (sheet.offsetWidth > room) sheet.style.zoom = String(room / sheet.offsetWidth);
+  }
+  fitSheet();
+  window.addEventListener("resize", fitSheet);
+
+  printLink.addEventListener("click", async (event) => {
+    event.preventDefault();
+    window.print();
+  });
+
+  (async function () {
+    try {
+      const via = await backend();
+      if (!via) return;
+      const [propertiesResponse, people] = await Promise.all([
+        fetch("../documents/properties.json", { cache: "no-store" }), residents(via),
+      ]);
+      const properties = (await propertiesResponse.json()).properties;
+      render(properties, people);
+      status.hidden = true;
+      table.hidden = false;
+      printLink.hidden = false;
+    } catch (error) {
+      fail(error.message || "The rent register could not be loaded.");
+    }
+  })();
+})();
+</script>
+<script src="../shared/footer.js"></script>
+</body>
+</html>

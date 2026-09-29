@@ -137,8 +137,9 @@
     margin-bottom: 16px;
   }
   @media (max-width: 560px) { .field-grid { grid-template-columns: 1fr; } }
+  .field-grid label[hidden] { display: none; }
   .field-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-  .field-grid input {
+  .field-grid input, .field-grid select {
     font: inherit;
     /* 16px or more, or an iPhone zooms the page in on tapping a box. */
     font-size: 16px;
@@ -148,7 +149,7 @@
     border-radius: 6px;
     background: #fff;
   }
-  .field-grid input:focus { outline: 2px solid var(--accent2); border-color: var(--accent); }
+  .field-grid input:focus, .field-grid select:focus { outline: 2px solid var(--accent2); border-color: var(--accent); }
   .form-msg { font-size: 13px; }
   .form-msg.error { color: var(--danger); }
   .form-msg.ok { color: var(--ok); }
@@ -281,16 +282,14 @@
       <h2>Applicants</h2>
     </div>
     <p class="hint">
-      Add someone who is applying. They are kept for filling in their
-      application, and when they sign up on this site with the same email,
-      their login is linked to what you entered here.
+      Add a person you approve to apply. They will be emailed a link to the application.
     </p>
     <p class="hint">
-      To send someone the application: <strong>Application</strong> opens it
-      with their name, mobile and email filled in &mdash; pick the apartment,
-      then Print, and save it as a PDF. <strong>Email</strong> starts an
-      email to them; attach that PDF and send. <strong>Archive</strong> takes
-      them off the list, and Show archived brings them back.
+      <strong>Application</strong> opens it filled in with their name, mobile,
+      email and apartment; Print it and save it as a PDF. <strong>Email</strong>
+      starts an email to them with the link to create their login here; attach
+      that PDF and send. <strong>Archive</strong> takes them off the list, and
+      Show archived brings them back.
     </p>
     <form id="applicant-form" novalidate>
       <div class="field-grid">
@@ -305,6 +304,14 @@
         </label>
         <label>Mobile
           <input id="applicant-mobile" name="mobile" type="tel" inputmode="tel" autocomplete="off" maxlength="40" required>
+        </label>
+        <label>Apartment
+          <select id="applicant-address" name="address" required>
+            <option value="">Choose…</option>
+          </select>
+        </label>
+        <label id="applicant-unit-label" hidden>Unit
+          <select id="applicant-unit" name="unit"></select>
         </label>
       </div>
       <div class="actions">
@@ -356,6 +363,20 @@
   <section>
     <div class="step-head">
       <span class="step" aria-hidden="true">3</span>
+      <h2>Monthly Rent Register</h2>
+    </div>
+    <p class="hint">
+      Every unit, with its tenants&rsquo; names, email and phone, and a line to
+      write the date the month&rsquo;s rent was received. Print one each month.
+    </p>
+    <div class="actions">
+      <a class="button-link" id="rent-register-link" href="rent_register.html">Rent register</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">4</span>
       <h2>Legal</h2>
     </div>
     <p class="hint">
@@ -548,8 +569,41 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     last_name: document.getElementById("applicant-last"),
     email: document.getElementById("applicant-email"),
     mobile: document.getElementById("applicant-mobile"),
+    address: document.getElementById("applicant-address"),
+    unit: document.getElementById("applicant-unit"),
   };
+  const unitLabel = document.getElementById("applicant-unit-label");
   let showingArchived = false;
+  let properties = [];
+
+  // The apartments, from documents/properties.json - the same table the
+  // documents' popup uses. A building with units asks which one.
+  async function loadProperties() {
+    try {
+      const response = await fetch("../documents/properties.json", { cache: "no-store" });
+      properties = (await response.json()).properties;
+    } catch (error) {
+      properties = [];
+    }
+    for (const property of properties) {
+      fields.address.add(new Option(property.address, property.address));
+    }
+  }
+
+  function showUnits() {
+    const property = properties.find((p) => p.address === fields.address.value);
+    const units = property ? property.units : [];
+    fields.unit.length = 0;
+    fields.unit.add(new Option("Choose…", ""));
+    for (const unit of units) fields.unit.add(new Option(unit, unit));
+    unitLabel.hidden = !units.length;
+  }
+  fields.address.addEventListener("change", showUnits);
+
+  function apartment(person) {
+    if (!person.address) return "";
+    return person.unit ? `${person.address}, Unit ${person.unit}` : person.address;
+  }
 
   function say(text, kind) {
     message.textContent = text;
@@ -611,6 +665,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     try {
       sessionStorage.setItem("lgd-applicant", JSON.stringify({
         id: person.id, name: fullName(person), phone: person.mobile || "", email: person.email || "",
+        address: person.address || "", unit: person.unit || "",
       }));
     } catch (error) {
       // Private browsing with storage off: the application still opens,
@@ -624,9 +679,13 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   // mailto link cannot attach a file itself.
   function emailLink(person) {
     const subject = "Your rental application - Lower Garden District Properties, Inc.";
+    const place = apartment(person);
+    const signup = new URL("../applicant/", window.location.href).href;
     const body = `Hello ${person.first_name},\n\n`
+      + (place ? `You are approved to apply for ${place}. ` : "You are approved to apply. ")
       + "Attached is our rental application. Please fill it in, sign it, and "
       + "send it back to us, or bring it to our office.\n\n"
+      + `You can also create your login to our portal, with this email address, here:\n${signup}\n\n`
       + "Thank you,\nLower Garden District Properties, Inc.";
     return `mailto:${encodeURIComponent(person.email)}`
       + `?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -657,7 +716,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       who.textContent = fullName(person);
       const contact = document.createElement("span");
       contact.className = "contact";
-      contact.textContent = [person.email, person.mobile].filter(Boolean).join(" · ");
+      contact.textContent = [apartment(person), person.email, person.mobile].filter(Boolean).join(" · ");
       const login = document.createElement("span");
       login.className = "login" + (person.has_login ? " yes" : "");
       login.textContent = (person.has_login ? "Has a login" : "No login yet")
@@ -730,10 +789,15 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     event.preventDefault();
     const values = {};
     for (const [key, input] of Object.entries(fields)) values[key] = input.value.trim();
-    const missing = Object.entries(values).find(([, value]) => !value);
+    const missing = ["first_name", "last_name", "email", "mobile"].find((key) => !values[key]);
     if (missing) {
       say("First name, last name, email and mobile are all needed.", "error");
-      fields[missing[0]].focus();
+      fields[missing].focus();
+      return;
+    }
+    if (!values.address || (!unitLabel.hidden && !values.unit)) {
+      say(values.address ? "Pick the unit they are applying for." : "Pick the apartment they are applying for.", "error");
+      (values.address ? fields.unit : fields.address).focus();
       return;
     }
     button.disabled = true;
@@ -742,6 +806,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       const created = await add(values);
       say(`${created.first_name} ${created.last_name} added.`, "ok");
       form.reset();
+      showUnits();
       fields.first_name.focus();
       showingArchived = false;
       await refresh();
@@ -752,8 +817,12 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     }
   });
 
-  if (window.LGD_DASHBOARD) refresh();
-  else document.addEventListener("lgd-dashboard-ready", refresh, { once: true });
+  async function start() {
+    await loadProperties();
+    await refresh();
+  }
+  if (window.LGD_DASHBOARD) start();
+  else document.addEventListener("lgd-dashboard-ready", start, { once: true });
 })();
 </script>
 <script src="../shared/account.js"></script>
