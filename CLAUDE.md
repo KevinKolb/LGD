@@ -472,7 +472,7 @@ read in full versus only seen via a search tool's summary. Append to it, don't
 replace it, whenever a clause decision draws on outside research — it's meant to
 survive as a reference trail, including for potential litigation.
 
-The manager page links to it as step 3a, and it is read there as an ordinary
+The manager page links to it from step 3, Legal (beside the legal checklist), and it is read there as an ordinary
 page on this site — not as a raw file on a code host, which is what the link
 used to do. [`manager/legal_research.html`](manager/legal_research.html) is a
 **generated file** — never hand-edit it. Regenerate it after every append to
