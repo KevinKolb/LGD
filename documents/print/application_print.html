@@ -167,7 +167,7 @@
   .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
   .picker-box label[hidden] { display: none; }
   .picker-box .optional { color: #777; font-size: 9.5pt; }
-  .picker-box select, .picker-box input[type=text] {
+  .picker-box select, .picker-box input[type=text], .picker-box input[type=date] {
     display: block;
     box-sizing: border-box;
     width: 100%;
@@ -184,6 +184,39 @@
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* One popup question: its label above its box. */
+  .picker-box .question { margin: 0 0 12px; }
+  .picker-box .question > label { display: block; margin: 0; font-size: 11pt; }
+  /* A date, and beside it the Today switch that fills it in. */
+  .date-row { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .picker-box .date-row input[type=date] { margin-top: 0; flex: 1 1 auto; width: auto; }
+  .today { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .picker-box .today label { display: inline; margin: 0; font-size: 11pt; }
+  input.switch {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    margin: 0;
+    border-radius: 999px;
+    background: #bdbdbd;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  input.switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .15s;
+  }
+  input.switch:checked { background: #1f5d4c; }
+  input.switch:checked::before { transform: translateX(16px); }
   /* A term: the number box and its months/years select on one line. */
   .term-row { display: flex; gap: 8px; margin-top: 4px; }
   .term-row input[data-term], .term-row select { margin-top: 0; }
@@ -394,7 +427,7 @@
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">APPLICATION FOR APARTMENT</p>
 <p class="field row"><span class="label">Address of property</span><span class="blank fixed" id="premises" style="flex-grow: 20"></span><span class="label">Desired Date of occupancy</span><span class="blank fixed" style="flex-grow: 12"></span></p>
-<p class="field row"><span class="label">Monthly rental rate $</span><span class="blank fixed" id="field-rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" id="field-term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" id="field-deposit" style="flex-grow: 6"></span></p>
+<p class="field row"><span class="label">Monthly rental rate $</span><span class="blank fixed" data-fill="rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" data-fill="term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" data-fill="deposit" style="flex-grow: 6"></span></p>
 <p class="field row"><span class="label">Name of Applicant</span><span class="blank fixed" style="flex-grow: 37"></span></p>
 <p class="field row"><span class="label">Date of birth</span><span class="blank fixed" style="flex-grow: 12"></span><span class="label">Social Security #</span><span class="blank fixed" style="flex-grow: 14"></span></p>
 <p class="field row"><span class="label">Telephone #</span><span class="blank fixed" style="flex-grow: 16"></span><span class="label">Email</span><span class="blank fixed" style="flex-grow: 25"></span></p>
@@ -420,7 +453,7 @@
 <p class="field row"><span class="label">Telephone#</span><span class="blank fixed" style="flex-grow: 14"></span><span class="label">Address</span><span class="blank fixed" style="flex-grow: 25"></span><span class="label">Relationship</span><span class="blank fixed" style="flex-grow: 10"></span></p>
 <p><strong>PLEASE READ CAREFULLY:</strong> I hereby give prospective Lessor and/or its agent permission to check information on this application and my credit history in general.  I hereby release any liability on the part of the prospective Lessor, its agent and/or above references in acquiring information concerning rental, employment or credit history.  This application is made with the understanding that it is subject to acceptance by Lessor and subject to execution by a representative of said company and delivery of a lease covering said premises. Please allow a minimum of 5 days to process your application for both credit and character references.</p>
 <p class="field"><strong>CREDIT CHECK AUTHORIZATION:</strong> I authorize Lessor and its agent to obtain a consumer credit report on me and to verify the information in this application, including my rental and employment history.  Applicant&#x27;s initials<span class="blank fixed" style="min-width: 0.56in"></span></p>
-<p class="field"><strong>HOLDING DEPOSIT — THERE IS NO APPLICATION FEE.</strong>  There is no fee to apply. However, a holding deposit is submitted with this application.  Applicant has deposited herewith the sum of $<span class="blank fixed" style="min-width: 0.70in"></span>, receipt of which is hereby acknowledged, as a non-interest bearing holding deposit.  It is not an application fee and it is not a rental payment.  If this application is approved, the deposit holds the apartment for applicant.  If this application is not approved, the deposit will be returned to applicant in full.  If this application is approved and applicant then fails or refuses to enter into the contemplated lease, Lessor shall retain said deposit as liquidated damages to cover the cost of taking and processing the application and removing the premises from the market and holding same for applicant.</p>
+<p class="field"><strong>HOLDING DEPOSIT — THERE IS NO APPLICATION FEE.</strong>  There is no fee to apply. However, a holding deposit is submitted with this application.  Applicant has deposited herewith the sum of $<span class="blank fixed" data-fill="holding" style="min-width: 0.70in"></span>, receipt of which is hereby acknowledged, as a non-interest bearing holding deposit.  It is not an application fee and it is not a rental payment.  If this application is approved, the deposit holds the apartment for applicant.  If this application is not approved, the deposit will be returned to applicant in full.  If this application is approved and applicant then fails or refuses to enter into the contemplated lease, Lessor shall retain said deposit as liquidated damages to cover the cost of taking and processing the application and removing the premises from the market and holding same for applicant.</p>
 <p class="field row"><span class="label">Signature of applicant</span><span class="blank fixed" style="flex-grow: 31"></span><span class="label">Date</span><span class="blank fixed" style="flex-grow: 14"></span></p>
 <p><strong>BINDING ARBITRATION — PLEASE READ BEFORE SIGNING.</strong>  <strong>By signing below, you and Lessor both give up the right to have any dispute about this application decided by a court or a jury.  Disputes go to a private arbitrator instead. This applies to both of you equally.</strong></p>
 <p>In exchange for Lessor reviewing this application, checking the references and credit history described above, and holding the apartment on the terms described under HOLDING DEPOSIT, Applicant and Lessor agree as follows.</p>
@@ -484,17 +517,22 @@
     <label>Unit
       <select id="picker-unit"></select>
     </label>
-    <label>Monthly rental rate <span class="optional">(optional)</span>
-      <input type="text" id="picker-field-rent" data-fills="field-rent" data-money inputmode="decimal" value="$">
-    </label>
-    <label>Term of lease <span class="optional">(optional)</span>
-      <span class="term-row">
-      <input type="text" id="picker-field-term" data-fills="field-term" data-term inputmode="numeric">
-      <select id="picker-field-term-unit" aria-label="Months or years"><option value="month">months</option><option value="year">years</option></select></span>
-    </label>
-    <label>Security deposit <span class="optional">(optional)</span>
-      <input type="text" id="picker-field-deposit" data-fills="field-deposit" data-money inputmode="decimal" value="$">
-    </label>
+    <div class="question">
+      <label for="q-term">Term of lease <span class="optional">(optional)</span></label>
+      <span class="term-row"><input type="text" id="q-term" data-q="term" data-term inputmode="numeric"><select id="q-term-unit" aria-label="Months or years"><option value="month">months</option><option value="year">years</option></select></span>
+    </div>
+    <div class="question">
+      <label for="q-rent">Monthly rental rate <span class="optional">(optional)</span></label>
+      <input type="text" id="q-rent" data-q="rent" data-money inputmode="decimal" value="$">
+    </div>
+    <div class="question">
+      <label for="q-deposit">Security deposit <span class="optional">(optional)</span></label>
+      <input type="text" id="q-deposit" data-q="deposit" data-money inputmode="decimal" value="$" data-follows="q-rent">
+    </div>
+    <div class="question">
+      <label for="q-holding">Holding deposit <span class="optional">(optional)</span></label>
+      <input type="text" id="q-holding" data-q="holding" data-money inputmode="decimal" value="$">
+    </div>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
       <button type="submit" id="picker-fill">Generate document</button>
@@ -736,22 +774,22 @@
     clean();
   });
 
-  // The deposit starts as the month's rent: leaving the rent box copies its
-  // amount into the deposit box (the user, 2026-09-29). The deposit stays
-  // editable, and once someone types their own figure there, a later
-  // change to the rent leaves it alone - it only follows the rent while it
-  // is empty or still holds the amount last copied in.
-  var rentBox = document.getElementById("picker-field-rent");
-  var depositBox = document.getElementById("picker-field-deposit");
-  if (rentBox && depositBox) {
+  // A box that starts as another's answer - the deposit as a month's rent,
+  // the occupants as the lessees (data-follows) - copied across when the
+  // first box is left (the user, 2026-09-29). It stays editable, and once
+  // someone types their own there, a later change to the first leaves it
+  // alone: it follows only while empty or still holding what was copied.
+  document.querySelectorAll("[data-follows]").forEach(function (box) {
+    var source = document.getElementById(box.getAttribute("data-follows"));
+    var empty = box.hasAttribute("data-money") ? "$" : "";
     var copied = null;
-    rentBox.addEventListener("change", function () {
-      if (depositBox.value === "$" || depositBox.value === copied) {
-        depositBox.value = rentBox.value;
-        copied = rentBox.value;
+    source.addEventListener("change", function () {
+      if (box.value === empty || box.value === copied) {
+        box.value = source.value;
+        copied = source.value;
       }
     });
-  }
+  });
 
   // Term boxes: a whole number only; months or years is the select beside it.
   document.querySelectorAll("input[data-term]").forEach(function (input) {
@@ -759,6 +797,23 @@
       var digits = input.value.replace(/[^0-9]/g, "").replace(/^0+/, "");
       if (digits !== input.value) { input.value = digits; }
     });
+  });
+
+  // Dates start blank. The Today switch fills in today's date, which stays
+  // editable; changing the date to another day turns the switch off, and
+  // turning it off clears today's date (the user, 2026-09-29).
+  function isoToday() {
+    var now = new Date();
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+  }
+  document.querySelectorAll("input[data-today-for]").forEach(function (toggle) {
+    var date = document.getElementById(toggle.getAttribute("data-today-for"));
+    toggle.addEventListener("change", function () {
+      if (toggle.checked) { date.value = isoToday(); }
+      else if (date.value === isoToday()) { date.value = ""; }
+    });
+    date.addEventListener("input", function () { toggle.checked = date.value === isoToday(); });
   });
 
   // The combined page's document checkboxes: an unticked document is
@@ -844,6 +899,119 @@
     });
   }
 
+  // --- What fills the blanks -----------------------------------------
+  var COMPANY = "Lower Garden District Properties, Inc.";
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+
+  // An answer, if its question is being asked: a question for a document
+  // not ticked is hidden, and its answer ignored.
+  function answer(key) {
+    var input = document.getElementById("q-" + key);
+    if (!input || input.closest("[hidden]")) { return ""; }
+    var value = input.value.trim();
+    return input.hasAttribute("data-money") ? value.replace(/^[$]/, "") : value;
+  }
+
+  // "1200" -> "1,200"; "1200.5" -> "1,200.50". The printed label already
+  // has the "$" (or "dollars").
+  function money(text) {
+    var amount = parseFloat(text);
+    if (!text || isNaN(amount)) { return ""; }
+    var cents = Math.round(amount * 100) % 100 !== 0;
+    return amount.toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0,
+                                             maximumFractionDigits: 2 });
+  }
+
+  // An amount written out, as on a cheque: "One thousand two hundred and 00/100".
+  var ONES = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+              "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+              "eighteen", "nineteen"];
+  var TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+  function underThousand(n) {
+    var words = [];
+    if (n >= 100) { words.push(ONES[Math.floor(n / 100)] + " hundred"); n %= 100; }
+    if (n >= 20) { words.push(TENS[Math.floor(n / 10)] + (n % 10 ? "-" + ONES[n % 10] : "")); }
+    else if (n > 0) { words.push(ONES[n]); }
+    return words.join(" ");
+  }
+  function inWords(text) {
+    var amount = parseFloat(text);
+    if (!text || isNaN(amount) || amount >= 1e9) { return ""; }
+    var dollars = Math.floor(amount);
+    var cents = Math.round((amount - dollars) * 100);
+    var parts = [];
+    [[1e6, " million"], [1e3, " thousand"], [1, ""]].forEach(function (scale) {
+      var chunk = Math.floor(dollars / scale[0]) % 1000;
+      if (chunk) { parts.push(underThousand(chunk) + scale[1]); }
+    });
+    var words = parts.length ? parts.join(" ") : "zero";
+    return words.charAt(0).toUpperCase() + words.slice(1) + " and " + (cents < 10 ? "0" : "") + cents + "/100";
+  }
+
+  function ordinal(n) {
+    var tens = n % 100, ones = n % 10;
+    var suffix = (tens >= 11 && tens <= 13) ? "th"
+      : ones === 1 ? "st" : ones === 2 ? "nd" : ones === 3 ? "rd" : "th";
+    return n + suffix;
+  }
+  // "2026-10-01" -> a Date at local midnight, or null.
+  function parseDate(text) {
+    var parts = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(text);
+    return parts ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) : null;
+  }
+  // The day, month and two-digit year a form's "the ___ day of ___ 20__" wants.
+  function dateParts(date) {
+    return { day: ordinal(date.getDate()), month: MONTHS[date.getMonth()],
+             year: String(date.getFullYear()).slice(2) };
+  }
+
+  function fillValues(property) {
+    var values = {
+      lessor: COMPANY,
+      "signed-city": property.city || "New Orleans",
+      lessee: answer("lessee"),
+      occupants: answer("occupants"),
+      rent: money(answer("rent")),
+      deposit: money(answer("deposit")),
+      "deposit-words": inWords(answer("deposit")),
+      holding: money(answer("holding"))
+    };
+    var rent = parseFloat(answer("rent"));
+    if (!isNaN(rent) && rent >= 50) { values["net-rent"] = money(String(rent - 50)); }
+
+    var termCount = parseInt(answer("term"), 10);
+    var termUnit = document.getElementById("q-term-unit");
+    termUnit = termUnit ? termUnit.value : "month";
+    if (termCount) { values.term = termCount + " " + termUnit + (termCount === 1 ? "" : "s"); }
+
+    var start = parseDate(answer("start"));
+    if (start) {
+      var parts = dateParts(start);
+      values["start-day"] = parts.day;
+      values["start-month"] = parts.month;
+      values["start-year"] = parts.year;
+      if (termCount) {
+        // The lease ends the day before the same date a term later: from
+        // October 1, 2026 for 12 months, the last day of September 2027.
+        var months = termUnit === "year" ? termCount * 12 : termCount;
+        var end = new Date(start.getFullYear(), start.getMonth() + months, start.getDate() - 1);
+        var endParts = dateParts(end);
+        values["end-month"] = endParts.month;
+        values["end-year"] = endParts.year;
+      }
+    }
+    var signed = parseDate(answer("signed"));
+    if (signed) {
+      var signedParts = dateParts(signed);
+      values["signed-day"] = signedParts.day;
+      values["signed-month"] = signedParts.month;
+      values["signed-year"] = signedParts.year;
+      values["signed-date"] = signedParts.month + " " + signed.getDate() + ", " + signed.getFullYear();
+    }
+    return values;
+  }
+
   properties.forEach(function (property, index) {
     propertySelect.add(new Option(property.address, String(index)));
   });
@@ -858,23 +1026,16 @@
     event.preventDefault();
     // Parking, walls and yard all come from documents/properties.json.
     applyProperty(chosenProperty(), unitSelect.value);
-    // Optional boxes (a document's own, e.g. the application's rent): each
-    // fills the blank it names; left empty, the blank stays to write in.
-    document.querySelectorAll("input[data-fills]").forEach(function (input) {
-      if (input.closest("[hidden]")) { return; }  // a document not chosen
-      var target = document.getElementById(input.getAttribute("data-fills"));
-      var value = input.value.trim();
-      // An amount's printed label already ends in "$"; "$" alone is empty.
-      if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
-      // A term is a number of months or of years: "1 year", "12 months".
-      if (input.hasAttribute("data-term") && value) {
-        var unit = document.getElementById(input.id + "-unit").value;
-        value = value + " " + unit + (value === "1" ? "" : "s");
-      }
-      if (target && value) {
-        target.textContent = value;
-        target.classList.add("filled");
-      }
+    // Every answer, and what follows from it, fills each blank tagged
+    // with its key, in every document on the page; an empty answer leaves
+    // its blanks to write in by hand.
+    var values = fillValues(chosenProperty());
+    Object.keys(values).forEach(function (key) {
+      if (!values[key]) { return; }
+      document.querySelectorAll('[data-fill="' + key + '"]').forEach(function (blank) {
+        blank.textContent = values[key];
+        blank.classList.add("filled");
+      });
     });
     finish();
   });

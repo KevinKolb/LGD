@@ -198,6 +198,33 @@ is no longer a "Leave it blank" button (removed 2026-09-29 by the user), so
 a document is always generated for an apartment; the code for a blank form
 (version labels, hand-ticked parking radios) is still there, unreached.
 
+**The popup fills the office's blanks** (the user went through every blank
+on 2026-09-29). `QUESTIONS` in the lease generator is every question, in
+order - lessee name(s), occupants, lease start date, term, monthly rent,
+security deposit, holding deposit, signing date - each optional; each
+document names the ones it uses (`LEASE_QUESTIONS`, and `QUESTIONS` in the
+deposit and application generators), and the combined page asks the
+union, each once. Answers fill every blank tagged `data-fill="<key>"`, in
+every document on the page. Some keys are worked out rather than asked
+(`fillValues` in the script): the Lessor is always `COMPANY_NAME`, the
+city it is executed at is the property's `city` or "New Orleans" (a 2.0
+migration), net rent is rent less the $50 deduction, the deposit is also
+written out ("One thousand two hundred and 00/100") on the deposit form,
+and the lease ends on the last day of the month before start + term. The
+signing date fills both the lease's "this ___ day of ___" and the
+deposit form's "Received ... on ___". Dates start blank; a Today switch
+fills in today's date, still editable. The deposit follows the rent and
+the occupants follow the lessees until typed over (`FOLLOWS`).
+
+Blanks are tagged **by position** in the lease and deposit (`LEASE_FILLS`,
+`DEPOSIT_FILLS`, via `tag_blanks`, which fails the build if the count
+changes - a blank added to a master would otherwise shift every tag after
+it), and by the label before them in the application (`OFFICE_FIELDS`).
+Left for the pen: signatures, the occupants' second line, the
+application's applicant fields and "Desired date of occupancy". Page
+counts at every address were unchanged, with the questions empty and
+with every one answered.
+
 **Viewing is paper, and everything is one tab** (set by the user on
 2026-09-29: "everything will be on standard paper"). On screen each
 document sits on a `.sheet` - 8.5in wide with the print margins, so every

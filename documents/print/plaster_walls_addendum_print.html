@@ -167,7 +167,7 @@
   .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
   .picker-box label[hidden] { display: none; }
   .picker-box .optional { color: #777; font-size: 9.5pt; }
-  .picker-box select, .picker-box input[type=text] {
+  .picker-box select, .picker-box input[type=text], .picker-box input[type=date] {
     display: block;
     box-sizing: border-box;
     width: 100%;
@@ -184,6 +184,39 @@
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* One popup question: its label above its box. */
+  .picker-box .question { margin: 0 0 12px; }
+  .picker-box .question > label { display: block; margin: 0; font-size: 11pt; }
+  /* A date, and beside it the Today switch that fills it in. */
+  .date-row { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .picker-box .date-row input[type=date] { margin-top: 0; flex: 1 1 auto; width: auto; }
+  .today { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .picker-box .today label { display: inline; margin: 0; font-size: 11pt; }
+  input.switch {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    margin: 0;
+    border-radius: 999px;
+    background: #bdbdbd;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  input.switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .15s;
+  }
+  input.switch:checked { background: #1f5d4c; }
+  input.switch:checked::before { transform: translateX(16px); }
   /* A term: the number box and its months/years select on one line. */
   .term-row { display: flex; gap: 8px; margin-top: 4px; }
   .term-row input[data-term], .term-row select { margin-top: 0; }

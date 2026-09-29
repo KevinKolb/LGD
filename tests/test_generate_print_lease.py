@@ -98,8 +98,10 @@ def test_the_lessor_name_blank_is_wide_enough_to_write_a_name_in(real_output):
     Lessee, address) together, and three 5.5in "long" blanks in one short
     sentence is what originally made it look broken under justified text."""
     opening = real_output[real_output.index("<body>") :][:400]
-    first_blank = opening.index('<span class="blank')
-    assert opening[first_blank:].startswith('<span class="blank medium"></span>')
+    # The first blank is the Lessor's, filled with the company name.
+    first_blank = re.search(r'<span (?:data-fill="\w+" )?class="blank[^"]*"', opening).group(0)
+    assert first_blank == '<span data-fill="lessor" class="blank medium"'
+    assert "<body>" in real_output and '<main class="sheet">' in opening
 
 
 def test_preamble_paragraph_is_left_aligned_not_justified(real_output):
@@ -122,7 +124,7 @@ def test_a_month_name_blank_is_wider_than_a_two_digit_number_blank(real_output):
 
 def test_occupants_blanks_are_long_and_on_their_own_lines(real_output):
     occupants_area = real_output[real_output.index("OCCUPANTS") :][:400]
-    assert occupants_area.count('<span class="blank long"></span>') >= 2
+    assert len(re.findall(r'<span (?:data-fill="occupants" )?class="blank long"></span>', occupants_area)) >= 2
     assert "<br>" in occupants_area
 
 
@@ -613,3 +615,33 @@ def test_numbers_use_lining_figures(real_output):
     assert 'font-feature-settings: "lnum" 1;' in body
     page = real_output[real_output.index("@page {"):real_output.index("html, body {")]
     assert page.count("font-variant-numeric: lining-nums;") == 2
+
+
+def test_every_lease_blank_is_tagged_with_what_fills_it(gen, real_output):
+    """In order: Lessor, Lessee, premises, the term's start and end, rent,
+    net rent, deposit, occupants, and where and when it is signed."""
+    tags = re.findall(r'<span (?:data-fill="([\w-]+)" )?class="blank', real_output)
+    assert tuple(tag or None for tag in tags) == gen.LEASE_FILLS
+
+
+def test_a_blank_added_to_the_lease_fails_the_build(gen):
+    with pytest.raises(SystemExit, match="fill list"):
+        gen.tag_blanks('<span class="blank"></span>', ("a", "b"), "lease.md")
+
+
+def test_dates_start_blank_with_a_today_switch(real_output):
+    """The user, 2026-09-29: blank by default; Today fills in today's date,
+    which stays editable."""
+    for key in ("start", "signed"):
+        assert f'<input type="date" id="q-{key}" data-q="{key}">' in real_output
+        assert f'<input type="checkbox" class="switch" id="q-{key}-today" data-today-for="q-{key}">' in real_output
+    assert "if (toggle.checked) { date.value = isoToday(); }" in real_output
+
+
+def test_values_worked_out_from_the_answers(real_output):
+    """Net rent is rent less the $50 deduction; the lease ends the day
+    before the same date a term later; the deposit is also written out."""
+    assert 'values["net-rent"] = money(String(rent - 50));' in real_output
+    assert "new Date(start.getFullYear(), start.getMonth() + months, start.getDate() - 1)" in real_output
+    assert '"deposit-words": inWords(answer("deposit"))' in real_output
+    assert '"signed-city": property.city || "New Orleans"' in real_output

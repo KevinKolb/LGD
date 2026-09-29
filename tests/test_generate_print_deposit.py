@@ -134,3 +134,10 @@ def test_the_page_script_parses(real_output, tmp_path):
         result = subprocess.run([node, "--check", str(path)], capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
     assert "if (notAvailable && limited)" in real_output
+
+
+def test_the_deposit_blanks_are_tagged_with_what_fills_them(gen, real_output):
+    """Received from (lessees) on (signing date) (amount in words) dollars
+    $(amount) ... for (premises); then the holding deposit."""
+    tags = re.findall(r'<span (?:data-fill="([\w-]+)" )?class="blank', real_output)
+    assert tuple(tag or None for tag in tags) == gen.DEPOSIT_FILLS

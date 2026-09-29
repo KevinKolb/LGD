@@ -86,12 +86,13 @@ def test_the_vehicles_section_shows_only_where_there_is_parking(real_output):
     assert "(parking=limited)" not in real_output
 
 
-def test_the_office_fills_rent_term_and_deposit_from_the_popup(gen, real_output):
-    for lead, label, target in gen.OFFICE_FIELDS:
-        assert re.search(re.escape(lead) + rf'</span><span class="blank fixed" id="{target}"', real_output)
-        assert f'data-fills="{target}"' in real_output
-    assert real_output.count("(optional)") == 3
-
+def test_the_office_fills_rent_term_deposit_and_holding_from_the_popup(gen, real_output):
+    for lead, key in gen.OFFICE_FIELDS:
+        assert real_output.count(f'data-fill="{key}"') == 1, key
+    popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
+    for key in gen.QUESTIONS:
+        assert f'id="q-{key}" data-q="{key}"' in popup
+    assert popup.count("(optional)") == 4
 
 def test_lessor_not_owner_and_its_agent_not_his(real_output):
     body = real_output[real_output.index("<body>"):real_output.index('<div class="footer-note">')]
@@ -146,33 +147,32 @@ def test_every_money_label_ends_in_a_dollar_sign(real_output):
 
 def test_money_boxes_take_only_digits_a_point_and_one_dollar_sign(real_output):
     popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
-    for target in ("field-rent", "field-deposit"):
-        assert (f'data-fills="{target}" data-money inputmode="decimal" value="$">') in popup
+    for key in ("rent", "deposit", "holding"):
+        assert f'id="q-{key}" data-q="{key}" data-money inputmode="decimal" value="$"' in popup
     # Term of lease is not an amount.
-    assert 'data-fills="field-term" data-money' not in popup
+    assert 'id="q-term" data-q="term" data-money' not in popup
     script = real_output[real_output.index('document.querySelectorAll("input[data-money]")'):]
     assert 'before.replace(/[^0-9.]/g, "")' in script
     assert 'var cleaned = "$" + amount;' in script
-    # What fills the form drops the "$" - its printed label has one.
-    assert 'value = value.replace(/^[$]/, "");' in real_output
-
+    # What fills the form drops the "$" - its printed label has one - and
+    # groups thousands: "1,200", "1,200.50".
+    assert 'value.replace(/^[$]/, "")' in real_output
+    assert 'amount.toLocaleString("en-US"' in real_output
 
 def test_the_term_is_months_or_years_never_both(real_output):
     """A whole number and one choice of months or years; filled as
     "12 months" or "1 year"."""
     popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
-    assert 'data-fills="field-term" data-term inputmode="numeric">' in popup
-    assert ('<select id="picker-field-term-unit" aria-label="Months or years">'
+    assert 'id="q-term" data-q="term" data-term inputmode="numeric">' in popup
+    assert ('<select id="q-term-unit" aria-label="Months or years">'
             '<option value="month">months</option><option value="year">years</option></select>') in popup
     assert 'input.value.replace(/[^0-9]/g, "")' in real_output
-    assert 'value = value + " " + unit + (value === "1" ? "" : "s");' in real_output
-
+    assert 'termCount + " " + termUnit + (termCount === 1 ? "" : "s")' in real_output
 
 def test_the_deposit_follows_the_rent_until_edited(real_output):
     """Leaving the rent box copies its amount into the deposit box, which
     stays editable: it follows the rent only while empty or still holding
     the amount last copied (the user, 2026-09-29)."""
-    script = real_output[real_output.index('var rentBox = document.getElementById("picker-field-rent");'):]
-    script = script[:script.index("// Term boxes")]
-    assert 'rentBox.addEventListener("change"' in script
-    assert 'if (depositBox.value === "$" || depositBox.value === copied)' in script
+    assert 'id="q-deposit" data-q="deposit" data-money inputmode="decimal" value="$" data-follows="q-rent"' in real_output
+    script = real_output[real_output.index('document.querySelectorAll("[data-follows]")'):]
+    assert 'if (box.value === empty || box.value === copied)' in script

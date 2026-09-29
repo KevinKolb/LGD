@@ -56,15 +56,20 @@ def test_every_document_has_a_premises_blank_and_ids_are_unique(real_output):
 
 
 def test_the_popup_asks_each_question_once(real_output):
+    """Each question once, however many documents use it, and shown only
+    while one of them is ticked."""
     popup = real_output[real_output.index('<div class="picker"'):real_output.index("</form>")]
     assert popup.count('id="picker-property"') == 1
     assert popup.count('id="picker-unit"') == 1
-    for target in ("field-rent", "field-term", "field-deposit"):
-        assert popup.count(f'data-fills="{target}"') == 1
-    # The application's own questions show only while it is ticked.
-    assert popup.count('data-for-docs="application"') == 3
+    asked = re.findall(r'<div class="question" data-for-docs="([^"]+)">\s*<label for="q-(\w+)"', popup)
+    assert [key for _, key in asked] == ["lessee", "occupants", "start", "term", "rent", "deposit",
+                                         "holding", "signed"]
+    docs = {key: set(for_docs.split()) for for_docs, key in asked}
+    assert docs["deposit"] == {"application", "lease", "deposit"}
+    assert docs["holding"] == {"application", "deposit"}
+    assert docs["lessee"] == {"lease", "deposit"}
+    assert docs["start"] == {"lease"}
     assert "Which documents, and for which apartment?" in popup
-
 
 def test_the_popup_offers_each_document_as_a_checkbox(real_output):
     boxes = re.findall(r'<input type="checkbox" data-doc-choice value="(\w+)" data-name="([\w ]+)"( checked)?>',

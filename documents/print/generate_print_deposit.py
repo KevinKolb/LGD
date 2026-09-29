@@ -146,6 +146,15 @@ def render_list(block: str) -> tuple[str, list[int]]:
     return f'<ol class="conditions" start="{numbers[0]}">\n{rows}\n</ol>', numbers
 
 
+# The agreement's blanks, in order, and the popup answer that fills each
+# (see QUESTIONS in the lease generator): "Received from ___ on ___ ___
+# dollars $___ As Security Deposit for ___", then the holding deposit's
+# "sum of $___". The premises has its own id.
+DEPOSIT_FILLS = ("lessee", "signed-date", "deposit-words", "deposit", None, "holding")
+# The popup questions this document asks.
+QUESTIONS = ("lessee", "deposit", "holding", "signed")
+
+
 def render_signatures(labels: list[str]) -> str:
     rows = "\n".join(f'<div class="sig-line">{html.escape(label)}</div>' for label in labels)
     return f'<div class="signature-block">\n{rows}\n</div>'
@@ -198,12 +207,12 @@ def render_body(source_text: str) -> str:
             if f'data-option="{group}={value}"' not in body:
                 raise SystemExit(f"{SOURCE.name} has no {group} version {value}, which the lease has.")
 
-    return body
+    return lease.tag_blanks(body, DEPOSIT_FILLS, SOURCE.name)
 
 
 def generate(source_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
-    return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("security deposit")
+    return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("security deposit", QUESTIONS)
 
 
 def main() -> None:

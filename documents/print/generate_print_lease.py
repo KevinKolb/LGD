@@ -338,7 +338,7 @@ HTML_HEAD = """<!doctype html>
   .picker-box label { display: block; margin: 0 0 12px; font-size: 11pt; }
   .picker-box label[hidden] { display: none; }
   .picker-box .optional { color: #777; font-size: 9.5pt; }
-  .picker-box select, .picker-box input[type=text] {
+  .picker-box select, .picker-box input[type=text], .picker-box input[type=date] {
     display: block;
     box-sizing: border-box;
     width: 100%;
@@ -355,6 +355,39 @@ HTML_HEAD = """<!doctype html>
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* One popup question: its label above its box. */
+  .picker-box .question { margin: 0 0 12px; }
+  .picker-box .question > label { display: block; margin: 0; font-size: 11pt; }
+  /* A date, and beside it the Today switch that fills it in. */
+  .date-row { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .picker-box .date-row input[type=date] { margin-top: 0; flex: 1 1 auto; width: auto; }
+  .today { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .picker-box .today label { display: inline; margin: 0; font-size: 11pt; }
+  input.switch {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    margin: 0;
+    border-radius: 999px;
+    background: #bdbdbd;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  input.switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .15s;
+  }
+  input.switch:checked { background: #1f5d4c; }
+  input.switch:checked::before { transform: translateX(16px); }
   /* A term: the number box and its months/years select on one line. */
   .term-row { display: flex; gap: 8px; margin-top: 4px; }
   .term-row input[data-term], .term-row select { margin-top: 0; }
@@ -723,22 +756,22 @@ __PROPERTIES_JSON__
     clean();
   });
 
-  // The deposit starts as the month's rent: leaving the rent box copies its
-  // amount into the deposit box (the user, 2026-09-29). The deposit stays
-  // editable, and once someone types their own figure there, a later
-  // change to the rent leaves it alone - it only follows the rent while it
-  // is empty or still holds the amount last copied in.
-  var rentBox = document.getElementById("picker-field-rent");
-  var depositBox = document.getElementById("picker-field-deposit");
-  if (rentBox && depositBox) {
+  // A box that starts as another's answer - the deposit as a month's rent,
+  // the occupants as the lessees (data-follows) - copied across when the
+  // first box is left (the user, 2026-09-29). It stays editable, and once
+  // someone types their own there, a later change to the first leaves it
+  // alone: it follows only while empty or still holding what was copied.
+  document.querySelectorAll("[data-follows]").forEach(function (box) {
+    var source = document.getElementById(box.getAttribute("data-follows"));
+    var empty = box.hasAttribute("data-money") ? "$" : "";
     var copied = null;
-    rentBox.addEventListener("change", function () {
-      if (depositBox.value === "$" || depositBox.value === copied) {
-        depositBox.value = rentBox.value;
-        copied = rentBox.value;
+    source.addEventListener("change", function () {
+      if (box.value === empty || box.value === copied) {
+        box.value = source.value;
+        copied = source.value;
       }
     });
-  }
+  });
 
   // Term boxes: a whole number only; months or years is the select beside it.
   document.querySelectorAll("input[data-term]").forEach(function (input) {
@@ -746,6 +779,23 @@ __PROPERTIES_JSON__
       var digits = input.value.replace(/[^0-9]/g, "").replace(/^0+/, "");
       if (digits !== input.value) { input.value = digits; }
     });
+  });
+
+  // Dates start blank. The Today switch fills in today's date, which stays
+  // editable; changing the date to another day turns the switch off, and
+  // turning it off clears today's date (the user, 2026-09-29).
+  function isoToday() {
+    var now = new Date();
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+  }
+  document.querySelectorAll("input[data-today-for]").forEach(function (toggle) {
+    var date = document.getElementById(toggle.getAttribute("data-today-for"));
+    toggle.addEventListener("change", function () {
+      if (toggle.checked) { date.value = isoToday(); }
+      else if (date.value === isoToday()) { date.value = ""; }
+    });
+    date.addEventListener("input", function () { toggle.checked = date.value === isoToday(); });
   });
 
   // The combined page's document checkboxes: an unticked document is
@@ -831,6 +881,119 @@ __PROPERTIES_JSON__
     });
   }
 
+  // --- What fills the blanks -----------------------------------------
+  var COMPANY = __COMPANY_JSON__;
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+
+  // An answer, if its question is being asked: a question for a document
+  // not ticked is hidden, and its answer ignored.
+  function answer(key) {
+    var input = document.getElementById("q-" + key);
+    if (!input || input.closest("[hidden]")) { return ""; }
+    var value = input.value.trim();
+    return input.hasAttribute("data-money") ? value.replace(/^[$]/, "") : value;
+  }
+
+  // "1200" -> "1,200"; "1200.5" -> "1,200.50". The printed label already
+  // has the "$" (or "dollars").
+  function money(text) {
+    var amount = parseFloat(text);
+    if (!text || isNaN(amount)) { return ""; }
+    var cents = Math.round(amount * 100) % 100 !== 0;
+    return amount.toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0,
+                                             maximumFractionDigits: 2 });
+  }
+
+  // An amount written out, as on a cheque: "One thousand two hundred and 00/100".
+  var ONES = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+              "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+              "eighteen", "nineteen"];
+  var TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+  function underThousand(n) {
+    var words = [];
+    if (n >= 100) { words.push(ONES[Math.floor(n / 100)] + " hundred"); n %= 100; }
+    if (n >= 20) { words.push(TENS[Math.floor(n / 10)] + (n % 10 ? "-" + ONES[n % 10] : "")); }
+    else if (n > 0) { words.push(ONES[n]); }
+    return words.join(" ");
+  }
+  function inWords(text) {
+    var amount = parseFloat(text);
+    if (!text || isNaN(amount) || amount >= 1e9) { return ""; }
+    var dollars = Math.floor(amount);
+    var cents = Math.round((amount - dollars) * 100);
+    var parts = [];
+    [[1e6, " million"], [1e3, " thousand"], [1, ""]].forEach(function (scale) {
+      var chunk = Math.floor(dollars / scale[0]) % 1000;
+      if (chunk) { parts.push(underThousand(chunk) + scale[1]); }
+    });
+    var words = parts.length ? parts.join(" ") : "zero";
+    return words.charAt(0).toUpperCase() + words.slice(1) + " and " + (cents < 10 ? "0" : "") + cents + "/100";
+  }
+
+  function ordinal(n) {
+    var tens = n % 100, ones = n % 10;
+    var suffix = (tens >= 11 && tens <= 13) ? "th"
+      : ones === 1 ? "st" : ones === 2 ? "nd" : ones === 3 ? "rd" : "th";
+    return n + suffix;
+  }
+  // "2026-10-01" -> a Date at local midnight, or null.
+  function parseDate(text) {
+    var parts = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(text);
+    return parts ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) : null;
+  }
+  // The day, month and two-digit year a form's "the ___ day of ___ 20__" wants.
+  function dateParts(date) {
+    return { day: ordinal(date.getDate()), month: MONTHS[date.getMonth()],
+             year: String(date.getFullYear()).slice(2) };
+  }
+
+  function fillValues(property) {
+    var values = {
+      lessor: COMPANY,
+      "signed-city": property.city || "New Orleans",
+      lessee: answer("lessee"),
+      occupants: answer("occupants"),
+      rent: money(answer("rent")),
+      deposit: money(answer("deposit")),
+      "deposit-words": inWords(answer("deposit")),
+      holding: money(answer("holding"))
+    };
+    var rent = parseFloat(answer("rent"));
+    if (!isNaN(rent) && rent >= 50) { values["net-rent"] = money(String(rent - 50)); }
+
+    var termCount = parseInt(answer("term"), 10);
+    var termUnit = document.getElementById("q-term-unit");
+    termUnit = termUnit ? termUnit.value : "month";
+    if (termCount) { values.term = termCount + " " + termUnit + (termCount === 1 ? "" : "s"); }
+
+    var start = parseDate(answer("start"));
+    if (start) {
+      var parts = dateParts(start);
+      values["start-day"] = parts.day;
+      values["start-month"] = parts.month;
+      values["start-year"] = parts.year;
+      if (termCount) {
+        // The lease ends the day before the same date a term later: from
+        // October 1, 2026 for 12 months, the last day of September 2027.
+        var months = termUnit === "year" ? termCount * 12 : termCount;
+        var end = new Date(start.getFullYear(), start.getMonth() + months, start.getDate() - 1);
+        var endParts = dateParts(end);
+        values["end-month"] = endParts.month;
+        values["end-year"] = endParts.year;
+      }
+    }
+    var signed = parseDate(answer("signed"));
+    if (signed) {
+      var signedParts = dateParts(signed);
+      values["signed-day"] = signedParts.day;
+      values["signed-month"] = signedParts.month;
+      values["signed-year"] = signedParts.year;
+      values["signed-date"] = signedParts.month + " " + signed.getDate() + ", " + signed.getFullYear();
+    }
+    return values;
+  }
+
   properties.forEach(function (property, index) {
     propertySelect.add(new Option(property.address, String(index)));
   });
@@ -845,23 +1008,16 @@ __PROPERTIES_JSON__
     event.preventDefault();
     // Parking, walls and yard all come from documents/properties.json.
     applyProperty(chosenProperty(), unitSelect.value);
-    // Optional boxes (a document's own, e.g. the application's rent): each
-    // fills the blank it names; left empty, the blank stays to write in.
-    document.querySelectorAll("input[data-fills]").forEach(function (input) {
-      if (input.closest("[hidden]")) { return; }  // a document not chosen
-      var target = document.getElementById(input.getAttribute("data-fills"));
-      var value = input.value.trim();
-      // An amount's printed label already ends in "$"; "$" alone is empty.
-      if (input.hasAttribute("data-money")) { value = value.replace(/^[$]/, ""); }
-      // A term is a number of months or of years: "1 year", "12 months".
-      if (input.hasAttribute("data-term") && value) {
-        var unit = document.getElementById(input.id + "-unit").value;
-        value = value + " " + unit + (value === "1" ? "" : "s");
-      }
-      if (target && value) {
-        target.textContent = value;
-        target.classList.add("filled");
-      }
+    // Every answer, and what follows from it, fills each blank tagged
+    // with its key, in every document on the page; an empty answer leaves
+    // its blanks to write in by hand.
+    var values = fillValues(chosenProperty());
+    Object.keys(values).forEach(function (key) {
+      if (!values[key]) { return; }
+      document.querySelectorAll('[data-fill="' + key + '"]').forEach(function (blank) {
+        blank.textContent = values[key];
+        blank.classList.add("filled");
+      });
     });
     finish();
   });
@@ -886,38 +1042,107 @@ __PROPERTIES_JSON__
 """
 
 
-def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
+# Every question the popup can ask, in the order it asks them: (label,
+# kind). Each document names the ones it needs (its QUESTIONS), and the
+# combined page asks the union - each once, however many of the ticked
+# documents use it (the user, 2026-09-29: "no duplicated questions").
+# Every answer is optional: left empty, its blanks stay to write in by hand.
+#
+# The answers fill the blanks tagged data-fill="<key>", in every document on
+# the page; some keys are worked out from an answer rather than asked (see
+# fillValues in the script): lessor and signed-city are fixed, net-rent is
+# the rent less the $50 early-payment deduction, deposit-words is the
+# deposit written out, start-*/end-*/signed-* are a date's parts, and the
+# lease's end month is the start date plus the term, less a day.
+QUESTIONS = {
+    "lessee": ("Lessee name(s)", "text"),
+    "occupants": ("Occupants", "text"),
+    "start": ("Lease start date", "date"),
+    "term": ("Term of lease", "term"),
+    "rent": ("Monthly rental rate", "money"),
+    "deposit": ("Security deposit", "money"),
+    "holding": ("Holding deposit", "money"),
+    "signed": ("Signing date", "date"),
+}
+# A box that starts as another's answer and keeps following it until
+# someone types their own: the deposit is a month's rent, the occupants
+# are the lessees.
+FOLLOWS = {"deposit": "rent", "occupants": "lessee"}
+
+# The lease's blanks, in the order they appear in documents/lease.md, and
+# the key that fills each (None: filled otherwise, or by hand).
+LEASE_FILLS = (
+    "lessor", "lessee", None,                       # parties; premises has its id
+    "start-day", "start-month", "start-year",       # 1. TERM commencing
+    "end-month", "end-year",                        # ... ending on the last day of
+    "rent", "net-rent",                             # 2. RENT
+    "deposit",                                      # 3. SECURITY DEPOSIT
+    "occupants", None,                              # 4. OCCUPANTS (second line by hand)
+    "signed-city", "signed-day", "signed-month", "signed-year",  # Executed in duplicate at
+)
+LEASE_QUESTIONS = ("lessee", "occupants", "start", "term", "rent", "deposit", "signed")
+
+
+def tag_blanks(body: str, keys: tuple, source: str) -> str:
+    """Tag the document's blanks, in order, with the key that fills each.
+    The count must match exactly - a blank added to or removed from the
+    master would otherwise shift every tag after it onto the wrong blank."""
+    spans = list(re.finditer(r'<span class="blank\b', body))
+    if len(spans) != len(keys):
+        raise SystemExit(
+            f"{source} has {len(spans)} blanks, but its fill list names {len(keys)}. "
+            "Has a blank been added or removed? Update the list to match."
+        )
+    out, last = [], 0
+    for match, key in zip(spans, keys):
+        out.append(body[last:match.start()])
+        out.append(f'<span data-fill="{key}" class="blank' if key else match.group(0))
+        last = match.end()
+    return "".join(out) + body[last:]
+
+
+def render_question(key: str, for_docs: str = "") -> str:
+    label, kind = QUESTIONS[key]
+    attrs = f' data-for-docs="{html.escape(for_docs)}"' if for_docs else ""
+    field = f'q-{key}'
+    follows = f' data-follows="q-{FOLLOWS[key]}"' if key in FOLLOWS else ""
+    if kind == "money":
+        control = (f'<input type="text" id="{field}" data-q="{key}" data-money inputmode="decimal"'
+                   f' value="$"{follows}>')
+    elif kind == "term":
+        control = (f'<span class="term-row"><input type="text" id="{field}" data-q="{key}" data-term'
+                   f' inputmode="numeric"><select id="{field}-unit" aria-label="Months or years">'
+                   '<option value="month">months</option><option value="year">years</option>'
+                   '</select></span>')
+    elif kind == "date":
+        # Blank until chosen; the Today switch fills in today's date, which
+        # stays editable (the user, 2026-09-29).
+        control = (f'<span class="date-row"><input type="date" id="{field}" data-q="{key}">'
+                   f'<span class="today"><input type="checkbox" class="switch" id="{field}-today"'
+                   f' data-today-for="{field}"><label for="{field}-today">Today</label></span></span>')
+    else:
+        control = f'<input type="text" id="{field}" data-q="{key}"{follows}>'
+    return (f'    <div class="question"{attrs}>\n'
+            f'      <label for="{field}">{html.escape(label)} <span class="optional">(optional)</span></label>\n'
+            f'      {control}\n'
+            f'    </div>')
+
+
+def render_picker_footer(document_name: str, questions: tuple[str, ...] = (),
                          documents: tuple[tuple[str, str, bool], ...] = (),
-                         money: tuple[str, ...] = (), terms: tuple[str, ...] = ()) -> str:
+                         for_docs: dict[str, str] | None = None) -> str:
     """The apartment picker, its script and the inlined apartment table -
     shared by every printable document that names the premises.
 
-    `fields` adds optional text boxes to the popup, as (label, blank id)
-    pairs, or (label, blank id, doc key) when the combined page asks it
-    only for that document: whatever is typed fills the element with that
-    id. `documents`, on the combined page only, is (key, name, ticked) per
-    document, offered as checkboxes above the apartment questions. The
-    blank ids in `money` are amounts: their boxes take only digits, "$"
-    and ".", and always start with one "$". The blank ids in `terms` are
-    lengths of time: a whole number and a choice of months or years, never
-    both, filled as "12 months" or "1 year"."""
-    lines = []
-    for field in fields:
-        label, target = field[0], field[1]
-        for_docs = f' data-for-docs="{html.escape(field[2])}"' if len(field) > 2 else ""
-        lines.append(
-            f'    <label{for_docs}>{html.escape(label)} <span class="optional">(optional)</span>'
-            + ('\n      <span class="term-row">' if target in terms else "")
-            + f'\n      <input type="text" id="picker-{html.escape(target)}" data-fills="{html.escape(target)}"'
-            + (' data-money inputmode="decimal" value="$"' if target in money else "")
-            + (' data-term inputmode="numeric"' if target in terms else "")
-            + '>'
-            + (f'\n      <select id="picker-{html.escape(target)}-unit" aria-label="Months or years">'
-               '<option value="month">months</option><option value="year">years</option></select>'
-               '</span>' if target in terms else "")
-            + '\n'
-            f"    </label>")
-    extra = "\n".join(lines)
+    `questions` are keys of QUESTIONS, asked after the apartment. On the
+    combined page, `documents` is (key, name, ticked) per document, offered
+    as checkboxes, and `for_docs` maps each question to the documents that
+    use it, so it is asked only while one of them is ticked."""
+    unknown = [key for key in questions if key not in QUESTIONS]
+    if unknown:
+        raise SystemExit(f"Unknown popup question(s): {unknown}")
+    ordered = [key for key in QUESTIONS if key in questions]
+    extra = "\n".join(render_question(key, (for_docs or {}).get(key, "")) for key in ordered)
     if documents:
         boxes = "\n".join(
             f'      <label class="doc-choice"><input type="checkbox" data-doc-choice value="{html.escape(key)}"'
@@ -932,6 +1157,7 @@ def render_picker_footer(document_name: str, fields: tuple[tuple, ...] = (),
     return DOC_BUTTONS + (PICKER_FOOTER.replace("__QUESTION__", html.escape(question))
             .replace("__DOC_CHOICES__", choices)
             .replace("__EXTRA_FIELDS__", extra)
+            .replace("__COMPANY_JSON__", json.dumps(COMPANY_NAME))
             .replace(PROPERTIES_MARKER, properties_json(load_properties())))
 
 def flatten_paragraph(text: str) -> str:
@@ -1366,7 +1592,7 @@ def render_body(source_text: str) -> str:
         + "\n</div>"
     )
 
-    return "\n".join(paragraphs[:-1]) + "\n" + tail_html
+    return tag_blanks("\n".join(paragraphs[:-1]) + "\n" + tail_html, LEASE_FILLS, "documents/lease.md")
 
 
 def generate(source_text: str) -> str:
@@ -1374,7 +1600,7 @@ def generate(source_text: str) -> str:
         render_head(COMPANY_NAME, TITLE, SUBTITLE)
         + render_body(source_text)
         + LEASE_FOOTER_NOTE
-        + render_picker_footer("lease")
+        + render_picker_footer("lease", LEASE_QUESTIONS)
     )
 
 

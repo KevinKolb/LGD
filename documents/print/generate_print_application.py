@@ -44,19 +44,17 @@ lease = _load_lease_generator()
 BLANK = re.compile(r"_{2,}")
 CHECKBOX = "[ ]"
 
-# Blanks the office fills in, offered as optional boxes in the popup: the
-# label printed before each blank, the popup's label, and the blank's id.
+# Blanks the office fills in from the popup: the text printed just before
+# each blank, and the popup question (a key of the lease generator's
+# QUESTIONS) that fills it. The rest of the form is the applicant's.
 OFFICE_FIELDS = (
-    ("Monthly rental rate $", "Monthly rental rate", "field-rent"),
-    ("Term of lease", "Term of lease", "field-term"),
-    ("Security deposit $", "Security deposit", "field-deposit"),
+    ("Monthly rental rate $", "rent"),
+    ("Term of lease", "term"),
+    ("Security deposit $", "deposit"),
+    ("Applicant has deposited herewith the sum of $", "holding"),
 )
-# The blanks among them that hold an amount of money. Their popup boxes
-# accept only digits, "$" and ".", and supply the "$" themselves; the "$"
-# is left off what fills the form, whose label already prints one.
-MONEY_FIELDS = ("field-rent", "field-deposit")
-# The blank that holds a length of time: a number of months or of years.
-TERM_FIELDS = ("field-term",)
+# The popup questions this document asks.
+QUESTIONS = ("rent", "term", "deposit", "holding")
 
 # A block beginning "(parking=limited) " prints on every blank application
 # but, once an apartment is picked, only where that option applies - the
@@ -156,9 +154,9 @@ def render_text(text: str) -> str:
         ident = ""
         if before.endswith(PREMISES_LEAD):
             ident = ' id="premises"'
-        for lead, _, target in OFFICE_FIELDS:
+        for lead, key in OFFICE_FIELDS:
             if before.endswith(html.escape(lead)):
-                ident = f' id="{target}"'
+                ident = f' data-fill="{key}"'
         return f'<span class="blank fixed"{ident} style="min-width: {width}"></span>'
 
     return BLANK.sub(blank, escaped)
@@ -168,9 +166,9 @@ def blank_id(label: str) -> str:
     """The id for the blank after this label, if the picker fills it."""
     if label.endswith(PREMISES_LEAD):
         return ' id="premises"'
-    for lead, _, target in OFFICE_FIELDS:
+    for lead, key in OFFICE_FIELDS:
         if label.endswith(lead):
-            return f' id="{target}"'
+            return f' data-fill="{key}"'
     return ""
 
 
@@ -228,20 +226,15 @@ def render_body(source_text: str) -> str:
     body = "\n".join(parts)
     if body.count('id="premises"') != 1:
         raise SystemExit(f'{SOURCE.name} needs exactly one "{PREMISES_LEAD}___" blank for the picker.')
-    for lead, _, target in OFFICE_FIELDS:
-        if body.count(f'id="{target}"') != 1:
+    for lead, key in OFFICE_FIELDS:
+        if body.count(f'data-fill="{key}"') != 1:
             raise SystemExit(f'{SOURCE.name} needs exactly one "{lead}___" blank.')
     return body
 
 
-# The popup's optional boxes for this document, as (label, blank id).
-PICKER_FIELDS = tuple((label, target) for _, label, target in OFFICE_FIELDS)
-
-
 def generate(source_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
-    return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("application", PICKER_FIELDS,
-                                                                                   money=MONEY_FIELDS, terms=TERM_FIELDS)
+    return head + render_body(source_text) + "\n" + FOOTER_NOTE + lease.render_picker_footer("application", QUESTIONS)
 
 
 def main() -> None:

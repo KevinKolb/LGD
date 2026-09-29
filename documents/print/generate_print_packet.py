@@ -74,6 +74,11 @@ def section(key: str, module, source: Path) -> str:
             + body + "\n</section>")
 
 
+def module_questions(module) -> tuple[str, ...]:
+    """The popup questions a document's generator asks."""
+    return lease.LEASE_QUESTIONS if module is lease else module.QUESTIONS
+
+
 def check_unique_ids(page: str) -> None:
     ids = re.findall(r'\sid="([^"]+)"', page)
     repeated = sorted({i for i in ids if ids.count(i) > 1})
@@ -85,14 +90,16 @@ def generate() -> str:
     css = "".join(module.EXTRA_CSS for _, _, module, _, _ in DOCUMENTS)
     head = lease.render_page_head(lease.COMPANY_NAME, TITLE).replace("</style>", css + "</style>", 1)
     body = "\n".join(section(key, module, source) for key, _, module, source, _ in DOCUMENTS)
-    # Every question once: the apartment is shared by all three, and each
-    # document's own boxes are asked only while it is ticked.
-    fields = tuple(field + ("application",) for field in application.PICKER_FIELDS)
+    # Every question once, however many documents use it, and asked only
+    # while one of those documents is ticked.
+    uses: dict[str, list[str]] = {}
+    for key, _, module, _, _ in DOCUMENTS:
+        for question in module_questions(module):
+            uses.setdefault(question, []).append(key)
     choices = tuple((key, name, ticked) for key, name, _, _, ticked in DOCUMENTS)
     head += '<main class="sheet-stack">\n'
-    page = head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("documents", fields, choices,
-                                                                          money=application.MONEY_FIELDS,
-                                                                          terms=application.TERM_FIELDS)
+    page = head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer(
+        "documents", tuple(uses), choices, {question: " ".join(docs) for question, docs in uses.items()})
     check_unique_ids(page)
     return page
 
