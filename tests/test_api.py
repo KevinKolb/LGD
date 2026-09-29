@@ -94,7 +94,7 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     response = client.get("/", auth=None)
     assert response.status_code == 200
     # The company name once, in the card: "... Inc. Portal".
-    body = response.text[response.text.index("<body>"):]
+    body = response.text[response.text.index("</head>"):]
     assert body.count("Lower Garden District Properties, Inc.") == 1
     assert "<h1>Lower Garden District Properties, Inc. Portal</h1>" in response.text
     # Manager and Admin sit below a line, in Tulane light blue.
