@@ -52,17 +52,18 @@ EXTRA_CSS = """
   .sig-row .sig-line.date { flex: 0 0 1.6in; }
 """
 
-AUTO_PRINT = """
-<div class="footer-note">
+FOOTER_NOTE = """<div class="footer-note">
   Generated from lease &sect;20 WALLS, version (B), in <code>documents/lease.md</code>
   by <code>documents/print/generate_print_addendum.py</code>. It will not appear on a
   printed copy. Regenerate after editing <code>documents/lease.md</code> or
   <code>documents/properties.json</code>.
-</div>
+</div>"""
+
+AUTO_PRINT = """
 <script>
   // As with the lease: print once the embedded font is ready, unless opened
   // with #view to read on screen. No picker here, so the floating Print
-  // button (lease.PRINT_BUTTON) shows straight away.
+  // button (lease.DOC_BUTTONS) shows straight away.
   document.getElementById("print-button").hidden = false;
   window.addEventListener("load", function () {
     if (window.location.hash === "#view") { return; }
@@ -147,7 +148,7 @@ def generate(lease_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
     return (head + incorporation + "\n" + rules + "\n"
             + '<div class="execution-block">\n' + closing + "\n" + render_signatures() + "\n</div>"
-            + lease.PRINT_BUTTON + AUTO_PRINT)
+            + "\n" + FOOTER_NOTE + lease.DOC_BUTTONS + AUTO_PRINT)
 
 
 def main() -> None:

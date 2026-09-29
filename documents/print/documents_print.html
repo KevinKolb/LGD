@@ -138,7 +138,7 @@
        popup taller than a phone screen scrolls from its top instead of
        being cut off above it. */
     overflow-y: auto;
-    padding: 16px;
+    padding: 16px 16px 80px;
     /* Opaque, not a dimmed overlay: the lease is not shown at all until an
        apartment is picked, so nobody reads or prints the wrong one. */
     background: #e9e7e2;
@@ -194,11 +194,15 @@
      document while it is read on screen, so "View" is one click from
      paper. Hidden until the picker is done, so it never offers to print
      a lease before its apartment is chosen. */
-  .print-button {
+  .float-buttons {
     position: fixed;
-    right: 20px;
-    bottom: 20px;
-    z-index: 5;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    display: flex;
+    gap: 10px;
+  }
+  .float-buttons a, .float-buttons button {
     padding: 10px 20px;
     border: 1px solid #1f5d4c;
     border-radius: 999px;
@@ -209,8 +213,8 @@
     box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
     cursor: pointer;
   }
-  .print-button:hover { background: #174a3c; }
-  .print-button[hidden] { display: none; }
+  .float-buttons a { text-decoration: none; background: #fff; color: #1f5d4c; }
+  .float-buttons button:hover { background: #174a3c; }
   .execution-block {
     /* "Executed in duplicate at ___ this ___ day of ___" and the four
        signature lines are one unit: those signatures execute that sentence.
@@ -254,7 +258,7 @@
   @media print {
     .footer-note { display: none; }
     .picker { display: none !important; }
-    .print-button { display: none !important; }
+    .float-buttons { display: none !important; }
     a { color: inherit; text-decoration: none; }
     /* Pin the printed column to the paper, in absolute units.
        A phone lays the screen out about 390px wide, and mobile browsers
@@ -272,43 +276,38 @@
       padding: 0 0 0.25in;
     }
   }
-  /* The combined page. A document's wrapper takes no part in layout, so
-     its paragraphs break across pages exactly as on the document's own
-     page (wrapped in a real box, Chrome paginated the lease differently).
-     The break before each later document goes on its heading instead. */
-  section.document { display: contents; }
+  /* The combined page: each later document starts a new sheet of paper,
+     the break sitting on its heading (see the wrapper rules in print). */
   section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {
     page-break-before: always;
     break-before: page;
   }
-  @media screen {
-    body { padding: 0.5in 0.75in 1in; box-shadow: 0 0 12px rgba(0,0,0,.15); }
-    section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {
-      margin-top: 0.6in;
-      padding-top: 0.5in;
-      border-top: 1px dashed #999;
-    }
+  @media print {
+    /* The wrappers take no part in printed layout, so every document
+       paginates exactly as it did before they existed. (A real box around
+       the lease made Chrome break its pages differently.) The screen
+       zoom must not reach paper either. */
+    .sheet, .sheet-stack, section.document { display: contents; zoom: 1 !important; }
   }
-  /* A phone. Screen only: print keeps its own fixed 6.8in column above,
-     so this cannot change how anything paginates. The long fill-in lines
-     are wider than a phone, and a page wider than the screen puts
-     everything at its right edge - the Print button included - out of
-     sight, which is how the button went missing on phones. */
-  @media screen and (max-width: 700px) {
-    body { padding: 20px 16px 96px; box-shadow: none; }
-    .blank.long, .blank.medium, .blank.word { min-width: 0; width: 100%; max-width: 3in; }
-    .blank { max-width: 100%; }
-    .blank.fixed { min-width: 0 !important; width: 40%; }
-    /* "body" for weight: the application's own rules come later in the
-       page and would otherwise win. */
-    body p.field.row { display: block; min-height: 0; margin: 0 0 0.3em; }
-    body p.field.row .label,
-    body p.field.row .blank + .label { display: block; margin: 0.5em 0 0; white-space: normal; }
-    body p.field.row .blank.fixed { display: block; width: 100%; height: 1.4em; margin: 0; }
-    body p.field.row .blank.fixed.filled { height: auto; white-space: normal; }
-    p { text-align: left; }
-    .sig-row { flex-wrap: wrap; }
-    .print-button { right: 16px; bottom: 16px; }
+  /* On screen a document is shown as the sheet of Letter paper it prints
+     on: 8.5in wide, the same 0.85in margins, so every line breaks where
+     it will on paper. A script zooms each sheet down to fit a narrower
+     screen (fitSheets), so a phone shows the page, not a reflow of it. */
+  @media screen {
+    html, body { background: #e9e7e2; }
+    body { max-width: none; padding: 12px 0 88px; }
+    .sheet {
+      display: block;
+      box-sizing: border-box;
+      width: 8.5in;
+      min-height: 11in;
+      margin: 0 auto;
+      padding: 0.85in;
+      background: #fff;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, .18);
+    }
+    .sheet:not([hidden]) ~ .sheet:not([hidden]) { margin-top: 12px; }
+    .sheet-stack > .footer-note { max-width: 6.8in; margin: 0.3in auto 0; border: 0; }
     .footer-note code { overflow-wrap: anywhere; }
   }
 
@@ -375,7 +374,8 @@
 </style>
 </head>
 <body>
-<section class="document" data-doc="application">
+<main class="sheet-stack">
+<section class="document sheet" data-doc="application">
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">APPLICATION FOR APARTMENT</p>
 <p class="field row"><span class="label">Address of property</span><span class="blank fixed" data-premises style="flex-grow: 20"></span><span class="label">Desired Date of occupancy</span><span class="blank fixed" style="flex-grow: 12"></span></p>
@@ -422,7 +422,7 @@
 <p class="field row"><span class="label">Applicant signature</span><span class="blank fixed" style="flex-grow: 29"></span></p>
 <p class="field row"><span class="label">Date</span><span class="blank fixed" style="flex-grow: 34"></span></p>
 </section>
-<section class="document" data-doc="lease">
+<section class="document sheet" data-doc="lease">
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">RESIDENTIAL LEASE</p>
 <p class="preamble"><span class="blank medium"></span>(hereinafter referred to as Lessor) hereby leases to <span class="blank medium"></span> (hereinafter referred to as Lessee) the premises known as <span class="blank medium" data-premises></span> in New Orleans, Louisiana for use as a private residence only.</p>
@@ -482,7 +482,7 @@
 </div>
 </div>
 </section>
-<section class="document" data-doc="deposit">
+<section class="document sheet" data-doc="deposit">
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">SECURITY DEPOSIT AGREEMENT</p>
 <p class="fill">Received from <span class="blank medium"></span> on <span class="blank word"></span></p>
@@ -537,12 +537,36 @@
   <code>documents/properties.json</code>. Printed together, "Page X of Y" counts the
   whole printout, not each document.
 </div>
-<button type="button" class="print-button" id="print-button" hidden>Print</button>
+</main>
+<div class="float-buttons">
+  <a href="../../manager/" id="back-button">Back</a>
+  <button type="button" id="print-button" hidden>Print</button>
+</div>
 <script>
   document.getElementById("print-button").addEventListener("click", function () {
     var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
     fontsReady.then(function () { window.print(); });
   });
+  document.getElementById("back-button").addEventListener("click", function (event) {
+    var cameFromHere = false;
+    try { cameFromHere = new URL(document.referrer).origin === window.location.origin; } catch (e) {}
+    if (cameFromHere && window.history.length > 1) {
+      event.preventDefault();
+      window.history.back();
+    }
+  });
+  // Zoom each sheet down to the screen's width, never up. Zoom rather
+  // than a narrower column: the lines must break where they do on paper.
+  function fitSheets() {
+    var room = document.documentElement.clientWidth - 16;
+    document.querySelectorAll(".sheet").forEach(function (sheet) {
+      sheet.style.zoom = "";
+      var width = sheet.offsetWidth;
+      if (width > room) { sheet.style.zoom = String(room / width); }
+    });
+  }
+  fitSheets();
+  window.addEventListener("resize", fitSheets);
 </script>
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
   <form class="picker-box" id="picker-form">

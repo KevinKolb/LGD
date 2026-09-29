@@ -186,17 +186,24 @@ until one is picked, and the print dialog only opens after. Picking fills
 in the premises blank, bold and underlined, and applies the options.
 "Leave it blank" gives the old fully blank form.
 
-Every printable document also carries a floating **Print** button
-(`PRINT_BUTTON` in the lease generator, reused by the others), added
-2026-09-29 so a document opened with View is one click from paper. It is
-screen-only, waits on `document.fonts.ready` like the auto-print, and stays
-hidden until the popup closes, so it can never print a lease before its
-apartment is picked. On a phone it had been out of sight: the long
-fill-in lines made the page wider than the screen, putting the button past
-its right edge. The `@media screen and (max-width: 700px)` rules in
-`HTML_HEAD` fix that (and stack the application's rows one field per line);
-they are screen-only, so printing is untouched - verified by comparing every
-printed page before and after, blank and filled, at desktop and phone widths.
+**Viewing is paper, and everything is one tab** (set by the user on
+2026-09-29: "everything will be on standard paper"). On screen each
+document sits on a `.sheet` - 8.5in wide with the print margins, so every
+line breaks exactly where it will on paper - and `fitSheets()` zooms the
+sheet down to fit a phone rather than reflowing it. In print the sheet is
+`display: contents` and `zoom: 1 !important`, so it adds nothing to the
+printed layout: every printed page was compared before and after, blank
+and filled, at desktop and phone widths, and none changed.
+
+The manager page opens every document (and the legal pages) in the same
+tab and has no Print buttons. Instead each document floats **Back** and
+**Print** (`DOC_BUTTONS` in the lease generator, reused by the others;
+the legal pages float Back only). Back uses `history.back()` when this site
+opened the page, else goes to the manager page. Print waits on
+`document.fonts.ready` like the auto-print, and stays hidden until the
+popup closes, so it can never print a lease before its apartment is
+picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
+`render_head` opens, which keeps the popup and buttons out of the zoom.
 
 The rule, settled by the user on 2026-09-28: **every lease has the same
 sections with the same numbers; only the wording inside §17 PATIO/YARD,
@@ -283,8 +290,9 @@ left out: no longer in use, and it names a fixed address.
 
 Two things that are load-bearing:
 
-- **`section.document { display: contents; }`.** Wrapped in a real box,
-  Chrome paginated the lease differently from its own page. With no box,
+- **In print, `section.document` is `display: contents`** (on screen each
+  is its own sheet). Wrapped in a real box, Chrome paginated the lease
+  differently from its own page. With no box,
   every document prints exactly as on its own page - checked for each
   document at every address. The break before each later document sits on
   its `h1.company` instead. The one known difference: at 1364 Camp the

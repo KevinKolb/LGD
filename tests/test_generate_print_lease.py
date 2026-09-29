@@ -459,20 +459,24 @@ def test_printing_waits_for_the_apartment_to_be_picked(real_output):
     # The only other call is the floating Print button's, and that button
     # starts hidden and is shown only by finish() - so it too waits.
     assert real_output.count("window.print()") == 2
-    assert '<button type="button" class="print-button" id="print-button" hidden>' in real_output
+    assert '<button type="button" id="print-button" hidden>Print</button>' in real_output
     finish = script[:script.index("properties.forEach")]
     assert 'getElementById("print-button").hidden = false' in finish
     assert real_output.count('getElementById("print-button").hidden = false') == 1
 
 
-def test_the_print_button_floats_on_screen_and_never_prints(real_output):
-    """Viewing a document (#view) keeps a Print button over it, so paper is
-    one click away; the button itself must not appear on paper."""
-    css = real_output[real_output.index(".print-button {"):]
+def test_back_and_print_float_on_screen_and_never_print(real_output):
+    """Everything opens in the same tab, so a document carries its own way
+    back beside its Print button; neither may appear on paper."""
+    css = real_output[real_output.index(".float-buttons {"):]
     assert "position: fixed;" in css[:css.index("}")]
     printed = real_output[real_output.index("@media print {"):]
-    assert ".print-button { display: none !important; }" in printed[:printed.index("\n  }")]
-
+    assert ".float-buttons { display: none !important; }" in printed[:printed.index("\n  }")]
+    buttons = real_output[real_output.index('<div class="float-buttons">'):]
+    buttons = buttons[:buttons.index("</div>")]
+    assert '<a href="../../manager/" id="back-button">Back</a>' in buttons
+    assert 'id="print-button"' in buttons
+    assert "window.history.back()" in real_output
 
 @pytest.mark.parametrize("prop, message", [
     ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"parking": "maybe"}},
@@ -561,18 +565,22 @@ def test_bullet_items_are_their_own_indented_paragraphs(real_output):
     assert len(bullets) == 6
     assert "p.bullet {" in real_output
 
-def test_on_a_phone_nothing_is_wider_than_the_screen(real_output):
-    """The long fill-in lines were wider than a phone, so the page was
-    wider than the screen and the floating Print button, at its right
-    edge, was out of sight. Measured in headless Chrome as iPhone SE, 13
-    and Pixel 7: page width now equals screen width on every document.
-    The rules are screen-only, so printing is untouched."""
-    phone = real_output[real_output.index("@media screen and (max-width: 700px) {"):]
-    phone = phone[:phone.index("\n  }\n")]
-    assert ".blank.long, .blank.medium, .blank.word { min-width: 0;" in phone
-    assert ".blank { max-width: 100%; }" in phone
-    assert "@media print" not in phone
-
+def test_on_screen_the_document_is_a_sheet_of_letter_paper(real_output):
+    """Viewed - on a phone especially - a document looks like the paper it
+    prints on: an 8.5in sheet with the print margins, zoomed to fit the
+    screen, so every line breaks where it will on paper. Measured in
+    headless Chrome as iPhone SE, 13 and Pixel 7: no page is wider than the
+    screen, and every printed page is unchanged."""
+    screen = real_output[real_output.index("  @media screen {\n    html, body"):]
+    sheet = screen[screen.index(".sheet {"):]
+    sheet = sheet[:sheet.index("}")]
+    assert "width: 8.5in;" in sheet and "padding: 0.85in;" in sheet
+    assert "size: letter;" in real_output and "margin: 0.85in;" in real_output
+    assert "function fitSheets()" in real_output
+    assert '<main class="sheet">' in real_output
+    # In print the sheet is no box at all, and never zoomed.
+    printed = real_output[real_output.index("  @media print {\n    /* The wrappers"):]
+    assert ".sheet, .sheet-stack, section.document { display: contents; zoom: 1 !important; }" in printed
 
 def test_the_popup_scrolls_on_a_short_screen(real_output):
     """Centred with align-items, a popup taller than a phone screen was cut

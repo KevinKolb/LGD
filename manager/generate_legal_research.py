@@ -243,6 +243,22 @@ PAGE = """<!doctype html>
     color: var(--muted);
     font-size: 13px;
   }}
+  /* Opened in the same tab from the manager page; this takes you back. */
+  .back-button {{
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    padding: 10px 20px;
+    border: 1px solid #1f5d4c;
+    border-radius: 999px;
+    background: #fff;
+    color: #1f5d4c;
+    font: inherit;
+    text-decoration: none;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
+  }}
+  @media print {{ .back-button {{ display: none; }} }}
 </style>
 </head>
 <body>
@@ -263,6 +279,7 @@ PAGE = """<!doctype html>
 </main>
 
 <script src="../shared/footer.js"></script>
+<a class="back-button" href="index.html">Back</a>
 </body>
 </html>
 """

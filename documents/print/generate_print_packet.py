@@ -69,7 +69,7 @@ def section(key: str, module, source: Path) -> str:
     if body.count('id="premises"') != 1:
         raise SystemExit(f"{source.name}: expected exactly one premises blank.")
     body = body.replace('id="premises"', "data-premises")
-    return (f'<section class="document" data-doc="{key}">\n'
+    return (f'<section class="document sheet" data-doc="{key}">\n'
             + lease.render_title_block(lease.COMPANY_NAME, module.SUBTITLE)
             + body + "\n</section>")
 
@@ -89,6 +89,7 @@ def generate() -> str:
     # document's own boxes are asked only while it is ticked.
     fields = tuple(field + ("application",) for field in application.PICKER_FIELDS)
     choices = tuple((key, name, ticked) for key, name, _, _, ticked in DOCUMENTS)
+    head += '<main class="sheet-stack">\n'
     page = head + body + "\n" + FOOTER_NOTE + lease.render_picker_footer("documents", fields, choices)
     check_unique_ids(page)
     return page

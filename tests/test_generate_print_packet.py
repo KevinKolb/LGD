@@ -33,7 +33,7 @@ def real_output(gen) -> str:
 
 
 def sections(page: str) -> dict[str, str]:
-    return dict(re.findall(r'<section class="document" data-doc="(\w+)">(.*?)</section>', page, re.S))
+    return dict(re.findall(r'<section class="document sheet" data-doc="(\w+)">(.*?)</section>', page, re.S))
 
 
 def test_each_document_is_its_own_generators_body(gen, real_output):
@@ -78,7 +78,7 @@ def test_the_addendum_is_left_out(real_output):
 def test_each_document_starts_a_new_sheet(real_output):
     """The wrapper takes no part in layout (so each document paginates as on
     its own page); the page break sits on each later document's heading."""
-    assert "section.document { display: contents; }" in real_output
+    assert ".sheet, .sheet-stack, section.document { display: contents; zoom: 1 !important; }" in real_output
     rule = real_output[real_output.index("section.document:not([hidden]) ~ section.document:not([hidden]) > h1.company {"):]
     assert "break-before: page;" in rule[:rule.index("}")]
 
@@ -105,8 +105,7 @@ def test_the_page_script_parses(real_output, tmp_path):
 
 def test_the_manager_page_links_it():
     page = MANAGER_PAGE.read_text(encoding="utf-8")
-    assert 'href="../documents/print/documents_print.html#view"' in page
-    assert 'href="../documents/print/documents_print.html"' in page
+    assert 'href="../documents/print/documents_print.html#view">View documents</a>' in page
 
 
 def test_single_document_pages_have_no_checkboxes():
@@ -114,3 +113,12 @@ def test_single_document_pages_have_no_checkboxes():
         page = (PRINT_DIR / name).read_text(encoding="utf-8")
         assert 'type="checkbox" data-doc-choice' not in page
         assert "Which apartment is this" in page
+
+
+def test_the_manager_page_opens_everything_in_this_tab_and_has_no_print_links():
+    """The documents print from their own floating button, and have a Back
+    button to return; so nothing on the manager page opens a new tab or
+    prints directly."""
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert 'target="_blank"' not in page
+    assert not re.search(r'id="print-[\w-]+-link"', page)
