@@ -163,6 +163,14 @@
   .applicant-list .login { font-size: 12px; color: var(--muted); white-space: nowrap; }
   .applicant-list .login.yes { color: var(--ok); }
   .applicant-list .empty { color: var(--muted); font-size: 13px; justify-content: flex-start; }
+  /* Each applicant's buttons: a row of their own under the name, small
+     enough to sit three across on a phone. */
+  .applicant-list .row-actions { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .applicant-list .row-actions .button-link,
+  .applicant-list .row-actions button.secondary { padding: 5px 11px; font-size: 12px; }
+  .list-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 22px; }
+  .list-head h3 { margin: 0; font-size: 15px; }
+  .list-head + .applicant-list { margin-top: 10px; }
   .note { color: var(--muted); font-size: 12px; }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.secondary {
@@ -273,6 +281,13 @@
       application, and when they sign up on this site with the same email,
       their login is linked to what you entered here.
     </p>
+    <p class="hint">
+      To send someone the application: <strong>Application</strong> opens it
+      with their name, mobile and email filled in &mdash; pick the apartment,
+      then Print, and save it as a PDF. <strong>Email</strong> starts an
+      email to them; attach that PDF and send. <strong>Archive</strong> takes
+      them off the list, and Show archived brings them back.
+    </p>
     <form id="applicant-form" novalidate>
       <div class="field-grid">
         <label>First name
@@ -293,7 +308,11 @@
         <span class="form-msg" id="applicant-msg" role="status" aria-live="polite"></span>
       </div>
     </form>
-    <ul class="applicant-list" id="applicant-list" aria-label="Applicants"></ul>
+    <div class="list-head">
+      <h3 id="applicant-list-title">Current applicants</h3>
+      <button type="button" class="secondary" id="toggle-archived" aria-pressed="false">Show archived</button>
+    </div>
+    <ul class="applicant-list" id="applicant-list" aria-labelledby="applicant-list-title"></ul>
   </section>
   <section>
     <div class="step-head">
@@ -506,17 +525,19 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
 "use strict";
 // --- Step 1: add an applicant -------------------------------------------
 //
-// First, last, email and mobile, stored as a person with role "applicant"
-// in the manager's own company - for filling in their application later,
-// and adopted by their login when they sign up with the same email. On
-// GitHub Pages this calls the database's create_applicant / list_applicants
-// (supabase/migrations/002_manager_adds_applicants.sql), which check that
-// the caller is a manager or admin; served by the FastAPI app it calls
-// /api/applicants, which checks the same.
+// First, last, email and mobile, stored as a person with is_applicant set,
+// in the manager's own company - for filling in their application, and
+// adopted by their login when they sign up with the same email. On GitHub
+// Pages this calls the database's create_applicant / list_applicants /
+// set_applicant_archived (supabase/migrations/002_manager_adds_applicants.sql),
+// which check that the caller is a manager or admin; served by the FastAPI
+// app it calls /api/applicants, which checks the same.
 (function () {
   const form = document.getElementById("applicant-form");
   const message = document.getElementById("applicant-msg");
   const list = document.getElementById("applicant-list");
+  const listTitle = document.getElementById("applicant-list-title");
+  const toggle = document.getElementById("toggle-archived");
   const button = document.getElementById("add-applicant");
   const fields = {
     first_name: document.getElementById("applicant-first"),
@@ -524,6 +545,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     email: document.getElementById("applicant-email"),
     mobile: document.getElementById("applicant-mobile"),
   };
+  let showingArchived = false;
 
   function say(text, kind) {
     message.textContent = text;
@@ -541,8 +563,12 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     return payload;
   }
 
+  function usingApi() {
+    return window.LGD_DASHBOARD.backend === "api";
+  }
+
   async function add(values) {
-    if (window.LGD_DASHBOARD.backend === "api") {
+    if (usingApi()) {
       return (await api("/api/applicants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -552,11 +578,63 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     return window.LGD.auth.rpc("create_applicant", values);
   }
 
-  async function fetchAll() {
-    if (window.LGD_DASHBOARD.backend === "api") {
-      return (await api("/api/applicants")).applicants;
+  async function fetchAll(archived) {
+    if (usingApi()) {
+      return (await api("/api/applicants?archived=" + archived)).applicants;
     }
-    return window.LGD.auth.rpc("list_applicants", {});
+    return window.LGD.auth.rpc("list_applicants", { archived });
+  }
+
+  async function setArchived(person, archived) {
+    if (usingApi()) {
+      return (await api(`/api/applicants/${encodeURIComponent(person.id)}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived }),
+      })).applicant;
+    }
+    return window.LGD.auth.rpc("set_applicant_archived", { person_id: person.id, archived });
+  }
+
+  function fullName(person) {
+    return `${person.first_name} ${person.last_name}`.trim();
+  }
+
+  // The application, filled in with this applicant's name, mobile and
+  // email. Their details go in this tab's sessionStorage, and the page's
+  // address names them, so the popup fills only when both agree.
+  function openApplication(person) {
+    try {
+      sessionStorage.setItem("lgd-applicant", JSON.stringify({
+        id: person.id, name: fullName(person), phone: person.mobile || "", email: person.email || "",
+      }));
+    } catch (error) {
+      // Private browsing with storage off: the application still opens,
+      // with their blanks left to fill by hand.
+    }
+    window.location.href = "../documents/print/documents_print.html?docs=application&applicant="
+      + encodeURIComponent(person.id) + "#view";
+  }
+
+  // An email to them, ready for the application's PDF to be attached - a
+  // mailto link cannot attach a file itself.
+  function emailLink(person) {
+    const subject = "Your rental application - Lower Garden District Properties, Inc.";
+    const body = `Hello ${person.first_name},\n\n`
+      + "Attached is our rental application. Please fill it in, sign it, and "
+      + "send it back to us, or bring it to our office.\n\n"
+      + "Thank you,\nLower Garden District Properties, Inc.";
+    return `mailto:${encodeURIComponent(person.email)}`
+      + `?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function actionButton(text, onClick, primary) {
+    const control = document.createElement("button");
+    control.type = "button";
+    control.className = primary ? "button-link" : "secondary";
+    control.textContent = text;
+    control.addEventListener("click", onClick);
+    return control;
   }
 
   function render(applicants) {
@@ -564,7 +642,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     if (!applicants.length) {
       const item = document.createElement("li");
       item.className = "empty";
-      item.textContent = "No applicants yet.";
+      item.textContent = showingArchived ? "No archived applicants." : "No applicants yet.";
       list.append(item);
       return;
     }
@@ -572,23 +650,55 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       const item = document.createElement("li");
       const who = document.createElement("span");
       who.className = "who";
-      who.textContent = `${person.first_name} ${person.last_name}`.trim();
+      who.textContent = fullName(person);
       const contact = document.createElement("span");
       contact.className = "contact";
       contact.textContent = [person.email, person.mobile].filter(Boolean).join(" · ");
       const login = document.createElement("span");
       login.className = "login" + (person.has_login ? " yes" : "");
-      login.textContent = person.has_login ? "Has a login" : "No login yet";
+      login.textContent = (person.has_login ? "Has a login" : "No login yet")
+        + (person.is_resident ? " · Resident" : "");
       const left = document.createElement("span");
       left.append(who, document.createElement("br"), contact);
-      item.append(left, login);
+
+      const actions = document.createElement("span");
+      actions.className = "row-actions";
+      if (showingArchived) {
+        actions.append(actionButton("Restore", () => archive(person, false, actions)));
+      } else {
+        actions.append(actionButton("Application", () => openApplication(person), true));
+        if (person.email) {
+          const mail = document.createElement("a");
+          mail.className = "button-link secondary";
+          mail.href = emailLink(person);
+          mail.textContent = "Email";
+          actions.append(mail);
+        }
+        actions.append(actionButton("Archive", () => archive(person, true, actions)));
+      }
+      item.append(left, login, actions);
       list.append(item);
     }
   }
 
-  async function refresh() {
+  async function archive(person, archived, actions) {
+    actions.querySelectorAll("button").forEach((control) => { control.disabled = true; });
     try {
-      render(await fetchAll());
+      await setArchived(person, archived);
+      say(`${fullName(person)} ${archived ? "archived" : "restored"}.`, "ok");
+      await refresh();
+    } catch (error) {
+      say(error.message, "error");
+      actions.querySelectorAll("button").forEach((control) => { control.disabled = false; });
+    }
+  }
+
+  async function refresh() {
+    listTitle.textContent = showingArchived ? "Archived applicants" : "Current applicants";
+    toggle.textContent = showingArchived ? "Show current" : "Show archived";
+    toggle.setAttribute("aria-pressed", String(showingArchived));
+    try {
+      render(await fetchAll(showingArchived));
     } catch (error) {
       list.textContent = "";
       const item = document.createElement("li");
@@ -597,6 +707,11 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       list.append(item);
     }
   }
+
+  toggle.addEventListener("click", () => {
+    showingArchived = !showingArchived;
+    refresh();
+  });
 
   // A US number, however it was typed, reads (504) 555-1234.
   fields.mobile.addEventListener("blur", () => {
@@ -624,6 +739,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       say(`${created.first_name} ${created.last_name} added.`, "ok");
       form.reset();
       fields.first_name.focus();
+      showingArchived = false;
       await refresh();
     } catch (error) {
       say(error.message, "error");

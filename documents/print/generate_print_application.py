@@ -56,6 +56,16 @@ OFFICE_FIELDS = (
 # The popup questions this document asks.
 QUESTIONS = ("rent", "term", "deposit", "holding")
 
+# The applicant's own blanks that the manager page can fill, from an
+# applicant picked there (its Application button): the label before each,
+# and which of their details fills it. Only the first blank after each
+# label - later "Email" blanks are the other occupants'.
+APPLICANT_FIELDS = (
+    ("Name of Applicant", "name"),
+    ("Telephone #", "phone"),
+    ("Email", "email"),
+)
+
 # A block beginning "(parking=limited) " prints on every blank application
 # but, once an apartment is picked, only where that option applies - the
 # same data-option tag the lease uses. The vehicles section is one: only an
@@ -229,6 +239,11 @@ def render_body(source_text: str) -> str:
     for lead, key in OFFICE_FIELDS:
         if body.count(f'data-fill="{key}"') != 1:
             raise SystemExit(f'{SOURCE.name} needs exactly one "{lead}___" blank.')
+    for lead, key in APPLICANT_FIELDS:
+        cell = f'<span class="label">{html.escape(lead)}</span><span class="blank fixed" '
+        if cell not in body:
+            raise SystemExit(f'{SOURCE.name} needs a "{lead}___" blank for the applicant.')
+        body = body.replace(cell, cell + f'data-applicant="{key}" ', 1)
     return body
 
 

@@ -410,39 +410,60 @@ through `node --check` when node is installed.
 
 The manager page's step 1, Applicants (2026-09-29; Paper Documents
 Generator became step 2, Legal step 3), takes first name, last name, email
-and mobile and stores a `people` row with role `applicant`, in the
-manager's own company - for filling in their application later, and for
-their login. `people` gained `first_name` / `last_name` (`full_name` stays,
-as "first last"); the mobile is `phone`, stored as `(504) 555-1234` for any
-US number.
+and mobile and stores a `people` row with `is_applicant` set, in the
+manager's own company - for filling in their application, and for their
+login. `people` gained `first_name` / `last_name` (`full_name` stays, as
+"first last"); the mobile is `phone`, stored as `(504) 555-1234` for any
+US number. Someone already in `people` with that email (a resident
+applying for another apartment) is not a second person: their row becomes
+an applicant too. Only an applicant already on the current list is refused.
+
+Each applicant in the list has three buttons (the user, same day):
+
+- **Application** opens `documents_print.html?docs=application&applicant=<id>#view`
+  with the applicant's name, mobile and email in the manager page's
+  `sessionStorage` ("lgd-applicant"). The popup says "For Jane Doe." and
+  fills the three blanks the application generator tags `data-applicant`
+  (`APPLICANT_FIELDS`: the first blank after "Name of Applicant",
+  "Telephone #" and "Email" - later Email blanks are the occupants'). It
+  fills only when the stored id matches the address, so a document opened
+  any other way never gets a stale applicant.
+- **Email** is a `mailto:` with a subject and a short note. A mailto cannot
+  attach a file, so the manager prints the application to PDF and attaches
+  it. Sending from the site itself would need a mail service and a server
+  step.
+- **Archive** sets `people.archived_at`: off the list, kept in the
+  directory. **Show archived** lists them, each with **Restore**. Adding an
+  archived applicant again restores the same row.
 
 On the live site (GitHub Pages) the browser still cannot write `people` -
-001's default deny stands. It calls two SECURITY DEFINER functions from
+001's default deny stands. It calls three SECURITY DEFINER functions from
 `supabase/migrations/002_manager_adds_applicants.sql` through
-`LGD.auth.rpc()`: `create_applicant` and `list_applicants`. They check the
-caller is a signed-in manager or admin, always file the row under the
-caller's own `manager_id` (never one the browser sends), and are granted
-to `authenticated` only. Served by the FastAPI app, the page calls
-`/api/applicants` instead (`db.create_applicant` / `db.list_applicants`,
-same checks and the same wording, in `db.clean_applicant`).
+`LGD.auth.rpc()`: `create_applicant`, `list_applicants(archived)` and
+`set_applicant_archived(person_id, archived)`. They check the caller is a
+signed-in manager or admin, touch only the caller's own company (an admin:
+every company), always file a new row under the caller's own `manager_id`
+(never one the browser sends), and are granted to `authenticated` only.
+Served by the FastAPI app, the page calls `/api/applicants`
+(`?archived=true`) and `POST /api/applicants/{id}/archive` instead, with
+the same checks and wording in `app/db.py`.
 
-**The login half:** 002 also replaces 001's `webwebusers_create_person` so a
-new login *adopts* an unclaimed person with the same email instead of
-making a second one - so when the applicant signs up with the address the
-manager typed and confirms it, their login links to that record. The
-manager page shows "Has a login" / "No login yet". Sending them an invite
-email is not built yet: creating an auth account needs Supabase's secret
-key, which must never reach a browser, so it needs a server-side step (an
-Edge Function, or the FastAPI app).
+**The login half:** 001's `handle_auth_user_confirmed` gives a new login
+to an unclaimed person with the same email (`auth_id is null`), rather than
+making a second one. So when the applicant signs up with the address the
+manager typed and confirms it, their login is that same row. The manager
+page shows "Has a login" / "No login yet". Sending them an invite email is
+not built yet: creating an auth account needs Supabase's secret key, which
+must never reach a browser, so it needs a server-side step (an Edge
+Function, or the FastAPI app).
 
-**002 must be applied to the live database before the form works there**
-(`python supabase/apply_migrations.py`). It was checked against a local
-Postgres 16 with a stand-in `auth` schema: applied twice cleanly (so it is
-safe to re-run), anonymous callers refused, a signed-in applicant refused,
-each manager seeing only their company, an admin seeing all, and a
-signup with the same email linking to the manager's record with no
-duplicate person. `list_applicants` skips people whose login was promoted
-to manager or admin, since their directory row still says `applicant`.
+**001 and 002 must be applied to the live database** (`python
+supabase/apply_migrations.py`). Both were checked against a local Postgres
+16 with a stand-in `auth` schema, from the old live shape and from an
+empty database, each applied twice cleanly: anonymous callers refused, a
+signed-in applicant refused, each manager seeing only their company, an
+admin seeing all, archive and restore, and a signup with the same email
+linking to the manager's record with no duplicate person.
 
 ## Saved for later: `_saved/`
 
@@ -470,37 +491,47 @@ pre-correction wording, untouched, as it always will.
 
 If another apparent typo turns up later, flag it and ask — don't fix it silently.
 
-## `people` and `webusers`, and who checks a password
+## `people` is everyone, logins included, and who checks a password
 
 `people` (in `app/db.py`'s schema) is the directory of everyone the system
-knows about - residents, managers, admins and applicants alike, one row each,
-with an optional `property_id` because only a resident actually lives
-somewhere, and an optional `manager_id` for the company they belong to.
+knows about - residents, managers, admins and applicants alike, **one row
+each**, with an optional `property_id` because only a resident actually
+lives somewhere, and an optional `manager_id` for the company they belong to.
 
-`webusers` (in `app/accounts.py`, mirrored in `accounts.json` locally) is the
-**login** table, and it is a subset: `webusers.person_id` points at the person a
-login belongs to, NOT NULL, so **every login has exactly one person**. The
-reverse is deliberately not true and never will be - an applicant who filled
-in the form, or a resident who has never signed in, is a person with no login.
-That was the open question this file used to record; it is settled now, in
-favour of `people` being the superset.
+**Roles are four yes/no columns, not one value** (the user, 2026-09-29:
+"User can be applicant and resident... Can be manager and admin too. All
+one table."): `is_applicant`, `is_resident`, `is_manager`, `is_admin`. In
+Python a `User` has `roles` (a frozenset), plus `role` - the most senior
+one held, in `ROLE_ORDER` (admin, manager, resident, applicant) - and
+`role_label` ("admin, manager") for showing. A gate allows a person who
+holds *any* allowed role. `shared/auth.js`'s `profile()` returns the same
+three. A login with no role column set is an applicant, never a startup
+failure.
 
-The rule is enforced in the database rather than in code, because there is
-more than one way to create a login: a website signup, `python -m
-app.accounts`, or somebody typing an INSERT into the Supabase SQL editor. A
-BEFORE INSERT trigger on `webusers` creates the person row when one is not
-supplied, so all three paths obey it. Locally, where `webusers` lives in a JSON
-file that no trigger can watch, `python -m app.accounts link-people` does the
-same job and is safe to re-run.
+**A login is columns on the person's row**, not a table of its own:
+`username`, `password_hash` and `auth_id`. There was a separate `webusers`
+table, with a `person_id` pointing here; 001 merged it into `people` on
+2026-09-29 and dropped it, and dropped the old single `role` column after
+reading it into the four flags. Until the migration has run on a
+database, `app/config.py` reads the old `webusers` table, and
+`shared/auth.js` falls back to it, so signing in never waits on a
+migration. A person with no login - an applicant a manager added, a
+resident who has never signed in - just has those columns empty.
+
+Locally the logins live in `accounts.json`, under the key `"webusers"`
+still (it holds real password hashes and is gitignored, so it is never
+renamed by editing anything committed), each with a `"roles"` list
+(an old `"role"` is read too). `python -m app.accounts link-people` gives
+each one a `people` row, and is safe to re-run.
 
 **Two different things can check a password, and either is enough:**
 
-- **Supabase Auth** (`webusers.auth_id` -> `auth.users`) is what the live
+- **Supabase Auth** (`people.auth_id` -> `auth.users`) is what the live
   website uses. `login/index.html` and `shared/auth.js` talk to it straight
   from the browser, which is the only kind of login that can work at all on
   GitHub Pages, where there is no server. Supabase holds that password; this
   app never sees it.
-- **`webusers.password_hash`** (PBKDF2, `app/auth.py`) is what this app's HTTP
+- **`people.password_hash`** (PBKDF2, `app/auth.py`) is what this app's HTTP
   Basic auth checks. That path is not what the live site uses.
 
 So `app/config.py` requires *one* of the two, never both: a row created by a
@@ -531,8 +562,9 @@ meant to be public, and carries no privileges of its own. What actually
 protects the data is row level security, in
 `supabase/migrations/001_auth_people_rls.sql`: every table denies the
 anon/authenticated roles by default, and exactly three things are granted
-back - read your own `webusers` row, read your own `people` row, edit your own
-name and phone. No browser policy can change a `role` or a `manager_id`.
+back - read your own `people` row (every column but `password_hash`), and
+edit your own name and phone. No browser policy can change a role column or
+a `manager_id`.
 
 **A new table in `app/db.py` is a data leak until it is added to that
 migration's RLS list.** `tests/test_auth_links.py` compares the two and fails
@@ -560,23 +592,23 @@ transaction and roll back - that is how the trigger and all fifteen RLS rules
 in 001 were checked against real data without committing a thing.
 
 Role vocabulary was settled on 2026-09-08: the roles are `admin` / `manager` /
-`resident` / `applicant` everywhere - `ROLE_*` in `app/config.py`, the strings
-stored in `webusers.role`, and `people.role`. The old `landlord` / `tenant` values
-are mapped forward by `normalize_role()` on every load, in both the JSON and
-Postgres paths, and `preload_accounts_from_postgres` also rewrites them in
-place. **Keep that mapping.** It is not redundant with the UPDATE: a database
-still holding the old strings - a migration that has not run yet, a restored
-backup - must still log people in rather than reject every user at once.
+`resident` / `applicant` everywhere - `ROLE_*` in `app/config.py`, and since
+2026-09-29 the `is_*` columns of `people`. The old `landlord` / `tenant` values
+are mapped forward by `normalize_role()` on every load, and 001's merge (and
+`app/db.py`'s `ROLE_COLUMN_MIGRATION`) reads them into the right column.
+**Keep that mapping.** A database still holding the old strings - a migration
+that has not run yet, a restored backup - must still log people in rather
+than reject every user at once.
 
 On 2026-09-08 the last of it went too: `landlords` became `managers`, every
 `landlord_id` became `manager_id`, and that table's `company` column became
-`name`. `users` became `webusers` in the same pass - Supabase already has a
+`name`. `users` became `webusers` in the same pass (merged into `people` on 2026-09-29) - Supabase already has a
 `users` table (`auth.users`, where GoTrue keeps identities), and this one is
 joined to it, so two tables one schema apart sharing a name was a trap.
 
 Note the collision this leaves, deliberately: `manager` is both a role a
-person holds (`webusers.role = 'manager'`) and the name of the table of
-management companies, so a row reads `role='manager'`, `manager_id='lgd'`.
+person holds (`people.is_manager`) and the name of the table of
+management companies, so a row reads `is_manager=true`, `manager_id='lgd'`.
 The first is a job, the second is a company. Flagged when the rename was
 requested and accepted as-is.
 

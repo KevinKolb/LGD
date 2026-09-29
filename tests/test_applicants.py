@@ -5,6 +5,7 @@ does the same through Supabase - see test_the_migration_* below for what
 supabase/migrations/002_manager_adds_applicants.sql must keep doing."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -111,4 +112,72 @@ def test_the_manager_page_has_the_applicant_form_as_step_1() -> None:
     for name in ("first_name", "last_name", "email", "mobile"):
         assert f'name="{name}"' in section
     assert 'window.LGD.auth.rpc("create_applicant", values)' in page
-    assert 'window.LGD.auth.rpc("list_applicants", {})' in page
+    assert 'window.LGD.auth.rpc("list_applicants", { archived })' in page
+
+
+# --- Archiving (the user, 2026-09-29) ---------------------------------------
+
+def archive(client, auth, person_id, archived=True):
+    return client.post(f"/api/applicants/{person_id}/archive", json={"archived": archived}, auth=auth)
+
+
+def test_an_archived_applicant_moves_to_the_archived_list_and_back(client) -> None:
+    person = add(client, STEVE).json()["applicant"]
+    response = archive(client, STEVE, person["id"])
+    assert response.status_code == 200 and response.json()["applicant"]["archived"] is True
+    assert client.get("/api/applicants", auth=STEVE).json()["applicants"] == []
+    archived = client.get("/api/applicants?archived=true", auth=STEVE).json()["applicants"]
+    assert [a["email"] for a in archived] == ["jane.doe@example.com"]
+
+    assert archive(client, STEVE, person["id"], archived=False).status_code == 200
+    assert client.get("/api/applicants?archived=true", auth=STEVE).json()["applicants"] == []
+    assert len(client.get("/api/applicants", auth=STEVE).json()["applicants"]) == 1
+
+
+def test_adding_an_archived_applicant_again_brings_them_back(client) -> None:
+    person = add(client, STEVE).json()["applicant"]
+    archive(client, STEVE, person["id"])
+    again = add(client, STEVE)
+    assert again.status_code == 201
+    assert again.json()["applicant"]["id"] == person["id"]  # the same person, not a second one
+    assert again.json()["applicant"]["archived"] is False
+
+
+def test_another_company_cannot_archive_them(client) -> None:
+    person = add(client, STEVE).json()["applicant"]
+    response = archive(client, GAY, person["id"])
+    assert response.status_code == 404
+    assert response.json()["detail"] == "No such applicant."
+    assert archive(client, ADMIN, person["id"]).status_code == 200
+
+
+def test_a_resident_cannot_archive(client) -> None:
+    person = add(client, STEVE).json()["applicant"]
+    assert archive(client, TENANT1, person["id"]).status_code == 404
+
+
+# --- Sending them the application -------------------------------------------
+
+def test_the_application_tags_the_applicants_own_blanks_once_each() -> None:
+    page = (ROOT / "documents" / "print" / "application_print.html").read_text(encoding="utf-8")
+    tagged = re.findall(r'<span class="label">([^<]+)</span><span class="blank fixed" data-applicant="(\w+)"', page)
+    assert tagged == [("Name of Applicant", "name"), ("Telephone #", "phone"), ("Email", "email")]
+
+
+def test_the_popup_fills_them_only_for_the_applicant_the_address_names() -> None:
+    page = (ROOT / "documents" / "print" / "documents_print.html").read_text(encoding="utf-8")
+    assert 'new URLSearchParams(window.location.search).get("applicant")' in page
+    assert 'window.sessionStorage.getItem("lgd-applicant")' in page
+    assert "stored.id === applicantId" in page
+
+
+def test_each_applicant_row_offers_application_email_and_archive() -> None:
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert '"../documents/print/documents_print.html?docs=application&applicant="' in page
+    assert 'sessionStorage.setItem("lgd-applicant"' in page
+    assert "mailto:${encodeURIComponent(person.email)}" in page
+    assert 'actionButton("Archive", () => archive(person, true, actions))' in page
+    assert 'actionButton("Restore", () => archive(person, false, actions))' in page
+    assert 'id="toggle-archived"' in page
+    assert 'window.LGD.auth.rpc("list_applicants", { archived })' in page
+    assert 'window.LGD.auth.rpc("set_applicant_archived", { person_id: person.id, archived })' in page

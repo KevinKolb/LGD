@@ -183,7 +183,7 @@ Nothing writes files yet — that half is kept ready for mail merge.
    ```
 
    With `DATABASE_URL` set, every `app.accounts` command operates on the Postgres
-   `managers`/`webusers` tables instead of `accounts.json` — see `app/accounts.py`.
+   `managers` table and the logins on `people` instead of `accounts.json` — see `app/accounts.py`.
 
 3. **Render** — create a free Web Service pointed at this GitHub repo.
    - Build command: `pip install -r requirements.txt`

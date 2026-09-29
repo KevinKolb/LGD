@@ -184,6 +184,8 @@
     color: #333;
   }
   .picker-summary li { margin-bottom: 2px; }
+  /* Who the document is for, when the manager page chose an applicant. */
+  .picker-for { margin: -4px 0 12px; font-size: 11pt; color: #333; }
   /* One popup question: its label above its box. */
   .picker-box .question { margin: 0 0 12px; }
   .picker-box .question > label { display: block; margin: 0; font-size: 11pt; }
@@ -1005,6 +1007,27 @@
     return values;
   }
 
+  // An applicant picked on the manager page (its Application button): the
+  // page's address names them (?applicant=<id>) and the manager page left
+  // their details in this tab's sessionStorage. Both must agree, so a
+  // document opened any other way is never filled with someone stale.
+  var applicant = null;
+  var applicantId = new URLSearchParams(window.location.search).get("applicant");
+  if (applicantId) {
+    try {
+      var stored = JSON.parse(window.sessionStorage.getItem("lgd-applicant") || "null");
+      if (stored && stored.id === applicantId) { applicant = stored; }
+    } catch (error) {
+      applicant = null;
+    }
+  }
+  if (applicant && document.querySelector("[data-applicant]")) {
+    var forLine = document.createElement("p");
+    forLine.className = "picker-for";
+    forLine.textContent = "For " + applicant.name + ".";
+    document.getElementById("picker-title").insertAdjacentElement("afterend", forLine);
+  }
+
   properties.forEach(function (property, index) {
     propertySelect.add(new Option(property.address, String(index)));
   });
@@ -1030,6 +1053,16 @@
         blank.classList.add("filled");
       });
     });
+    // The applicant's own blanks - name, telephone, email - from the one
+    // chosen on the manager page.
+    if (applicant) {
+      document.querySelectorAll("[data-applicant]").forEach(function (blank) {
+        var value = applicant[blank.getAttribute("data-applicant")];
+        if (!value) { return; }
+        blank.textContent = value;
+        blank.classList.add("filled");
+      });
+    }
     finish();
   });
 
