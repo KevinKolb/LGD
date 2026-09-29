@@ -141,3 +141,7 @@ def test_the_deposit_blanks_are_tagged_with_what_fills_them(gen, real_output):
     $(amount) ... for (premises); then the holding deposit."""
     tags = re.findall(r'<span (?:data-fill="([\w-]+)" )?class="blank', real_output)
     assert tuple(tag or None for tag in tags) == gen.DEPOSIT_FILLS
+
+
+def test_every_lessee_signature_has_an_email_line_beside_it(real_output):
+    assert real_output.count('<div class="sig-line">Lessee</div><div class="sig-line email">Email</div>') == 6

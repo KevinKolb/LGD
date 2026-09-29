@@ -309,6 +309,22 @@
     font-size: 10pt;
     letter-spacing: 0.04em;
   }
+  /* A signature with the lines beside it: a Lessee's Email, and on the
+     addendum a Date. Side by side, so adding them made no page longer. */
+  .sig-row {
+    display: flex;
+    gap: 0.3in;
+    /* The row, not its lines, carries the space above: margins inside a
+       flex row do not collapse, and on the lines they made every
+       signature block 0.3in taller - enough to push the deposit form onto
+       a third page. */
+    margin-top: 0.3in;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }
+  .sig-row .sig-line.email { flex: 0 0 2.5in; }
+  .sig-row .sig-line.date { flex: 0 0 1.2in; }
   .footer-note {
     margin-top: 0.6in;
     padding-top: 0.2in;

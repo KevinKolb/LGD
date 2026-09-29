@@ -56,3 +56,9 @@ when a change is made; nothing already written down gets edited.
   "Lower Garden District Properties, Inc.", the name the user set for every
   document. The deposit now takes it from the lease generator's COMPANY_NAME,
   so the two cannot differ again.
+
+- **2026-09-29 - An Email line beside each Lessee signature** (the user:
+  every place a lessee writes their name, they give their email too), in
+  both sets of three - under the deposit terms and under the holding
+  deposit. Filled in by hand; no wording changed, and the form is still
+  two pages.

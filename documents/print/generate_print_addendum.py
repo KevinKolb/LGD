@@ -42,14 +42,6 @@ lease = _load_lease_generator()
 
 EXTRA_CSS = """
   p.incorporation { text-align: left; }
-  .sig-row {
-    display: flex;
-    gap: 0.4in;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  .sig-row .sig-line { flex: 1 1 auto; max-width: none; }
-  .sig-row .sig-line.date { flex: 0 0 1.6in; }
 """
 
 FOOTER_NOTE = """<div class="footer-note">
@@ -121,11 +113,7 @@ def render_block(block: str) -> str:
 
 
 def render_signatures() -> str:
-    rows = "\n".join(
-        f'<div class="sig-row"><div class="sig-line">{html.escape(who)}</div>'
-        f'<div class="sig-line date">Date</div></div>'
-        for who in SIGNERS
-    )
+    rows = "\n".join(lease.signature_row(who, date=True) for who in SIGNERS)
     return f'<div class="signature-block">\n{rows}\n</div>'
 
 

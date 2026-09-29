@@ -234,3 +234,10 @@ for the research behind any entry that cites outside sources.
 
 Nothing is currently pending in red in `documents/lease.md` — every drafted
 change above has been reviewed and applied.
+
+- **2026-09-29 - An Email line beside each Lessee signature** (the user:
+  every place a lessee writes their name, they give their email too). The
+  three Lessee signature lines at the end of the lease each have an
+  "Email" line beside them, to be filled in by hand; the Lessor/Agent line
+  does not. No wording in `lease.md` changed - the line is added by the
+  generator (`signature_row`) - and no lease got longer.

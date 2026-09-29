@@ -222,6 +222,15 @@ Blanks are tagged **by position** in the lease and deposit (`LEASE_FILLS`,
 `DEPOSIT_FILLS`, via `tag_blanks`, which fails the build if the count
 changes - a blank added to a master would otherwise shift every tag after
 it), and by the label before them in the application (`OFFICE_FIELDS`).
+**The lessee's email is for the pen, never the popup** (the user,
+2026-09-29: the popup is the Lessor's side). Every place a lessee writes
+their name, the form asks their email beside it: `signature_row` in the
+lease generator gives each "Lessee" signature an Email line on the same
+row (lease, both deposit-form blocks, and the addendum's rows with Date);
+the application already pairs each name with an Email. The row carries
+the space above it, not its lines - flex items' margins don't collapse,
+and on the lines they pushed the deposit form onto a third page.
+
 Left for the pen: signatures, the occupants' second line, the
 application's applicant fields and "Desired date of occupancy". Page
 counts at every address were unchanged, with the questions empty and

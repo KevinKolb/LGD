@@ -156,7 +156,7 @@ QUESTIONS = ("lessee", "deposit", "holding", "signed")
 
 
 def render_signatures(labels: list[str]) -> str:
-    rows = "\n".join(f'<div class="sig-line">{html.escape(label)}</div>' for label in labels)
+    rows = "\n".join(lease.signature_row(label) for label in labels)
     return f'<div class="signature-block">\n{rows}\n</div>'
 
 

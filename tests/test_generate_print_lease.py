@@ -655,3 +655,18 @@ def test_the_lease_starts_on_the_first_of_next_month_by_default(real_output):
     assert '<input type="date" id="q-signed" data-q="signed">' in real_output
     assert "new Date(now.getFullYear(), now.getMonth() + 1, 1)" in real_output
     assert "date.value = dateDefault(date);" in real_output
+
+
+def test_every_lessee_signature_has_an_email_line_beside_it(real_output):
+    """Every place a lessee writes their name, the form asks their email
+    too (the user, 2026-09-29); the Lessor/Agent line does not."""
+    block = real_output[real_output.index('<div class="signature-block">'):]
+    block = block[:block.index("\n</div>")]
+    assert block.count('<div class="sig-row"><div class="sig-line">Lessee</div>'
+                       '<div class="sig-line email">Email</div></div>') == 3
+    assert '<div class="sig-line">Lessor/Agent</div>\n' in block
+    # The row, not its lines, carries the space above it: flex margins do
+    # not collapse, and that made the deposit form a page longer.
+    row = real_output[real_output.index("  .sig-row {"):]
+    assert "margin-top: 0.3in;" in row[:row.index("}")]
+    assert ".sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }" in real_output

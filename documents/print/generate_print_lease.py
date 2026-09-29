@@ -480,6 +480,22 @@ HTML_HEAD = """<!doctype html>
     font-size: 10pt;
     letter-spacing: 0.04em;
   }
+  /* A signature with the lines beside it: a Lessee's Email, and on the
+     addendum a Date. Side by side, so adding them made no page longer. */
+  .sig-row {
+    display: flex;
+    gap: 0.3in;
+    /* The row, not its lines, carries the space above: margins inside a
+       flex row do not collapse, and on the lines they made every
+       signature block 0.3in taller - enough to push the deposit form onto
+       a third page. */
+    margin-top: 0.3in;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }
+  .sig-row .sig-line.email { flex: 0 0 2.5in; }
+  .sig-row .sig-line.date { flex: 0 0 1.2in; }
   .footer-note {
     margin-top: 0.6in;
     padding-top: 0.2in;
@@ -1342,12 +1358,25 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
 
 
 
+def signature_row(label: str, date: bool = False) -> str:
+    """One signature: a rule to sign on with the role beneath it. A Lessee's
+    has an Email line beside it, for the lessee to write in by hand - every
+    place a lessee writes their name, they give their email too (the user,
+    2026-09-29). The popup is for the Lessor's side and never asks it."""
+    cells = [f'<div class="sig-line">{html.escape(label)}</div>']
+    if label.startswith("Lessee"):
+        cells.append('<div class="sig-line email">Email</div>')
+    if date:
+        cells.append('<div class="sig-line date">Date</div>')
+    if len(cells) == 1:
+        return cells[0]
+    return '<div class="sig-row">' + "".join(cells) + "</div>"
+
+
 def render_signature_lines(labels: list[str]) -> str:
     """One block per signature: a horizontal rule to sign on, the role label
     underneath it - each entry kept visually separate, never run together."""
-    rows = "\n".join(
-        f'<div class="sig-line">{html.escape(label)}</div>' for label in labels
-    )
+    rows = "\n".join(signature_row(label) for label in labels)
     return f'<div class="signature-block">\n{rows}\n</div>'
 
 

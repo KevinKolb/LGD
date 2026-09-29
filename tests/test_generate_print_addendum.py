@@ -71,3 +71,11 @@ def test_the_font_is_embedded_and_the_page_prints_itself(real_output):
 
 def test_generated_file_on_disk_matches_a_fresh_run(gen, real_output):
     assert gen.OUTPUT.read_text(encoding="utf-8") == real_output
+
+
+def test_every_lessee_signs_with_email_and_date(real_output):
+    row = ('<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div>'
+           '<div class="sig-line date">Date</div></div>')
+    assert real_output.count(row) == 3
+    assert ('<div class="sig-row"><div class="sig-line">Lessor/Agent</div>'
+            '<div class="sig-line date">Date</div></div>') in real_output
