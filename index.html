@@ -175,7 +175,7 @@
   <p class="hint">Choose your role.</p>
   <div class="links">
     <a href="applicant/">Applicant</a>
-    <a href="resident/">Resident</a>
+    <a href="resident/" data-soon>Resident</a>
     <hr class="links-divider">
     <a class="staff" href="manager/">Manager</a>
     <a class="staff" href="admin/">Admin</a>
@@ -193,10 +193,12 @@
 <script>
 "use strict";
 
-// The resident area is still a placeholder, so its link says so rather
-// than leading somewhere half-built. Delegated from document, so it covers
-// every link on the page. The applicant page opened on 2026-09-29 (the
-// user: "enable the applicant page").
+// The resident area is still a placeholder, so its link - marked
+// data-soon - says so rather than leading somewhere half-built. Every other
+// link goes where it says: the applicant page (opened 2026-09-29, the user:
+// "enable the applicant page"), and the manager and admin areas, which
+// ask you to sign in. Marking the one link, rather than listing the ones
+// that work, means a new page is never caught by this by accident.
 (function () {
   const modal = document.getElementById("soon-modal");
 
@@ -205,14 +207,8 @@
   }
 
   document.addEventListener("click", (event) => {
-    const link = event.target.closest("a");
+    const link = event.target.closest("a[data-soon]");
     if (!link) return;
-    // The parts that actually work: the applicant page (Apply, and
-    // application status), the manager and admin areas (each asks you to
-    // sign in), and signing in.
-    const path = new URL(link.href, window.location.href).pathname;
-    const open = ["/applicant/", "/manager/", "/admin/", "/login/"];
-    if (open.some((ending) => path.endsWith(ending))) return;
     event.preventDefault();
     modal.hidden = false;
   });

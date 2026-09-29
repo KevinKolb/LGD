@@ -125,7 +125,10 @@ def test_the_home_page_lets_the_applicant_link_through() -> None:
     home page's Coming soon box is for the resident link only now."""
     from pathlib import Path
     page = (Path(__file__).resolve().parent.parent / "index.html").read_text(encoding="utf-8")
-    assert 'const open = ["/applicant/", "/manager/", "/admin/", "/login/"];' in page
+    assert '<a href="applicant/">Applicant</a>' in page
+    assert '<a href="resident/" data-soon>Resident</a>' in page
+    assert page.count("data-soon>") == 1
+    assert 'event.target.closest("a[data-soon]")' in page
 
 
 def test_the_applicant_form_is_saved_for_later() -> None:

@@ -622,7 +622,8 @@ hold it:
 
 - The applicant page, which is where a login is created now - enabled on
   the home page on 2026-09-29 (the user: "enable the applicant page"); the
-  home page's "Coming soon." box is now for the Resident link only. It opens on
+  home page's "Coming soon." box is now only for a link marked
+  `data-soon` - just Resident. It opens on
   two buttons only, **Apply** and **Check application status** (the user,
   2026-09-29). Apply asks the email first, checked by
   `LGD.auth.emailOnFile` (003's `email_on_file`, callable signed out,
