@@ -186,6 +186,13 @@ until one is picked, and the print dialog only opens after. Picking fills
 in the premises blank, bold and underlined, and applies the options.
 "Leave it blank" gives the old fully blank form.
 
+Every printable document also carries a floating **Print** button
+(`PRINT_BUTTON` in the lease generator, reused by the others), added
+2026-09-29 so a document opened with View is one click from paper. It is
+screen-only, waits on `document.fonts.ready` like the auto-print, and stays
+hidden until the popup closes, so it can never print a lease before its
+apartment is picked.
+
 The rule, settled by the user on 2026-09-28: **every lease has the same
 sections with the same numbers; only the wording inside §17 PATIO/YARD,
 §20 WALLS and §21 PARKING varies by address.** A lease shows only its own

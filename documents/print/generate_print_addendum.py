@@ -61,7 +61,9 @@ AUTO_PRINT = """
 </div>
 <script>
   // As with the lease: print once the embedded font is ready, unless opened
-  // with #view to read on screen.
+  // with #view to read on screen. No picker here, so the floating Print
+  // button (lease.PRINT_BUTTON) shows straight away.
+  document.getElementById("print-button").hidden = false;
   window.addEventListener("load", function () {
     if (window.location.hash === "#view") { return; }
     var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
@@ -145,7 +147,7 @@ def generate(lease_text: str) -> str:
     head = lease.render_head(lease.COMPANY_NAME, TITLE, SUBTITLE).replace("</style>", EXTRA_CSS + "</style>", 1)
     return (head + incorporation + "\n" + rules + "\n"
             + '<div class="execution-block">\n' + closing + "\n" + render_signatures() + "\n</div>"
-            + AUTO_PRINT)
+            + lease.PRINT_BUTTON + AUTO_PRINT)
 
 
 def main() -> None:

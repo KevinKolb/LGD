@@ -346,6 +346,27 @@ HTML_HEAD = """<!doctype html>
   }
   .picker-actions button.secondary { background: transparent; color: #1f5d4c; }
   .picker-actions button:disabled { opacity: .45; cursor: not-allowed; }
+  /* Screen-only, like the picker: a Print button that floats over the
+     document while it is read on screen, so "View" is one click from
+     paper. Hidden until the picker is done, so it never offers to print
+     a lease before its apartment is chosen. */
+  .print-button {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 5;
+    padding: 10px 20px;
+    border: 1px solid #1f5d4c;
+    border-radius: 999px;
+    background: #1f5d4c;
+    color: #fff;
+    font: inherit;
+    font-size: 12pt;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
+    cursor: pointer;
+  }
+  .print-button:hover { background: #174a3c; }
+  .print-button[hidden] { display: none; }
   .execution-block {
     /* "Executed in duplicate at ___ this ___ day of ___" and the four
        signature lines are one unit: those signatures execute that sentence.
@@ -389,6 +410,7 @@ HTML_HEAD = """<!doctype html>
   @media print {
     .footer-note { display: none; }
     .picker { display: none !important; }
+    .print-button { display: none !important; }
     a { color: inherit; text-decoration: none; }
     /* Pin the printed column to the paper, in absolute units.
        A phone lays the screen out about 390px wide, and mobile browsers
@@ -437,6 +459,18 @@ LEASE_FOOTER_NOTE = """
   if you print from Firefox, those lines will simply be missing rather than
   wrong.
 </div>"""
+
+# The floating Print button, shared by every printable document. Screen
+# only; clicking it waits for the embedded font, for the same reason the
+# auto-print does. Documents with a picker unhide it once the picker closes.
+PRINT_BUTTON = """
+<button type="button" class="print-button" id="print-button" hidden>Print</button>
+<script>
+  document.getElementById("print-button").addEventListener("click", function () {
+    var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    fontsReady.then(function () { window.print(); });
+  });
+</script>"""
 
 PICKER_FOOTER = """
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
@@ -542,6 +576,7 @@ __PROPERTIES_JSON__
   // which skips the dialog so the lease can just be read on screen.
   function finish() {
     picker.hidden = true;
+    document.getElementById("print-button").hidden = false;
     if (window.location.hash === "#view") { return; }
     pageLoaded.then(function () {
       var fontsReady = (document.fonts && document.fonts.ready)
@@ -612,7 +647,7 @@ def render_picker_footer(document_name: str, fields: tuple[tuple[str, str], ...]
         f"    </label>"
         for label, target in fields
     )
-    return (PICKER_FOOTER.replace("__DOCUMENT__", html.escape(document_name))
+    return PRINT_BUTTON + (PICKER_FOOTER.replace("__DOCUMENT__", html.escape(document_name))
             .replace("__EXTRA_FIELDS__", extra)
             .replace(PROPERTIES_MARKER, properties_json(load_properties())))
 

@@ -456,7 +456,22 @@ def test_printing_waits_for_the_apartment_to_be_picked(real_output):
     manager has picked an apartment or chosen to leave it blank."""
     script = real_output[real_output.index("function finish"):]
     assert "window.print()" in script[:script.index("properties.forEach")]
-    assert real_output.count("window.print()") == 1
+    # The only other call is the floating Print button's, and that button
+    # starts hidden and is shown only by finish() - so it too waits.
+    assert real_output.count("window.print()") == 2
+    assert '<button type="button" class="print-button" id="print-button" hidden>' in real_output
+    finish = script[:script.index("properties.forEach")]
+    assert 'getElementById("print-button").hidden = false' in finish
+    assert real_output.count('getElementById("print-button").hidden = false') == 1
+
+
+def test_the_print_button_floats_on_screen_and_never_prints(real_output):
+    """Viewing a document (#view) keeps a Print button over it, so paper is
+    one click away; the button itself must not appear on paper."""
+    css = real_output[real_output.index(".print-button {"):]
+    assert "position: fixed;" in css[:css.index("}")]
+    printed = real_output[real_output.index("@media print {"):]
+    assert ".print-button { display: none !important; }" in printed[:printed.index("\n  }")]
 
 
 @pytest.mark.parametrize("prop, message", [
