@@ -521,6 +521,44 @@ async def api_list_residents(month: str | None = None,
     return {"residents": residents}
 
 
+class ResidentRequest(BaseModel):
+    address: str = Field(max_length=200)
+    unit: str = Field(default="", max_length=20)
+    first_name: str = Field(default="", max_length=100)
+    last_name: str = Field(default="", max_length=100)
+    email: str = Field(default="", max_length=254)
+    phone: str = Field(default="", max_length=40)
+    lease_start: str = Field(default="", max_length=10)
+    lease_end: str = Field(default="", max_length=10)
+    person_id: str | None = Field(default=None, max_length=64)
+
+
+@app.post("/api/residents")
+async def api_save_resident(payload: ResidentRequest,
+                            user: User = Depends(current_user)) -> dict[str, Any]:
+    """Resident Entry: add a resident (only the apartment is needed), or
+    with person_id change one."""
+    require_dashboard_role(user)
+    try:
+        resident = await db.save_resident(get_settings().db_path, manager_id=user.manager_id,
+                                          is_admin=user.is_admin, **payload.model_dump())
+    except db.ResidentError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"resident": resident}
+
+
+@app.delete("/api/residents/{person_id}")
+async def api_remove_resident(person_id: str, user: User = Depends(current_user)) -> dict[str, Any]:
+    """Take a resident out of their apartment; they stay in the directory."""
+    require_dashboard_role(user)
+    try:
+        resident = await db.remove_resident(get_settings().db_path, manager_id=user.manager_id,
+                                            is_admin=user.is_admin, person_id=person_id)
+    except db.ResidentError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    return {"resident": resident}
+
+
 class RentPaymentRequest(BaseModel):
     month: str = Field(max_length=7)
     address: str = Field(max_length=200)

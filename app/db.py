@@ -809,7 +809,8 @@ async def list_residents(db_path: str, *, manager_id: str | None,
     a "YYYY-MM" month, a resident whose recorded lease does not cover any
     day of it is left out; one with no lease dates always shows. The same
     as list_residents in supabase/migrations/006."""
-    query = ("SELECT p.id, p.full_name, p.email, p.phone, pr.address, "
+    query = ("SELECT p.id, p.full_name, COALESCE(p.first_name, '') AS first_name, "
+             "COALESCE(p.last_name, '') AS last_name, p.email, p.phone, pr.address, "
              "COALESCE(pr.apt, '') AS unit, p.lease_start, p.lease_end FROM people p "
              "JOIN properties pr ON pr.id = p.property_id WHERE p.is_resident = ?")
     args: list[Any] = [True]
@@ -823,6 +824,133 @@ async def list_residents(db_path: str, *, manager_id: str | None,
         args += [last_day, first_day]
     query += " ORDER BY pr.address, pr.apt, p.full_name"
     return await _rows(db_path, query, *args)
+
+
+class ResidentError(ValueError):
+    """Why a resident could not be entered - the wording of save_resident
+    and remove_resident in supabase/migrations/007."""
+
+
+async def _property_id(db_path: str, manager_id: str, address: str, unit: str) -> str:
+    """The `properties` row for an apartment, made if it is not there yet."""
+    rows = await _rows(db_path,
+                       "SELECT id FROM properties WHERE manager_id = ? AND address = ? "
+                       "AND COALESCE(apt, '') = ? ORDER BY created_at LIMIT 1",
+                       manager_id, address, unit)
+    if rows:
+        return rows[0]["id"]
+    property_id = secrets.token_hex(12)
+    await _write(db_path,
+                 "INSERT INTO properties (id, manager_id, address, apt, created_at) VALUES (?, ?, ?, ?, ?)",
+                 property_id, manager_id, address, unit or None, _now())
+    return property_id
+
+
+async def save_resident(db_path: str, *, manager_id: str | None, is_admin: bool = False,
+                        address: str, unit: str = "", first_name: str = "", last_name: str = "",
+                        email: str = "", phone: str = "", lease_start: str = "", lease_end: str = "",
+                        person_id: str | None = None) -> dict[str, Any]:
+    """Resident Entry (the user, 2026-09-30): only the apartment is needed.
+    Adds a resident, or with `person_id` changes one; an email already in
+    the directory makes that person the resident. The same rules and
+    wording as save_resident in supabase/migrations/007."""
+    if manager_id is None:
+        raise ResidentError("Your login is not filed under a company.")
+    address, unit = address.strip(), unit.strip()
+    first = first_name.strip() or None
+    last = last_name.strip() or None
+    email = email.strip().lower() or None
+    phone = phone.strip() or None
+    start = lease_start.strip() or None
+    end = lease_end.strip() or None
+    if not address:
+        raise ResidentError("Pick the apartment.")
+    if (len(address) > 200 or len(unit) > 20 or len(first or "") > 100 or len(last or "") > 100
+            or len(email or "") > 254 or len(phone or "") > 40):
+        raise ResidentError("One of those is too long.")
+    if email and not EMAIL_PATTERN.match(email):
+        raise ResidentError("That email address does not look right.")
+    if phone:
+        digits = re.sub(r"[^0-9]", "", phone)
+        if len(digits) < 10:
+            raise ResidentError("The phone number needs at least 10 digits.")
+        if len(digits) == 11 and digits.startswith("1"):
+            digits = digits[1:]
+        if len(digits) == 10:
+            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    for value in (start, end):
+        if value:
+            try:
+                if not DATE_PATTERN.match(value):
+                    raise ValueError
+                date.fromisoformat(value)
+            except ValueError:
+                raise ResidentError("A lease date does not look right.")
+    if start and end and end < start:
+        raise ResidentError("The lease cannot end before it starts.")
+    display = " ".join(part for part in (first, last) if part) or email or "Resident"
+
+    target = None
+    if person_id is not None:
+        target = await _person(db_path, person_id)
+        if target is None or not (is_admin or target.get("manager_id") == manager_id):
+            raise ResidentError("No such resident.")
+        if email:
+            clash = await _rows(db_path, "SELECT id FROM people WHERE lower(email) = ? AND id <> ?",
+                                email, person_id)
+            if clash:
+                raise ResidentError("Someone else already has that email.")
+    elif email:
+        found = await _rows(db_path, "SELECT * FROM people WHERE lower(email) = ? ORDER BY created_at LIMIT 1",
+                            email)
+        if found:
+            target = found[0]
+            if (not is_admin and target.get("manager_id") is not None
+                    and target["manager_id"] != manager_id):
+                raise ResidentError("That email belongs to someone at another company.")
+
+    place = await _property_id(db_path, (target or {}).get("manager_id") or manager_id, address, unit)
+    if target is not None:
+        editing = person_id is not None
+        await _write(
+            db_path,
+            "UPDATE people SET is_resident = ?, property_id = ?, manager_id = COALESCE(manager_id, ?), "
+            "first_name = ?, last_name = ?, full_name = ?, email = ?, phone = ?, "
+            "lease_start = ?, lease_end = ? WHERE id = ?",
+            True, place, manager_id,
+            first if editing else (first or target.get("first_name")),
+            last if editing else (last or target.get("last_name")),
+            display if (editing or first or last) else target["full_name"],
+            email if editing else (target.get("email") or email),
+            phone if editing else (phone or target.get("phone")),
+            start, end, target["id"])
+        person = await _person(db_path, target["id"])
+    else:
+        person = {
+            "id": secrets.token_hex(12), "full_name": display, "first_name": first, "last_name": last,
+            "email": email, "phone": phone, "property_id": place, "manager_id": manager_id,
+            "created_at": _now(), "is_applicant": False, "is_resident": True, "is_manager": False,
+            "is_admin": False, "archived_at": None, "apply_address": None, "apply_unit": None,
+            "lease_start": start, "lease_end": end,
+        }
+        if _is_postgres(db_path):
+            await _pg_create_person(db_path, person)
+        else:
+            await asyncio.to_thread(_sqlite_create_person, db_path, person)
+    return {"id": person["id"], "full_name": person["full_name"], "address": address, "unit": unit}
+
+
+async def remove_resident(db_path: str, *, manager_id: str | None, is_admin: bool = False,
+                          person_id: str) -> dict[str, Any]:
+    """Take someone out of their apartment; they stay in the directory."""
+    person = await _person(db_path, person_id)
+    if (person is None or not person.get("is_resident")
+            or not (is_admin or person.get("manager_id") == manager_id)):
+        raise ResidentError("No such resident.")
+    await _write(db_path,
+                 "UPDATE people SET is_resident = ?, property_id = NULL, lease_start = NULL, "
+                 "lease_end = NULL WHERE id = ?", False, person_id)
+    return {"id": person_id, "full_name": person["full_name"]}
 
 
 async def list_rent_payments(db_path: str, *, manager_id: str | None,

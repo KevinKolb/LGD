@@ -103,7 +103,7 @@ def test_the_manager_page_has_reports_coming_soon() -> None:
     page = MANAGER_PAGE.read_text(encoding="utf-8")
     section = page[page.index('<section id="reports">'):]
     section = section[:section.index("</section>")]
-    assert '<span class="step" aria-hidden="true">6</span>' in section
+    assert '<span class="step" aria-hidden="true">7</span>' in section
     assert "<h2>Reports</h2>" in section and "Coming soon." in section
 
 

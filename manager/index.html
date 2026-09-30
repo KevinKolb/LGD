@@ -450,9 +450,62 @@
     </form>
   </section>
 
-  <section>
+  <section id="residents">
     <div class="step-head">
       <span class="step" aria-hidden="true">4</span>
+      <h2>Resident Entry</h2>
+    </div>
+    <p class="hint">
+      For now, until residents have their own accounts: put each resident in
+      their apartment, so they show on the rent register. Only the apartment is
+      needed; everything else is optional. An apartment can have more than one
+      resident - add each one.
+    </p>
+    <div class="actions">
+      <button type="button" class="button-link" id="open-add-resident">Add resident</button>
+      <button type="button" class="secondary" id="view-residents" aria-pressed="false">View residents</button>
+    </div>
+    <p class="form-msg" id="resident-msg" role="status" aria-live="polite"></p>
+    <ul class="applicant-list" id="resident-list" aria-label="Residents" hidden></ul>
+  </section>
+
+  <!-- Add or change a resident. Only the apartment is required (the user,
+       2026-09-30: "let manager provide as little info as they can, all
+       optional"). Saved through save_resident (supabase/migrations/007) or
+       POST /api/residents. -->
+  <dialog class="popup" id="resident-dialog" aria-labelledby="resident-dialog-title">
+    <form id="resident-form" novalidate>
+      <h2 id="resident-dialog-title">Add resident</h2>
+      <div class="field-grid single">
+        <label>Apartment
+          <select id="resident-address" name="address" required>
+            <option value="">Choose…</option>
+          </select>
+        </label>
+        <label id="resident-unit-label" hidden>Unit
+          <select id="resident-unit" name="unit"></select>
+        </label>
+      </div>
+      <p class="hint">Everything below is optional.</p>
+      <div class="field-grid">
+        <label>First name <input id="resident-first" name="first_name" autocomplete="off" maxlength="100"></label>
+        <label>Last name <input id="resident-last" name="last_name" autocomplete="off" maxlength="100"></label>
+        <label>Email <input id="resident-email" name="email" type="email" autocomplete="off" maxlength="254"></label>
+        <label>Phone <input id="resident-phone" name="phone" type="tel" inputmode="tel" autocomplete="off" maxlength="40"></label>
+        <label>Lease start <input id="resident-start" name="lease_start" type="date"></label>
+        <label>Lease end <input id="resident-end" name="lease_end" type="date"></label>
+      </div>
+      <p class="form-msg" id="resident-form-msg" role="status" aria-live="polite"></p>
+      <div class="actions">
+        <button type="submit" class="button-link" id="save-resident">Save</button>
+        <button type="button" class="secondary" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <section>
+    <div class="step-head">
+      <span class="step" aria-hidden="true">5</span>
       <h2>Monthly Rent Register</h2>
     </div>
     <p class="hint">
@@ -466,7 +519,7 @@
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">5</span>
+      <span class="step" aria-hidden="true">6</span>
       <h2>Legal</h2>
     </div>
     <p class="hint">
@@ -488,7 +541,7 @@
 
   <section id="reports">
     <div class="step-head">
-      <span class="step" aria-hidden="true">6</span>
+      <span class="step" aria-hidden="true">7</span>
       <h2>Reports</h2>
     </div>
     <p class="hint">Coming soon.</p>
@@ -807,6 +860,229 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     } catch (error) {
       summary.textContent = "Which apartments take applications could not be loaded: " + error.message;
     }
+  }
+  if (window.LGD_DASHBOARD) start();
+  else document.addEventListener("lgd-dashboard-ready", start, { once: true });
+})();
+
+// Resident Entry (the user, 2026-09-30): temporary, until residents have
+// their own accounts. A manager puts residents in apartments - only the
+// apartment is needed - so they show on the rent register; an apartment
+// can hold several. Saved through save_resident / remove_resident and read
+// through list_residents (supabase/migrations/007), or /api/residents from
+// the FastAPI app. A resident entered with an email is the same `people`
+// row their login will attach to when they sign up.
+(function () {
+  const dialog = document.getElementById("resident-dialog");
+  const form = document.getElementById("resident-form");
+  const title = document.getElementById("resident-dialog-title");
+  const formMessage = document.getElementById("resident-form-msg");
+  const message = document.getElementById("resident-msg");
+  const list = document.getElementById("resident-list");
+  const viewButton = document.getElementById("view-residents");
+  const save = document.getElementById("save-resident");
+  const unitLabel = document.getElementById("resident-unit-label");
+  const fields = {
+    address: document.getElementById("resident-address"),
+    unit: document.getElementById("resident-unit"),
+    first_name: document.getElementById("resident-first"),
+    last_name: document.getElementById("resident-last"),
+    email: document.getElementById("resident-email"),
+    phone: document.getElementById("resident-phone"),
+    lease_start: document.getElementById("resident-start"),
+    lease_end: document.getElementById("resident-end"),
+  };
+  let properties = [];
+  let editing = null;   // the person being changed, or null when adding
+  let showing = false;
+
+  function say(target, text, kind) {
+    target.textContent = text;
+    target.className = "form-msg" + (kind ? " " + kind : "");
+  }
+
+  function usingApi() {
+    return window.LGD_DASHBOARD.backend === "api";
+  }
+
+  async function api(path, options) {
+    const response = await fetch(path, options);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof payload.detail === "string" ? payload.detail : "That did not work.");
+    }
+    return payload;
+  }
+
+  async function fetchResidents() {
+    if (usingApi()) return (await api("/api/residents")).residents;
+    return window.LGD.auth.rpc("list_residents", {});
+  }
+
+  async function saveResident(values) {
+    if (usingApi()) {
+      return (await api("/api/residents", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values),
+      })).resident;
+    }
+    return window.LGD.auth.rpc("save_resident", values);
+  }
+
+  async function removeResident(person) {
+    if (usingApi()) {
+      return (await api(`/api/residents/${encodeURIComponent(person.id)}`, { method: "DELETE" })).resident;
+    }
+    return window.LGD.auth.rpc("remove_resident", { person_id: person.id });
+  }
+
+  // Every apartment, not only those accepting applications: a resident can
+  // live anywhere.
+  function showUnits() {
+    const property = properties.find((p) => p.address === fields.address.value);
+    const units = property ? property.units : [];
+    fields.unit.length = 0;
+    fields.unit.add(new Option("Choose…", ""));
+    for (const unit of units) fields.unit.add(new Option(unit, unit));
+    unitLabel.hidden = !units.length;
+  }
+  fields.address.addEventListener("change", showUnits);
+
+  // A US number, however it was typed, reads (504) 555-1234.
+  fields.phone.addEventListener("blur", () => {
+    let digits = fields.phone.value.replace(/[^0-9]/g, "");
+    if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
+    if (digits.length === 10) {
+      fields.phone.value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+  });
+
+  const place = (r) => (r.unit ? `${r.address}, Unit ${r.unit}` : r.address);
+
+  function openForm(person) {
+    editing = person || null;
+    form.reset();
+    title.textContent = editing ? "Change resident" : "Add resident";
+    fields.address.value = editing ? editing.address : "";
+    showUnits();
+    if (editing) {
+      fields.unit.value = editing.unit || "";
+      for (const key of ["first_name", "last_name", "email", "phone", "lease_start", "lease_end"]) {
+        fields[key].value = editing[key] || "";
+      }
+    }
+    say(formMessage, "");
+    dialog.showModal();
+    (editing ? fields.first_name : fields.address).focus();
+  }
+
+  function actionButton(text, onClick) {
+    const control = document.createElement("button");
+    control.type = "button";
+    control.className = "secondary";
+    control.textContent = text;
+    control.addEventListener("click", onClick);
+    return control;
+  }
+
+  function render(residents) {
+    list.textContent = "";
+    if (!residents.length) {
+      const item = document.createElement("li");
+      item.className = "empty";
+      item.textContent = "No residents entered yet.";
+      list.append(item);
+      return;
+    }
+    for (const person of residents) {
+      const item = document.createElement("li");
+      const who = document.createElement("span");
+      who.className = "who";
+      who.textContent = person.full_name;
+      const contact = document.createElement("span");
+      contact.className = "contact";
+      const lease = person.lease_start || person.lease_end
+        ? `Lease ${person.lease_start || "…"} to ${person.lease_end || "…"}` : "";
+      contact.textContent = [place(person), person.full_name === person.email ? "" : person.email,
+                             person.phone, lease].filter(Boolean).join(" · ");
+      const left = document.createElement("span");
+      left.append(who, document.createElement("br"), contact);
+      const actions = document.createElement("span");
+      actions.className = "row-actions";
+      actions.append(
+        actionButton("Edit", () => openForm(person)),
+        actionButton("Remove", async () => {
+          if (!window.confirm(`Take ${person.full_name} out of ${place(person)}?`)) return;
+          try {
+            await removeResident(person);
+            say(message, `${person.full_name} is no longer a resident of ${place(person)}.`, "ok");
+            await refresh();
+          } catch (error) {
+            say(message, error.message, "error");
+          }
+        })
+      );
+      item.append(left, actions);
+      list.append(item);
+    }
+  }
+
+  async function refresh() {
+    viewButton.setAttribute("aria-pressed", String(showing));
+    viewButton.textContent = showing ? "Hide residents" : "View residents";
+    list.hidden = !showing;
+    if (!showing) return;
+    try {
+      render(await fetchResidents());
+    } catch (error) {
+      list.textContent = "";
+      const item = document.createElement("li");
+      item.className = "empty";
+      item.textContent = "The residents could not be loaded: " + error.message;
+      list.append(item);
+    }
+  }
+
+  viewButton.addEventListener("click", () => {
+    showing = !showing;
+    say(message, "");
+    refresh();
+  });
+  document.getElementById("open-add-resident").addEventListener("click", () => openForm(null));
+  dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const values = {};
+    for (const [key, input] of Object.entries(fields)) values[key] = input.value.trim();
+    if (!values.address || (!unitLabel.hidden && !values.unit)) {
+      say(formMessage, values.address ? "Pick the unit." : "Pick the apartment.", "error");
+      (values.address ? fields.unit : fields.address).focus();
+      return;
+    }
+    if (editing) values.person_id = editing.id;
+    save.disabled = true;
+    say(formMessage, "Saving…");
+    try {
+      const saved = await saveResident(values);
+      dialog.close();
+      say(message, `${saved.full_name} ${editing ? "saved" : "added"} at ${place(saved)}.`, "ok");
+      showing = true;
+      await refresh();
+    } catch (error) {
+      say(formMessage, error.message, "error");
+    } finally {
+      save.disabled = false;
+    }
+  });
+
+  async function start() {
+    try {
+      const response = await fetch("../documents/properties.json", { cache: "no-store" });
+      properties = (await response.json()).properties;
+    } catch (error) {
+      properties = [];
+    }
+    for (const property of properties) fields.address.add(new Option(property.address, property.address));
   }
   if (window.LGD_DASHBOARD) start();
   else document.addEventListener("lgd-dashboard-ready", start, { once: true });

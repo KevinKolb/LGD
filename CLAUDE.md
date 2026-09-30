@@ -385,8 +385,8 @@ prints exactly as its own page does (checked at every address), so the
 single-document pages are no longer linked from the manager page; they
 stay as files, and `app/main.py` still serves the lease one. The steps
 are now 1 Accept Applications, 2 Applicants, 3 Paper Documents Generator,
-4 Monthly Rent Register, 5 Legal, 6 Reports (only "Coming soon." for now,
-the user, 2026-09-30). **Regenerate it after editing any of the three masters or
+4 Resident Entry, 5 Monthly Rent Register, 6 Legal, 7 Reports (only
+"Coming soon." for now, the user, 2026-09-30). **Regenerate it after editing any of the three masters or
 `properties.json`**, alongside that document's own page. The addendum is
 left out: no longer in use, and it names a fixed address.
 
@@ -583,7 +583,7 @@ linking to the manager's record with no duplicate person.
 
 `manager/rent_register.html` (the user, 2026-09-29: "a printable page for
 now that lists all units, tenants, email and phones and a place for a
-written date it was received"), step 4 on the manager page. One row per
+written date it was received"), step 5 on the manager page. One row per
 unit from `documents/properties.json` (a house with no units is one row),
 so an empty unit still has its row; every tenant of a unit in that row;
 and a blank "Date received" column plus a "Month of ____" line, for the
@@ -613,8 +613,7 @@ again). So, like the documents, it does not load `shared/footer.js`
 - `people.lease_start` / `lease_end` ("YYYY-MM-DD", either may be empty).
   `list_residents(month)` (it replaces 003's no-argument one) leaves out a
   resident whose recorded lease covers no day of that month; one with no
-  dates always shows. **Nothing sets lease dates yet** - SQL, like
-  placing a resident.
+  dates always shows. Resident Entry (below) sets them.
 - `rent_payments` (`manager_id`, `address`, `unit`, `month`,
   `received_on`, ...), one row per apartment per month, locked to the
   browser; `list_rent_payments(month)` and `set_rent_payment(month,
@@ -629,12 +628,36 @@ day of the week ("Thu, Sep 3, 2026", the user, same day), or the cell
 stays blank for the pen - still one letter-size sheet. Text in every cell
 is left-aligned and vertically centered.
 
-**Putting a resident in a unit has no screen yet** - it is a row in
-`properties` and the person's `property_id`, done in the Supabase SQL
-editor. The first was Kevin Kolb (the user), made admin, manager and
-resident at 1558 Camp St., Unit A on 2026-09-29, by a snippet given to the
-user to paste rather than a committed migration: this repository is
-public, and that snippet holds his phone number.
+### Resident Entry
+
+Step 4 on the manager page, **temporary** (the user, 2026-09-30: "to get
+the rent register up and running for 10/1 add a temporary manager section
+called resident entry. let there be more than one resident per unit. let
+manager provide as little info as they can, all optional ... this will
+expand to user accounts at some point"). **Add resident** opens a popup
+where only the apartment (and its unit, for a building with units) is
+required; first and last name, email, phone, lease start and lease end are
+all optional. A resident with no name shows as their email, or
+"Resident". **View residents** lists them, each with **Edit** (the same
+popup, filled in) and **Remove** (after a confirm).
+
+A resident is an ordinary `people` row - `is_resident`, and `property_id`
+pointing at a `properties` row for the apartment, made on first use - so
+the rent register needs nothing of its own, several residents of one unit
+are just several rows, and one entered with an email is the very row their
+login attaches to when they sign up (001's trigger). An email already in
+the directory (an applicant) makes that person the resident rather than a
+second person. **Remove** only takes them out of the apartment
+(`is_resident` off, `property_id` and lease dates cleared); the person
+stays. `supabase/migrations/007_resident_entry.sql`: `save_resident(...)`
+(with `person_id` to edit) and `remove_resident(person_id)`, managers and
+admins, own company only; `list_residents` gains first and last name. The
+FastAPI app has `POST /api/residents` and `DELETE /api/residents/{id}`.
+
+The first resident, Kevin Kolb (the user: admin, manager and resident at
+1558 Camp St., Unit A), was put there on 2026-09-29 by a SQL snippet given
+to him rather than a committed migration - this repository is public, and
+it held his phone number - before Resident Entry existed.
 
 ## The house icon
 
