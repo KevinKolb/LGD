@@ -102,6 +102,13 @@
     color: var(--ink);
   }
   .empty { color: var(--muted); font-style: italic; }
+  .notice { margin: 0 0 16px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line);
+            border-radius: var(--radius); font-size: 15px; }
+  .notice.ok { padding: 10px 14px; font-size: 14px; }
+  button.signout {
+    font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  }
   a { color: var(--accent); }
   .badge {
     display: inline-block; padding: 2px 8px; border-radius: 999px;
@@ -356,25 +363,68 @@ async function boot() {
   }
 }
 
+// Every way this can end says so in words - never a page left on
+// "Loading…" or a bare "Admins only." (the user, 2026-09-30: "admin page
+// is still blank"). Who is signed in, with which roles, is shown whenever
+// they are turned away, since the usual cause is the wrong account, or a
+// record without is_admin.
 async function explainWithoutBackend(app) {
-  const auth = window.LGD.auth;
-  if (!auth.configured) {
-    app.replaceChildren(el("p", { class: "empty", text:
-      "This site is not connected to its login service yet." }));
-    return;
+  const say = (text, ...more) => app.replaceChildren(el("p", { class: "notice", text }), ...more);
+  try {
+    const auth = window.LGD.auth;
+    if (!auth.configured) {
+      say("This site is not connected to its login service yet.");
+      return;
+    }
+    const result = await auth.requireRole(["admin"]);
+    if (result.reason === "signed-out") {
+      say("You are not signed in. Taking you to the sign-in page…");
+      return;  // already heading to the login page
+    }
+    if (result.reason === "unconfirmed") {
+      say("You are signed in, but this login has no record on file yet, so it has no roles. " +
+          "If you just signed up, click the link in the confirmation email and come back.",
+          signOutButton(auth));
+      return;
+    }
+    if (!result.ok) {
+      const who = result.profile;
+      say(`Signed in as ${who.display_name || who.email}${who.email ? " (" + who.email + ")" : ""}, ` +
+          `with the role${who.roles.length > 1 ? "s" : ""}: ${who.role_label}. ` +
+          "This page is for admins. If this login should be an admin, its record in the " +
+          "people table needs is_admin set - or sign out and sign in with your admin login.",
+          signOutButton(auth));
+      return;
+    }
+    app.replaceChildren(
+      el("p", { class: "notice ok", text: `Signed in as ${result.profile.display_name || result.profile.email} (admin).` }),
+      colorsSection("supabase"),
+      el("p", { class: "empty", text:
+        "The managers, users and storage backends come from the app's own API, which is " +
+        "not running here - start it locally to see them." }));
+  } catch (error) {
+    say("The admin page could not load: " + (error && error.message ? error.message : error) +
+        ". Check your connection and reload.");
   }
-  const result = await auth.requireRole(["admin"]);
-  if (result.reason === "signed-out") return;  // already heading to the login page
-  if (!result.ok) {
-    app.replaceChildren(el("p", { class: "empty", text: "Admins only." }));
-    return;
-  }
-  app.replaceChildren(
-    colorsSection("supabase"),
-    el("p", { class: "empty", text:
-      "The managers, users and storage backends come from the app's own API, which is " +
-      "not running here - start it locally to see them." }));
 }
+
+function signOutButton(auth) {
+  const button = el("button", { type: "button", class: "signout", text: "Sign out" });
+  button.addEventListener("click", async () => {
+    await auth.signOut();
+    window.location.reload();
+  });
+  return button;
+}
+
+// A last resort: if nothing has answered in 20 seconds, say so.
+setTimeout(() => {
+  const app = document.getElementById("app");
+  if (app.textContent.trim() === "Loading…") {
+    app.replaceChildren(el("p", { class: "notice", text:
+      "This is taking too long - the login service did not answer. Check your connection and reload." }));
+  }
+}, 20000);
 
 boot();
 </script>

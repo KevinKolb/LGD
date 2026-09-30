@@ -86,3 +86,15 @@ def test_the_admin_page_tells_a_missing_app_from_a_refusal() -> None:
     page = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
     assert 'const fromApp = (response.headers.get("content-type") || "").includes("json");' in page
     assert "if (response.status === 404 && fromApp) {" in page
+
+
+def test_the_admin_page_always_says_what_happened() -> None:
+    """Never left on "Loading…" or a bare "Admins only.": who is signed in,
+    with which roles, when turned away; and any failure in words (the user,
+    2026-09-30: "admin page is still blank")."""
+    page = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
+    body = page[page.index("async function explainWithoutBackend(app) {"):]
+    assert "} catch (error) {" in body[:body.index("function signOutButton")]
+    assert "with the role${who.roles.length > 1 ? \"s\" : \"\"}: ${who.role_label}." in page
+    assert "this login has no record on file yet" in page
+    assert 'if (app.textContent.trim() === "Loading…") {' in page

@@ -488,7 +488,14 @@ section warns when a dark one is picked. `theme.js` holds a copy of
 admins included: it asked the FastAPI app for `/api/admin/info`, got
 GitHub's own "page not found", and read every 404 as a refusal. Only the
 app answers in JSON, so now only a JSON 404 means "not an admin"; anything
-else falls back to Supabase, which lets an admin in to Site colors.
+else falls back to Supabase, which lets an admin in to Site colors. And
+since the user still saw a blank page (2026-09-30), every way the page can
+end now says so in words: signed in as an admin, "Signed in as ... (admin)"
+and Site colors; as anyone else, who is signed in, their email and roles,
+and that the record needs `is_admin`, with a Sign out button; a login with
+no `people` row, that it has no record on file yet; any error, the error;
+and still "Loading…" after 20 seconds, that the login service did not
+answer.
 
 ## A manager adds an applicant (the first "less print" feature)
 
