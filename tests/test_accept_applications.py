@@ -56,7 +56,7 @@ def test_the_manager_page_has_the_section_as_step_1() -> None:
     section = section[:section.index("</section>")]
     assert '<span class="step" aria-hidden="true">1</span>' in section
     assert "<h2>Accept Applications</h2>" in section
-    assert 'id="open-accepting">Choose apartments</button>' in section
+    assert 'id="open-accepting">Choose properties</button>' in section
     start = page.index('<dialog class="popup" id="accepting-dialog"')
     popup = page[start:page.index("</dialog>", start)]
     assert 'id="accepting-choices"' in popup

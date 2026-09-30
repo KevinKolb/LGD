@@ -416,7 +416,7 @@ through `node --check` when node is installed.
 Step 1 on the manager page (the user, 2026-09-30: "popup shows all
 apartments and let's manager choose which ones to enable applications
 for"). The section shows which apartments are accepting applications, and
-**Choose apartments** opens a popup with every apartment from
+**Choose properties** opens a popup with every apartment from
 `documents/properties.json` - one group per building, a checkbox per unit,
 "Whole house" for a building with no units. Save replaces the company's
 list. Each apartment accepting applications shows as a tag with an ×,
