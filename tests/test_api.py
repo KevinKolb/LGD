@@ -43,7 +43,7 @@ def test_every_configured_user_can_sign_in(client, credentials) -> None:
 def test_dashboard_serves_the_paper_lease(client) -> None:
     response = client.get("/manager/")
     assert response.status_code == 200
-    assert "Manager Dashboard" in response.text
+    assert "Manager Portal" in response.text
     assert '<input type="checkbox" name="doc" value="lease">' in response.text
     # Printing is done from the document's own floating Print button.
     assert "Print paper lease" not in response.text
