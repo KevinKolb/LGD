@@ -689,6 +689,15 @@ there is a test for that too.
     python supabase/apply_migrations.py            # apply, then report
     python supabase/apply_migrations.py --report   # report only
 
+**The Supabase dashboard is signed into with GitHub** ("Continue with
+GitHub" at supabase.com/dashboard/sign-in, the user, 2026-09-30) - not an
+email and password. The project ref is `zglkceocuvioxovbnqrz`; its SQL
+editor is supabase.com/dashboard/project/zglkceocuvioxovbnqrz/sql/new,
+where the migration files can be pasted in name order instead of running
+the script. The script needs only `DATABASE_URL` (in the local `.env`, and
+in Render's environment), not a dashboard login. Which GitHub account is
+deliberately not written here: this repository is public.
+
 Every file in `supabase/migrations/` is written to be idempotent, so
 re-running the set is the normal way to bring a drifted database back into
 line. Before applying anything to the live project, run it inside a
