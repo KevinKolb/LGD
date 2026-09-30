@@ -66,7 +66,7 @@ def test_the_popup_asks_each_question_once(real_output):
                                          "holding", "signed", "received"]
     docs = {key: set(for_docs.split()) for for_docs, key in asked}
     assert docs["deposit"] == {"application", "lease", "deposit"}
-    assert docs["holding"] == {"application", "deposit"}
+    assert docs["holding"] == {"application"}
     assert docs["lessee"] == {"lease", "deposit"}
     assert docs["start"] == {"lease"}
     # Each document its own date (the user, 2026-09-30).

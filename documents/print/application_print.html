@@ -315,8 +315,8 @@
     font-size: 10pt;
     letter-spacing: 0.04em;
   }
-  /* A signature with the lines beside it: a Lessee's Email, and on the
-     addendum a Date. Side by side, so adding them made no page longer. */
+  /* A signature with its Date line beside it. Side by side, so adding
+     it made no page longer. */
   .sig-row {
     display: flex;
     gap: 0.3in;
@@ -329,7 +329,6 @@
     break-inside: avoid;
   }
   .sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }
-  .sig-row .sig-line.email { flex: 0 0 2.5in; }
   .sig-row .sig-line.date { flex: 0 0 1.2in; }
   .footer-note {
     margin-top: 0.6in;

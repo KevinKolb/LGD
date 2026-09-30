@@ -138,7 +138,7 @@ def test_the_page_script_parses(real_output, tmp_path):
 
 def test_the_deposit_blanks_are_tagged_with_what_fills_them(gen, real_output):
     """Received from (lessees) on (the date received) (amount in words) dollars
-    $(amount) ... for (premises); then the holding deposit."""
+    $(amount) ... for (premises); then the same amount deposited."""
     tags = re.findall(r'<span (?:data-fill="([\w-]+)" )?class="blank', real_output)
     assert tuple(tag or None for tag in tags) == gen.DEPOSIT_FILLS
 
@@ -152,8 +152,17 @@ def test_the_deposit_has_its_own_date(gen, real_output):
     assert 'values["received-date"]' in real_output
 
 
-def test_every_lessee_signature_has_an_email_line_beside_it(real_output):
-    assert real_output.count('<div class="sig-line">Lessee</div><div class="sig-line email">Email</div>') == 6
+def test_every_signature_has_a_date_line_and_no_email(real_output):
+    """The user, 2026-09-30: a Date line beside each signature, for the pen."""
+    assert real_output.count('<div class="sig-line">Lessee</div><div class="sig-line date">Date</div>') == 6
+    assert "Email" not in real_output
+
+
+def test_applicant_has_deposited_the_security_deposit(gen, real_output):
+    """The user, 2026-09-30: "Applicant has deposited herewith the sum of"
+    is the security deposit, so no holding deposit is asked."""
+    assert gen.DEPOSIT_FILLS[-1] == "deposit"
+    assert 'id="q-holding"' not in real_output
 
 
 def test_a_box_following_a_question_this_page_does_not_ask_is_skipped(real_output):

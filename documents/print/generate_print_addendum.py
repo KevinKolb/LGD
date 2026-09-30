@@ -113,7 +113,7 @@ def render_block(block: str) -> str:
 
 
 def render_signatures() -> str:
-    rows = "\n".join(lease.signature_row(who, date=True) for who in SIGNERS)
+    rows = "\n".join(lease.signature_row(who) for who in SIGNERS)
     return f'<div class="signature-block">\n{rows}\n</div>'
 
 

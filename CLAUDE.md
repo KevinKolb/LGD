@@ -204,7 +204,8 @@ a document is always generated for an apartment; the code for a blank form
 **The popup fills the office's blanks** (the user went through every blank
 on 2026-09-29). `QUESTIONS` in the lease generator is every question, in
 order - lessee name(s), occupants, lease start date, term, monthly rent,
-security deposit, holding deposit, signing date - each optional; each
+security deposit, holding deposit, lease signing date, deposit received
+date - each optional; each
 document names the ones it uses (`LEASE_QUESTIONS`, and `QUESTIONS` in the
 deposit and application generators), and the combined page asks the
 union, each once. Answers fill every blank tagged `data-fill="<key>"`, in
@@ -213,9 +214,14 @@ every document on the page. Some keys are worked out rather than asked
 city it is executed at is the property's `city` or "New Orleans" (a 2.0
 migration), net rent is rent less the $50 deduction, the deposit is also
 written out ("One thousand two hundred and 00/100") on the deposit form,
-and the lease ends on the last day of the month before start + term. The
-signing date fills both the lease's "this ___ day of ___" and the
-deposit form's "Received ... on ___". Dates start blank - except the
+and the lease ends on the last day of the month before start + term.
+Each document has its own date (the user, 2026-09-30): the lease signing
+date (`signed`) fills the lease's "this ___ day of ___", the deposit
+received date (`received`) the deposit form's "Received ... on ___", each
+shown in the combined popup only while its document is ticked. The deposit
+form's "Applicant has deposited herewith the sum of $___" is the security
+deposit again (the user, same day), so that form asks no holding deposit;
+only the application does. Dates start blank - except the
 lease start, which opens at the first of next month (`DATE_DEFAULTS`) - and
 a Today switch fills in today's date, still editable; turning it off puts
 back the blank or the default. The deposit follows the rent and
@@ -225,12 +231,14 @@ Blanks are tagged **by position** in the lease and deposit (`LEASE_FILLS`,
 `DEPOSIT_FILLS`, via `tag_blanks`, which fails the build if the count
 changes - a blank added to a master would otherwise shift every tag after
 it), and by the label before them in the application (`OFFICE_FIELDS`).
-**The lessee's email is for the pen, never the popup** (the user,
-2026-09-29: the popup is the Lessor's side). Every place a lessee writes
-their name, the form asks their email beside it: `signature_row` in the
-lease generator gives each "Lessee" signature an Email line on the same
-row (lease, both deposit-form blocks, and the addendum's rows with Date);
-the application already pairs each name with an Email. The row carries
+**Every signature has a Date line beside it, for the pen, never the
+popup** (the user, 2026-09-30: "on signature lines don't ask for email
+address, will provide date instead. No popup"): `signature_row` in the
+lease generator, used by the lease, both deposit-form blocks and the
+addendum. (From 2026-09-29 a Lessee's line had an Email beside it
+instead.) The application's own name-and-Email pairs are applicant
+fields, not signatures, and stay. Page counts at every address were
+unchanged by the swap. The row carries
 the space above it, not its lines - flex items' margins don't collapse,
 and on the lines they pushed the deposit form onto a third page.
 

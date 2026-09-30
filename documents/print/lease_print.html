@@ -315,8 +315,8 @@
     font-size: 10pt;
     letter-spacing: 0.04em;
   }
-  /* A signature with the lines beside it: a Lessee's Email, and on the
-     addendum a Date. Side by side, so adding them made no page longer. */
+  /* A signature with its Date line beside it. Side by side, so adding
+     it made no page longer. */
   .sig-row {
     display: flex;
     gap: 0.3in;
@@ -329,7 +329,6 @@
     break-inside: avoid;
   }
   .sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }
-  .sig-row .sig-line.email { flex: 0 0 2.5in; }
   .sig-row .sig-line.date { flex: 0 0 1.2in; }
   .footer-note {
     margin-top: 0.6in;
@@ -450,10 +449,10 @@
 <div class="execution-block">
 <p>Executed in duplicate at <span data-fill="signed-city" class="blank word"></span>, Louisiana this <span data-fill="signed-day" class="blank tiny"></span> day of <span data-fill="signed-month" class="blank word"></span>20<span data-fill="signed-year" class="blank tiny"></span>.</p>
 <div class="signature-block">
-<div class="sig-line">Lessor/Agent</div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
+<div class="sig-row"><div class="sig-line">Lessor/Agent</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
 </div>
 </div>
 <div class="footer-note">

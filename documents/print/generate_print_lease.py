@@ -486,8 +486,8 @@ HTML_HEAD = """<!doctype html>
     font-size: 10pt;
     letter-spacing: 0.04em;
   }
-  /* A signature with the lines beside it: a Lessee's Email, and on the
-     addendum a Date. Side by side, so adding them made no page longer. */
+  /* A signature with its Date line beside it. Side by side, so adding
+     it made no page longer. */
   .sig-row {
     display: flex;
     gap: 0.3in;
@@ -500,7 +500,6 @@ HTML_HEAD = """<!doctype html>
     break-inside: avoid;
   }
   .sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }
-  .sig-row .sig-line.email { flex: 0 0 2.5in; }
   .sig-row .sig-line.date { flex: 0 0 1.2in; }
   .footer-note {
     margin-top: 0.6in;
@@ -1413,19 +1412,13 @@ def markup_blanks(paragraph: str, widths: Iterator[str]) -> str:
 
 
 
-def signature_row(label: str, date: bool = False) -> str:
-    """One signature: a rule to sign on with the role beneath it. A Lessee's
-    has an Email line beside it, for the lessee to write in by hand - every
-    place a lessee writes their name, they give their email too (the user,
-    2026-09-29). The popup is for the Lessor's side and never asks it."""
-    cells = [f'<div class="sig-line">{html.escape(label)}</div>']
-    if label.startswith("Lessee"):
-        cells.append('<div class="sig-line email">Email</div>')
-    if date:
-        cells.append('<div class="sig-line date">Date</div>')
-    if len(cells) == 1:
-        return cells[0]
-    return '<div class="sig-row">' + "".join(cells) + "</div>"
+def signature_row(label: str) -> str:
+    """One signature: a rule to sign on with the role beneath it, and a Date
+    line beside it for the signer to write in by hand (the user,
+    2026-09-30: a date on every signature line, never an email; the popup
+    never asks it)."""
+    return ('<div class="sig-row"><div class="sig-line">' + html.escape(label) + '</div>'
+            '<div class="sig-line date">Date</div></div>')
 
 
 def render_signature_lines(labels: list[str]) -> str:

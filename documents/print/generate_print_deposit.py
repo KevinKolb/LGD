@@ -148,11 +148,13 @@ def render_list(block: str) -> tuple[str, list[int]]:
 
 # The agreement's blanks, in order, and the popup answer that fills each
 # (see QUESTIONS in the lease generator): "Received from ___ on ___ ___
-# dollars $___ As Security Deposit for ___", then the holding deposit's
-# "sum of $___". The premises has its own id.
-DEPOSIT_FILLS = ("lessee", "received-date", "deposit-words", "deposit", None, "holding")
+# dollars $___ As Security Deposit for ___", then "Applicant has deposited
+# herewith the sum of $___" - the same security deposit (the user,
+# 2026-09-30), so the form asks no holding deposit of its own. The
+# premises has its own id.
+DEPOSIT_FILLS = ("lessee", "received-date", "deposit-words", "deposit", None, "deposit")
 # The popup questions this document asks.
-QUESTIONS = ("lessee", "deposit", "holding", "received")
+QUESTIONS = ("lessee", "deposit", "received")
 
 
 def render_signatures(labels: list[str]) -> str:

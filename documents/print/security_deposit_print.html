@@ -315,8 +315,8 @@
     font-size: 10pt;
     letter-spacing: 0.04em;
   }
-  /* A signature with the lines beside it: a Lessee's Email, and on the
-     addendum a Date. Side by side, so adding them made no page longer. */
+  /* A signature with its Date line beside it. Side by side, so adding
+     it made no page longer. */
   .sig-row {
     display: flex;
     gap: 0.3in;
@@ -329,7 +329,6 @@
     break-inside: avoid;
   }
   .sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }
-  .sig-row .sig-line.email { flex: 0 0 2.5in; }
   .sig-row .sig-line.date { flex: 0 0 1.2in; }
   .footer-note {
     margin-top: 0.6in;
@@ -419,9 +418,9 @@
 <div class="execution-block">
 <p>Undersigned agrees that this Security Deposit may not be applied as rent and that the full monthly rent will be paid on or before the first day of every month including the last month of occupancy.</p>
 <div class="signature-block">
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
 </div>
 </div>
 <p class="conditions-heading">RELEASE OF THE SECURITY DEPOSIT IS SUBJECT TO THE FOLLOWING:</p>
@@ -446,13 +445,13 @@
 <p>In the event the lease agreement is broken, NO portion of the deposit will be refunded.</p>
 <p>Said premises MUST be returned to Lessor in as good condition as they were at the time the Lessee first occupied the apartment.  The cost of general labor is $40.00 per hour. Labor, materials for cleaning and repairs, and delinquent payments will be deducted from the Security Deposit. If premises cannot be rented due to the condition upon its return to Lessor, the days that it requires to return the premise to acceptable condition will be prorated and will be the Lessee&#x27;s responsibility.</p>
 <p>Security Deposit will be refunded by a check mailed to the forwarding address, made payable to all persons signing the lease. Refunds cannot be picked up at the office.</p>
-<p class="fill">Applicant has deposited herewith the sum of $<span data-fill="holding" class="blank word"></span>, receipt of which is hereby acknowledged as a non-interest bearing deposit (and not as a rental payment) to be refunded as provided in the Lease Agreement and Security Deposit Agreement.</p>
+<p class="fill">Applicant has deposited herewith the sum of $<span data-fill="deposit" class="blank word"></span>, receipt of which is hereby acknowledged as a non-interest bearing deposit (and not as a rental payment) to be refunded as provided in the Lease Agreement and Security Deposit Agreement.</p>
 <div class="execution-block">
 <p>In the event the application is approved and applicant fails or refuses to enter into the contemplated lease, Lessor shall retain the deposit as liquidated damages to cover the cost of taking and processing this application and removing the premises from the market and holding same for the applicant. In the event this application is disapproved, or for any other reason for which owner is responsible the Lease Agreement is not consummated, this deposit will be refunded to applicant.</p>
 <div class="signature-block">
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
-<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line email">Email</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
+<div class="sig-row"><div class="sig-line">Lessee</div><div class="sig-line date">Date</div></div>
 </div>
 </div>
 
@@ -511,10 +510,6 @@
     <div class="question">
       <label for="q-deposit">Security deposit <span class="optional">(optional)</span></label>
       <input type="text" id="q-deposit" data-q="deposit" data-money inputmode="decimal" value="$" data-follows="q-rent">
-    </div>
-    <div class="question">
-      <label for="q-holding">Holding deposit <span class="optional">(optional)</span></label>
-      <input type="text" id="q-holding" data-q="holding" data-money inputmode="decimal" value="$">
     </div>
     <div class="question">
       <label for="q-received">Deposit received date <span class="optional">(optional)</span></label>
