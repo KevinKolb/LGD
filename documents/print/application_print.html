@@ -803,6 +803,9 @@
   // alone: it follows only while empty or still holding what was copied.
   document.querySelectorAll("[data-follows]").forEach(function (box) {
     var source = document.getElementById(box.getAttribute("data-follows"));
+    // A document that does not ask the other question (the deposit form
+    // asks no rent): nothing to follow.
+    if (!source) { return; }
     var empty = box.hasAttribute("data-money") ? "$" : "";
     var copied = null;
     source.addEventListener("change", function () {

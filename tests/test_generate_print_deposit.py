@@ -154,3 +154,10 @@ def test_the_deposit_has_its_own_date(gen, real_output):
 
 def test_every_lessee_signature_has_an_email_line_beside_it(real_output):
     assert real_output.count('<div class="sig-line">Lessee</div><div class="sig-line email">Email</div>') == 6
+
+
+def test_a_box_following_a_question_this_page_does_not_ask_is_skipped(real_output):
+    """The deposit box follows the rent, which this page never asks; without
+    the guard the script stopped there and the popup listed no apartments."""
+    assert 'id="q-rent"' not in real_output
+    assert "if (!source) { return; }" in real_output
