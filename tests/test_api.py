@@ -187,7 +187,7 @@ def test_config_never_leaks_email_addresses(client) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Admin reference page
+# Admin Portal page
 # ---------------------------------------------------------------------------
 
 def test_admin_info_is_refused_to_a_manager_user(client) -> None:
@@ -201,7 +201,7 @@ def test_admin_page_itself_still_loads_for_a_manager(client) -> None:
     the page's own JS shows "Admins only." for a manager who lands there."""
     response = client.get("/admin/", auth=STEVE)
     assert response.status_code == 200
-    assert "Admin reference" in response.text
+    assert "Admin Portal" in response.text
 
 
 def test_admin_page_is_refused_to_a_tenant(client) -> None:

@@ -463,6 +463,11 @@ starts hidden so it never flashes; if neither answers it shows, since the
 signup's own email-on-file check still holds. **004 must be
 applied to the live database** like the others.
 
+## The Admin Portal
+
+`admin/index.html`, titled and headed "Admin Portal" (the user,
+2026-09-30; it was "Admin reference"), like the Manager Portal.
+
 ## Site colors
 
 The admin page's **Site colors** section (the user, 2026-09-30: "change the
