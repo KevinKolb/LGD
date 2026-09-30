@@ -71,7 +71,7 @@ the generator, "(A) ... (B) ..." in the text, the same `data-option` tags as
 the lease. A build error if either document lacks a version the other has.
 Wording changes are logged in
 [`documents/security_deposit_history.md`](documents/security_deposit_history.md). It is one of the
-three forms ticked in the manager page's step 2 (see "Several documents at
+three forms ticked in the manager page's step 3 (see "Several documents at
 once"). Tests:
 `tests/test_generate_print_deposit.py`.
 
@@ -312,7 +312,7 @@ margin and share the leftover width in proportion to their underscore counts
 in `application.md` - so the form's layout is still edited there, by the
 relative length of each blank. A long block with a blank (the holding
 deposit's "$____") stays prose with an inline blank (`ROW_MAX_TEXT`).
-Ticked in the manager page's step 2. Changes are logged in
+Ticked in the manager page's step 3. Changes are logged in
 [`documents/application_history.md`](documents/application_history.md).
 
 - A block beginning `(parking=limited)` in `application.md` is tagged like
@@ -370,7 +370,7 @@ it is ticked (`data-for-docs`). Unticked documents are hidden.
 
 **This is how every form opens from the manager page** (settled 2026-09-29,
 when the user asked for the clearest way to do several documents and for
-steps numbered 1, 2, ... with no letters). Step 2, Paper Documents
+steps numbered 1, 2, ... with no letters). Step 3, Paper Documents
 Generator (renamed from "Documents" the same day), is one
 checkbox per form and one "Make documents" button (the user's wording, greyed
 out until a form is ticked, then "Make lease" for one, "Make 2 documents"
@@ -381,8 +381,8 @@ page already chose, the popup hides its own checkboxes and asks only
 prints exactly as its own page does (checked at every address), so the
 single-document pages are no longer linked from the manager page; they
 stay as files, and `app/main.py` still serves the lease one. The steps
-are now 1 Applicants, 2 Paper Documents Generator, 3 Monthly Rent Register,
-4 Legal. **Regenerate it after editing any of the three masters or
+are now 1 Accept Applications, 2 Applicants, 3 Paper Documents Generator,
+4 Monthly Rent Register, 5 Legal. **Regenerate it after editing any of the three masters or
 `properties.json`**, alongside that document's own page. The addendum is
 left out: no longer in use, and it names a fixed address.
 
@@ -410,10 +410,35 @@ loses its backslash and breaks the entire script - it did, once, while the
 picker was being built. `test_the_page_script_parses` runs every script
 through `node --check` when node is installed.
 
+## Accept Applications
+
+Step 1 on the manager page (the user, 2026-09-30: "popup shows all
+apartments and let's manager choose which ones to enable applications
+for"). The section shows which apartments are accepting applications, and
+**Choose apartments** opens a popup with every apartment from
+`documents/properties.json` - one group per building, a checkbox per unit,
+"Whole house" for a building with no units. Save replaces the company's
+list.
+
+The list is the `open_apartments` table (`manager_id`, `address`, `unit`,
+`opened_at`; one row per apartment accepting, so one not listed is not),
+in `app/db.py` and in `supabase/migrations/004_accept_applications.sql`.
+004 locks the table itself - 001's loop only covers tables that exist when
+it runs, and Supabase grants a new public table to anon and authenticated
+by default - so the browser reaches it only through
+`list_open_apartments()` and `set_open_apartments(apartments json)`,
+SECURITY DEFINER, manager or admin only, always the caller's own company.
+An apartment already open keeps its `opened_at` when the list is saved
+again. The FastAPI app has the same as `GET`/`PUT /api/open-apartments`.
+
+Nothing else reads the list yet: the applicant page and the Add applicant
+popup still offer every apartment. **004 must be applied to the live
+database** like the others.
+
 ## A manager adds an applicant (the first "less print" feature)
 
-The manager page's step 1, Applicants (2026-09-29; Paper Documents
-Generator became step 2), is three buttons (the user, 2026-09-29): **Add
+The manager page's step 2, Applicants (2026-09-29; step 1 until Accept
+Applications went before it the next day), is three buttons (the user, 2026-09-29): **Add
 applicant**, **View current applicants** and **View archived applicants**.
 No list shows until one of the View buttons is pressed; pressing it again
 hides it.
@@ -503,7 +528,7 @@ linking to the manager's record with no duplicate person.
 
 `manager/rent_register.html` (the user, 2026-09-29: "a printable page for
 now that lists all units, tenants, email and phones and a place for a
-written date it was received"), step 3 on the manager page. One row per
+written date it was received"), step 4 on the manager page. One row per
 unit from `documents/properties.json` (a house with no units is one row),
 so an empty unit still has its row; every tenant of a unit in that row;
 and a blank "Date received" column plus a "Month of ____" line, for the
@@ -811,7 +836,7 @@ read in full versus only seen via a search tool's summary. Append to it, don't
 replace it, whenever a clause decision draws on outside research — it's meant to
 survive as a reference trail, including for potential litigation.
 
-The manager page links to it from step 4, Legal (beside the legal checklist), and it is read there as an ordinary
+The manager page links to it from step 5, Legal (beside the legal checklist), and it is read there as an ordinary
 page on this site — not as a raw file on a code host, which is what the link
 used to do. [`manager/legal_research.html`](manager/legal_research.html) is a
 **generated file** — never hand-edit it. Regenerate it after every append to

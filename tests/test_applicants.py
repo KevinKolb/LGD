@@ -107,11 +107,11 @@ def test_a_later_login_adopts_the_waiting_person() -> None:
     assert "where lower(email) = lower(new.email) and auth_id is null" in trigger
 
 
-def test_the_manager_page_has_the_applicant_form_as_step_1() -> None:
+def test_the_manager_page_has_the_applicants_as_step_2() -> None:
     page = MANAGER_PAGE.read_text(encoding="utf-8")
     section = page[page.index('<section id="applicants">'):]
     section = section[:section.index("</section>")]
-    assert '<span class="step" aria-hidden="true">1</span>' in section
+    assert '<span class="step" aria-hidden="true">2</span>' in section  # after Accept Applications
     assert "Add a person you approve to apply. They will be emailed a link to the application." in section
     # Three buttons, and the form in a popup: email and apartment only.
     for button in ('id="open-add-applicant">Add applicant</button>',
@@ -119,7 +119,8 @@ def test_the_manager_page_has_the_applicant_form_as_step_1() -> None:
                    'id="view-archived" aria-pressed="false">View archived applicants</button>'):
         assert button in section
     assert "<form" not in section
-    popup = page[page.index('<dialog class="popup" id="applicant-dialog"'):page.index("</dialog>")]
+    start = page.index('<dialog class="popup" id="applicant-dialog"')
+    popup = page[start:page.index("</dialog>", start)]
     assert sorted(re.findall(r'name="(\w+)"', popup)) == ["address", "email", "unit"]
     assert "dialog.showModal();" in page
     assert 'window.LGD.auth.rpc("create_applicant", values)' in page
@@ -225,7 +226,8 @@ def test_adding_one_offers_to_send_the_application() -> None:
     """When an applicant is created, the popup offers to send them the
     application (the user, 2026-09-29)."""
     page = MANAGER_PAGE.read_text(encoding="utf-8")
-    popup = page[page.index('<dialog class="popup" id="applicant-dialog"'):page.index("</dialog>")]
+    start = page.index('<dialog class="popup" id="applicant-dialog"')
+    popup = page[start:page.index("</dialog>", start)]
     assert '<a class="button-link" id="send-application" href="#">Send application</a>' in popup
     assert 'document.getElementById("send-application").href = emailLink(created);' in page
 

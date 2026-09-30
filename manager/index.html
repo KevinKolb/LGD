@@ -192,6 +192,17 @@
   dialog.popup .field-grid.single { grid-template-columns: 1fr; }
   dialog.popup .form-msg { margin: 0 0 12px; }
   dialog.popup .form-msg:empty { display: none; }
+  /* Accept Applications: the summary, and the popup's checklist - one
+     building a group, each unit a checkbox big enough for a thumb. */
+  .accepting-summary { margin: 0 0 14px; font-size: 14px; }
+  .accepting-choices { max-height: 55vh; overflow-y: auto; margin: 0 0 12px; }
+  .accepting-choices fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 10px 0 6px; }
+  .accepting-choices legend { padding: 0; font-weight: 600; font-size: 14px; }
+  .accepting-choices label {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 6px 14px 0 0; font-size: 14px; cursor: pointer;
+  }
+  .accepting-choices input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
   .note { color: var(--muted); font-size: 12px; }
   button:disabled { opacity: .45; cursor: not-allowed; }
   button.secondary {
@@ -292,9 +303,40 @@
 </header>
 
 <main hidden>
-  <section id="applicants">
+  <section id="accepting">
     <div class="step-head">
       <span class="step" aria-hidden="true">1</span>
+      <h2>Accept Applications</h2>
+    </div>
+    <p class="hint">
+      Choose which apartments are taking applications.
+    </p>
+    <p class="accepting-summary" id="accepting-summary">Loading…</p>
+    <div class="actions">
+      <button type="button" class="button-link" id="open-accepting">Choose apartments</button>
+    </div>
+  </section>
+
+  <!-- Every apartment from documents/properties.json, one checkbox each;
+       ticked ones are accepting applications. Saved through
+       set_open_apartments (supabase/migrations/004) or PUT
+       /api/open-apartments. -->
+  <dialog class="popup" id="accepting-dialog" aria-labelledby="accepting-dialog-title">
+    <form id="accepting-form" novalidate>
+      <h2 id="accepting-dialog-title">Accept applications</h2>
+      <p class="hint">Tick every apartment that is taking applications.</p>
+      <div class="accepting-choices" id="accepting-choices"></div>
+      <p class="form-msg" id="accepting-msg" role="status" aria-live="polite"></p>
+      <div class="actions">
+        <button type="submit" class="button-link" id="save-accepting">Save</button>
+        <button type="button" class="secondary" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <section id="applicants">
+    <div class="step-head">
+      <span class="step" aria-hidden="true">2</span>
       <h2>Applicants</h2>
     </div>
     <p class="hint">
@@ -357,7 +399,7 @@
   </dialog>
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">2</span>
+      <span class="step" aria-hidden="true">3</span>
       <h2>Paper Documents Generator</h2>
     </div>
     <p class="hint">
@@ -392,7 +434,7 @@
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">3</span>
+      <span class="step" aria-hidden="true">4</span>
       <h2>Monthly Rent Register</h2>
     </div>
     <p class="hint">
@@ -406,7 +448,7 @@
 
   <section>
     <div class="step-head">
-      <span class="step" aria-hidden="true">4</span>
+      <span class="step" aria-hidden="true">5</span>
       <h2>Legal</h2>
     </div>
     <p class="hint">
@@ -580,6 +622,122 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
 "use strict";
 // --- Step 1: add an applicant -------------------------------------------
 //
+// Accept Applications (the user, 2026-09-30): a popup of every apartment
+// from documents/properties.json, and the manager ticks the ones taking
+// applications. The list is the company's; on GitHub Pages it is read and
+// saved through list_open_apartments / set_open_apartments
+// (supabase/migrations/004), from the FastAPI app through
+// /api/open-apartments - both check the caller is a manager or admin.
+(function () {
+  const dialog = document.getElementById("accepting-dialog");
+  const form = document.getElementById("accepting-form");
+  const choices = document.getElementById("accepting-choices");
+  const summary = document.getElementById("accepting-summary");
+  const message = document.getElementById("accepting-msg");
+  const save = document.getElementById("save-accepting");
+  let properties = [];
+  let open = [];  // [{address, unit}] accepting applications now
+
+  const key = (address, unit) => `${address}|${unit || ""}`;
+  const place = (address, unit) => (unit ? `${address}, Unit ${unit}` : address);
+
+  function usingApi() {
+    return window.LGD_DASHBOARD.backend === "api";
+  }
+
+  async function api(options) {
+    const response = await fetch("/api/open-apartments", options);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof payload.detail === "string" ? payload.detail : "That could not be saved.");
+    }
+    return payload.apartments;
+  }
+
+  async function fetchOpen() {
+    if (usingApi()) return api();
+    return window.LGD.auth.rpc("list_open_apartments", {});
+  }
+
+  async function saveOpen(apartments) {
+    if (usingApi()) {
+      return api({ method: "PUT", headers: { "Content-Type": "application/json" },
+                   body: JSON.stringify({ apartments }) });
+    }
+    return window.LGD.auth.rpc("set_open_apartments", { apartments });
+  }
+
+  function showSummary() {
+    summary.textContent = open.length
+      ? "Accepting applications for " + open.map((a) => place(a.address, a.unit)).join("; ") + "."
+      : "Not accepting applications for any apartment.";
+  }
+
+  // One group per building; a house with no units is one checkbox.
+  function buildChoices() {
+    const ticked = new Set(open.map((a) => key(a.address, a.unit)));
+    choices.textContent = "";
+    for (const property of properties) {
+      const group = document.createElement("fieldset");
+      const legend = document.createElement("legend");
+      legend.textContent = property.address;
+      group.append(legend);
+      const units = property.units.length ? property.units : [""];
+      for (const unit of units) {
+        const label = document.createElement("label");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.dataset.address = property.address;
+        box.dataset.unit = unit;
+        box.checked = ticked.has(key(property.address, unit));
+        label.append(box, document.createTextNode(unit ? `Unit ${unit}` : "Whole house"));
+        group.append(label);
+      }
+      choices.append(group);
+    }
+  }
+
+  document.getElementById("open-accepting").addEventListener("click", () => {
+    buildChoices();
+    message.textContent = "";
+    message.className = "form-msg";
+    dialog.showModal();
+  });
+  dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const apartments = Array.from(choices.querySelectorAll("input:checked"))
+      .map((box) => ({ address: box.dataset.address, unit: box.dataset.unit }));
+    save.disabled = true;
+    message.textContent = "Saving…";
+    message.className = "form-msg";
+    try {
+      open = await saveOpen(apartments);
+      showSummary();
+      dialog.close();
+    } catch (error) {
+      message.textContent = error.message;
+      message.className = "form-msg error";
+    } finally {
+      save.disabled = false;
+    }
+  });
+
+  async function start() {
+    try {
+      const response = await fetch("../documents/properties.json", { cache: "no-store" });
+      properties = (await response.json()).properties;
+      open = await fetchOpen();
+      showSummary();
+    } catch (error) {
+      summary.textContent = "Which apartments take applications could not be loaded: " + error.message;
+    }
+  }
+  if (window.LGD_DASHBOARD) start();
+  else document.addEventListener("lgd-dashboard-ready", start, { once: true });
+})();
+
 // A manager approves someone to apply with their email address and the
 // apartment (the user, 2026-09-29); the applicant gives their own name and
 // phone when they create their login on the applicant page. Stored as a

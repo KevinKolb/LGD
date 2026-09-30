@@ -126,6 +126,18 @@ CREATE TABLE IF NOT EXISTS news (
 );
 CREATE INDEX IF NOT EXISTS news_created_at ON news (created_at DESC);
 CREATE INDEX IF NOT EXISTS news_manager ON news (manager_id, created_at DESC);
+
+-- The apartments accepting applications (the user, 2026-09-30), one row per
+-- apartment, per company; one not listed is not accepting. Address and unit
+-- as documents/properties.json writes them, the unit '' for a single house.
+-- Supabase gets the same table from supabase/migrations/004.
+CREATE TABLE IF NOT EXISTS open_apartments (
+    manager_id  TEXT NOT NULL,
+    address     TEXT NOT NULL,
+    unit        TEXT NOT NULL DEFAULT '',
+    opened_at   TEXT NOT NULL,
+    PRIMARY KEY (manager_id, address, unit)
+);
 """
 
 APPLICATION_COLUMNS = [
@@ -753,6 +765,52 @@ async def list_residents(db_path: str, *, manager_id: str | None) -> list[dict[s
         args.append(manager_id)
     query += " ORDER BY pr.address, pr.apt, p.full_name"
     return await _rows(db_path, query, *args)
+
+
+class OpenApartmentsError(ValueError):
+    """Why the list of apartments accepting applications could not be
+    saved - worded for the manager page, as in supabase/migrations/004."""
+
+
+async def list_open_apartments(db_path: str, *, manager_id: str | None) -> list[dict[str, Any]]:
+    """The company's apartments accepting applications, by address then unit."""
+    if manager_id is None:
+        return []
+    return await _rows(
+        db_path,
+        "SELECT address, unit, opened_at FROM open_apartments WHERE manager_id = ? "
+        "ORDER BY address, unit",
+        manager_id)
+
+
+async def set_open_apartments(db_path: str, *, manager_id: str | None,
+                              apartments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Replace the company's list: an apartment already open keeps the date
+    it was opened, one left out is closed. The same rules and wording as
+    set_open_apartments in supabase/migrations/004."""
+    if manager_id is None:
+        raise OpenApartmentsError("Your login is not filed under a company.")
+    if len(apartments) > 500:
+        raise OpenApartmentsError("That is too many apartments.")
+    wanted = set()
+    for item in apartments:
+        address = str(item.get("address") or "").strip()
+        unit = str(item.get("unit") or "").strip()
+        if not address or len(address) > 200 or len(unit) > 20:
+            raise OpenApartmentsError("One of those apartments does not look right.")
+        wanted.add((address, unit))
+    current = {(row["address"], row["unit"])
+               for row in await list_open_apartments(db_path, manager_id=manager_id)}
+    for address, unit in current - wanted:
+        await _write(db_path,
+                     "DELETE FROM open_apartments WHERE manager_id = ? AND address = ? AND unit = ?",
+                     manager_id, address, unit)
+    for address, unit in sorted(wanted - current):
+        await _write(db_path,
+                     "INSERT INTO open_apartments (manager_id, address, unit, opened_at) "
+                     "VALUES (?, ?, ?, ?)",
+                     manager_id, address, unit, _now())
+    return await list_open_apartments(db_path, manager_id=manager_id)
 
 
 async def set_applicant_archived(db_path: str, *, person_id: str, archived: bool,

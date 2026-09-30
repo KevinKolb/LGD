@@ -515,6 +515,41 @@ async def api_list_residents(user: User = Depends(current_user)) -> dict[str, An
     return {"residents": await db.list_residents(settings.db_path, manager_id=manager_id)}
 
 
+class OpenApartment(BaseModel):
+    address: str = Field(max_length=200)
+    unit: str = Field(default="", max_length=20)
+
+
+class OpenApartmentsRequest(BaseModel):
+    apartments: list[OpenApartment] = Field(max_length=500)
+
+
+@app.get("/api/open-apartments")
+async def api_list_open_apartments(user: User = Depends(current_user)) -> dict[str, Any]:
+    """The apartments this company is accepting applications for - the
+    manager page's Accept Applications popup. The website does the same
+    through Supabase (migration 004's list_open_apartments)."""
+    require_dashboard_role(user)
+    settings = get_settings()
+    return {"apartments": await db.list_open_apartments(settings.db_path, manager_id=user.manager_id)}
+
+
+@app.put("/api/open-apartments")
+async def api_set_open_apartments(payload: OpenApartmentsRequest,
+                                  user: User = Depends(current_user)) -> dict[str, Any]:
+    """Replace the list - always the caller's own company, never one the
+    request names."""
+    require_dashboard_role(user)
+    settings = get_settings()
+    try:
+        apartments = await db.set_open_apartments(
+            settings.db_path, manager_id=user.manager_id,
+            apartments=[item.model_dump() for item in payload.apartments])
+    except db.OpenApartmentsError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"apartments": apartments}
+
+
 class ArchiveRequest(BaseModel):
     archived: bool
 
