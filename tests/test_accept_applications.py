@@ -87,3 +87,12 @@ def test_add_applicant_offers_only_apartments_accepting_applications() -> None:
     assert 'document.addEventListener("lgd-open-apartments", (event) => {' in page
     assert "if (openUnits(property).length) fields.address.add(" in page
     assert 'say(formMessage, "No apartments are available at this time.", "error");' in page
+
+
+def test_each_accepting_apartment_is_a_tag_with_an_x_to_stop_it() -> None:
+    """The user, 2026-09-30: "must be able to undo accepting applications.
+    xs on tags?" """
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert 'stop.setAttribute("aria-label", `Stop accepting applications for ${name}`);' in page
+    assert "stop.addEventListener(\"click\", () => stopAccepting(apartment, stop));" in page
+    assert "open = await saveOpen(rest);" in page

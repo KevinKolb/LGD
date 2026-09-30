@@ -195,6 +195,21 @@
   /* Accept Applications: the summary, and the popup's checklist - one
      building a group, each unit a checkbox big enough for a thumb. */
   .accepting-summary { margin: 0 0 14px; font-size: 14px; }
+  /* Each apartment accepting applications is a tag; its x stops it
+     (the user, 2026-09-30: "must be able to undo accepting applications"). */
+  .accepting-summary .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .accepting-summary .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 4px 4px 12px; border-radius: 999px;
+    background: var(--accent2-soft, #dff0f8); border: 1px solid var(--accent2); font-size: 14px;
+  }
+  .accepting-summary .tag button {
+    width: 28px; height: 28px; border: 0; border-radius: 999px; padding: 0;
+    background: transparent; color: var(--ink); font-size: 18px; line-height: 1; cursor: pointer;
+  }
+  .accepting-summary .tag button:hover { background: rgba(0, 0, 0, .1); }
+  #accepting-status { margin: -6px 0 12px; }
+  #accepting-status:empty { display: none; }
   .accepting-choices { max-height: 55vh; overflow-y: auto; margin: 0 0 12px; }
   .accepting-choices fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 10px 0 6px; }
   .accepting-choices legend { padding: 0; font-weight: 600; font-size: 14px; }
@@ -311,7 +326,8 @@
     <p class="hint">
       Choose which apartments are taking applications.
     </p>
-    <p class="accepting-summary" id="accepting-summary">Loading…</p>
+    <div class="accepting-summary" id="accepting-summary">Loading…</div>
+    <p class="form-msg" id="accepting-status" role="status" aria-live="polite"></p>
     <div class="actions">
       <button type="button" class="button-link" id="open-accepting">Choose apartments</button>
     </div>
@@ -673,11 +689,52 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     document.dispatchEvent(new CustomEvent("lgd-open-apartments", { detail: open }));
   }
 
+  const status = document.getElementById("accepting-status");
+
   function showSummary() {
     announce();
-    summary.textContent = open.length
-      ? "Accepting applications for " + open.map((a) => place(a.address, a.unit)).join("; ") + "."
-      : "Not accepting applications for any apartment.";
+    summary.textContent = "";
+    if (!open.length) {
+      summary.textContent = "Not accepting applications for any apartment.";
+      return;
+    }
+    summary.append("Accepting applications for:");
+    const tags = document.createElement("div");
+    tags.className = "tags";
+    for (const apartment of open) {
+      const name = place(apartment.address, apartment.unit);
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      const stop = document.createElement("button");
+      stop.type = "button";
+      stop.textContent = "×";
+      stop.setAttribute("aria-label", `Stop accepting applications for ${name}`);
+      stop.title = "Stop accepting applications";
+      stop.addEventListener("click", () => stopAccepting(apartment, stop));
+      tag.append(name, stop);
+      tags.append(tag);
+    }
+    summary.append(tags);
+  }
+
+  // The x on a tag: that apartment stops taking applications, at once.
+  async function stopAccepting(apartment, control) {
+    control.disabled = true;
+    status.textContent = "";
+    status.className = "form-msg";
+    const rest = open
+      .filter((a) => key(a.address, a.unit) !== key(apartment.address, apartment.unit))
+      .map((a) => ({ address: a.address, unit: a.unit }));
+    try {
+      open = await saveOpen(rest);
+      showSummary();
+      status.textContent = `${place(apartment.address, apartment.unit)} is no longer accepting applications.`;
+      status.className = "form-msg ok";
+    } catch (error) {
+      control.disabled = false;
+      status.textContent = error.message;
+      status.className = "form-msg error";
+    }
   }
 
   // One group per building; a house with no units is one checkbox.

@@ -418,7 +418,10 @@ for"). The section shows which apartments are accepting applications, and
 **Choose apartments** opens a popup with every apartment from
 `documents/properties.json` - one group per building, a checkbox per unit,
 "Whole house" for a building with no units. Save replaces the company's
-list.
+list. Each apartment accepting applications shows as a tag with an ×,
+which stops it at once (the user, same day: "must be able to undo
+accepting applications. xs on tags?"); unticking it in the popup does the
+same.
 
 The list is the `open_apartments` table (`manager_id`, `address`, `unit`,
 `opened_at`; one row per apartment accepting, so one not listed is not),
