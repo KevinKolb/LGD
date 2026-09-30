@@ -694,6 +694,15 @@ five head lines; `tests/test_icons.py` checks each one. The name on a home
 screen is "LGD PORTAL", which is also the home page's title bar (the
 user, 2026-09-29).
 
+**The home page tells a phone how to add it to the home screen** (the
+user, 2026-09-30: "the first time the person goes to the page"): a popup
+with three steps, Share -> Add to Home Screen -> Add on an iPhone or iPad,
+menu -> Add to Home screen -> Add on Android, and "Got it". Only on a
+phone or tablet, never when opened from the home screen already, and once
+per browser (`lgd-home-screen-tip` in localStorage, set when shown; if
+storage is unavailable it is not shown at all). Tests:
+`tests/test_home_screen_tip.py`.
+
 ## Saved for later: `_saved/`
 
 Finished work that is not live yet goes in `_saved/`, with a line in its

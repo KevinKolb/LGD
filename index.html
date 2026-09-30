@@ -154,6 +154,11 @@
     width: calc(100% - 48px);
   }
   .modal-box p { margin: 0 0 18px; }
+  /* The home-screen tip: steps, read top to bottom. */
+  .modal-box h2 { margin: 0 0 12px; font-size: 18px; }
+  .modal-box ol { margin: 0 0 18px; padding-left: 22px; text-align: left; }
+  .modal-box li { margin-bottom: 8px; }
+  .modal-box li:last-child { margin-bottom: 0; }
   .modal-box button {
     font: inherit;
     border-radius: 6px;
@@ -194,6 +199,23 @@
   </div>
 </div>
 
+<div id="home-screen-modal" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="home-screen-title">
+    <h2 id="home-screen-title">Add LGD PORTAL to your home screen</h2>
+    <ol id="home-screen-ios" hidden>
+      <li>Tap the <strong>Share</strong> button (the square with an arrow pointing up).</li>
+      <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>.</li>
+    </ol>
+    <ol id="home-screen-android" hidden>
+      <li>Tap the <strong>menu</strong> (the three dots, top right).</li>
+      <li>Tap <strong>Add to Home screen</strong>.</li>
+      <li>Tap <strong>Add</strong>.</li>
+    </ol>
+    <button type="button" id="close-home-screen">Got it</button>
+  </div>
+</div>
+
 <p class="version">Version 1.0</p>
 <script>
 "use strict";
@@ -225,6 +247,43 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !modal.hidden) close();
   });
+})();
+
+// On a phone or tablet, the first visit only, how to put this page on the
+// home screen (the user, 2026-09-30). Never when it was opened from the
+// home screen already, and never again once shown - remembered in this
+// browser, so if that cannot be remembered (private browsing) it is not
+// shown at all rather than every time.
+(function () {
+  const SEEN = "lgd-home-screen-tip";
+  const agent = navigator.userAgent || "";
+  // iPadOS says it is a Mac; a Mac with a touch screen is an iPad.
+  const ios = /iPhone|iPad|iPod/.test(agent) ||
+    (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(agent);
+  const installed = navigator.standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches;
+  if (!(ios || android) || installed) return;
+  try {
+    if (localStorage.getItem(SEEN)) return;
+    localStorage.setItem(SEEN, new Date().toISOString());
+  } catch (error) {
+    return;
+  }
+
+  const modal = document.getElementById("home-screen-modal");
+  document.getElementById(ios ? "home-screen-ios" : "home-screen-android").hidden = false;
+  function close() {
+    modal.hidden = true;
+  }
+  document.getElementById("close-home-screen").addEventListener("click", close);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) close();
+  });
+  modal.hidden = false;
 })();
 </script>
 </body>
