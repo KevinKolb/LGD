@@ -515,6 +515,31 @@ async def api_list_residents(user: User = Depends(current_user)) -> dict[str, An
     return {"residents": await db.list_residents(settings.db_path, manager_id=manager_id)}
 
 
+class SiteColorsRequest(BaseModel):
+    accent: str = Field(default="", max_length=7)
+    accent2: str = Field(default="", max_length=7)
+
+
+@app.get("/api/site-colors")
+async def api_site_colors() -> dict[str, Any]:
+    """Public, like every page that shows them: the two main colors an admin
+    chose (shared/theme.js reads this before trying Supabase)."""
+    return await db.get_site_colors(get_settings().db_path)
+
+
+@app.put("/api/site-colors")
+async def api_set_site_colors(payload: SiteColorsRequest,
+                              user: User = Depends(current_user)) -> dict[str, Any]:
+    """Admins only; both empty goes back to each page's own colors."""
+    if not user.is_admin:
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        return await db.set_site_colors(get_settings().db_path, accent=payload.accent,
+                                        accent2=payload.accent2, person_id=user.person_id)
+    except db.SiteColorsError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
 class OpenApartment(BaseModel):
     address: str = Field(max_length=200)
     unit: str = Field(default="", max_length=20)
@@ -532,6 +557,13 @@ async def api_list_open_apartments(user: User = Depends(current_user)) -> dict[s
     require_dashboard_role(user)
     settings = get_settings()
     return {"apartments": await db.list_open_apartments(settings.db_path, manager_id=user.manager_id)}
+
+
+@app.get("/api/accepting-applications")
+async def api_accepting_applications() -> dict[str, bool]:
+    """Public: whether any property is accepting applications - yes or no,
+    nothing more. The applicant page shows Apply only while it is."""
+    return {"accepting": await db.accepting_applications(get_settings().db_path)}
 
 
 @app.put("/api/open-apartments")

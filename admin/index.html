@@ -21,6 +21,8 @@
     /* localStorage unavailable (e.g. private browsing) - default colors. */
   }
 </script>
+<!-- The two main colors an admin chose, if any (shared/theme.js). -->
+<script src="../shared/theme.js"></script>
 <link rel="icon" href="../favicon.ico?v=2" sizes="any">
 <link rel="icon" href="../shared/icons/house.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
@@ -106,6 +108,26 @@
     font-size: 12px; background: #eceae4; color: var(--ink); white-space: nowrap;
   }
   .badge.warn { background: #fbe6c2; color: #6b4708; }
+  /* Site colors: a picker and its #rrggbb box per color, a preview of a
+     header bar and a button in them, and Save / Back to the defaults. */
+  .color-row { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; flex-wrap: wrap; }
+  .color-row label { width: 120px; font-weight: 600; font-size: 14px; }
+  .color-row input[type=color] { width: 52px; height: 40px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .color-row input[type=text] { width: 110px; padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: 6px; }
+  .color-preview { margin: 6px 0 14px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .color-preview .bar { padding: 12px 16px; font-weight: 700; border-bottom: 4px solid; }
+  .color-preview .body { padding: 12px 16px; display: flex; gap: 10px; flex-wrap: wrap; background: #fff; }
+  .color-preview .sample { padding: 8px 14px; border-radius: 6px; font-weight: 600; font-size: 14px; }
+  .color-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .color-actions button {
+    font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
+  }
+  .color-actions button.secondary { background: transparent; color: var(--accent); }
+  .color-actions button:disabled { opacity: .5; cursor: progress; }
+  .color-msg { font-size: 13px; margin: 10px 0 0; }
+  .color-msg.error { color: var(--danger); }
+  .color-msg.warn { color: #6b4708; }
 </style>
 </head>
 <body>
@@ -198,21 +220,132 @@ function section(title, hint, ...body) {
   return s;
 }
 
+// --- Site colors (the user, 2026-09-30) ------------------------------------
+//
+// The site's two main colors, for every page: the main color (header bars,
+// buttons, links) and the second (the rule under each header, hovers, the
+// staff buttons). Saved through set_site_colors (supabase/migrations/005)
+// or PUT /api/site-colors - admins only - and read by shared/theme.js.
+function colorsSection(backend) {
+  const theme = window.LGD.theme;
+  const message = el("p", { class: "color-msg", role: "status", "aria-live": "polite" });
+  const say = (text, kind) => { message.textContent = text; message.className = "color-msg" + (kind ? " " + kind : ""); };
+
+  function colorRow(id, labelText) {
+    const picker = el("input", { type: "color", id: id + "-picker", "aria-label": labelText });
+    const box = el("input", { type: "text", id: id + "-hex", maxlength: "7", spellcheck: "false",
+                              autocomplete: "off", "aria-label": labelText + " (#rrggbb)" });
+    picker.addEventListener("input", () => { box.value = picker.value; preview(); });
+    box.addEventListener("input", () => {
+      const value = box.value.trim().toLowerCase();
+      if (/^#[0-9a-f]{6}$/.test(value)) { picker.value = value; preview(); }
+    });
+    const row = el("div", { class: "color-row" }, el("label", { for: id + "-picker", text: labelText }), picker, box);
+    return { row, picker, box };
+  }
+  const main = colorRow("accent", "Main color");
+  const second = colorRow("accent2", "Second color");
+
+  const bar = el("div", { class: "bar", text: "Lower Garden District Properties, Inc." });
+  const primary = el("span", { class: "sample", text: "Button" });
+  const outline = el("span", { class: "sample", text: "Link button" });
+  const staff = el("span", { class: "sample", text: "Manager" });
+  const previewBox = el("div", { class: "color-preview", "aria-hidden": "true" }, bar, el("div", { class: "body" }, primary, outline, staff));
+
+  function values() {
+    return { accent: main.picker.value.toLowerCase(), accent2: second.picker.value.toLowerCase() };
+  }
+
+  function preview() {
+    const { accent, accent2 } = values();
+    const ink = theme.inkOn(accent);
+    Object.assign(bar.style, { background: accent, color: ink, borderBottomColor: accent2 });
+    Object.assign(primary.style, { background: accent, color: ink });
+    Object.assign(outline.style, { border: `1px solid ${accent}`, color: accent });
+    Object.assign(staff.style, { background: accent2, color: "#1c1c1a" });
+    // Labels on the second color are dark ink; a dark second color hides them.
+    if (theme.luminance(accent2) < 0.3) {
+      say("The second color is dark: the dark labels on it (the Manager and Admin buttons, hovers) will be hard to read.", "warn");
+    } else if (message.classList.contains("warn")) {
+      say("");
+    }
+  }
+
+  function show(colors) {
+    const accent = (colors && colors.accent) || theme.DEFAULTS.accent;
+    const accent2 = (colors && colors.accent2) || theme.DEFAULTS.accent2;
+    main.picker.value = main.box.value = accent;
+    second.picker.value = second.box.value = accent2;
+    preview();
+  }
+
+  async function call(method, body) {
+    if (backend === "api") {
+      const response = await fetch("/api/site-colors", method === "GET" ? {} : {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.detail === "string" ? payload.detail : "That could not be saved.");
+      return payload;
+    }
+    return method === "GET"
+      ? window.LGD.auth.rpc("get_site_colors", {})
+      : window.LGD.auth.rpc("set_site_colors", body);
+  }
+
+  const save = el("button", { type: "button", text: "Save colors" });
+  const reset = el("button", { type: "button", class: "secondary", text: "Back to Tulane green and blue" });
+  async function store(body, done) {
+    save.disabled = reset.disabled = true;
+    say("Saving…");
+    try {
+      const colors = await call("PUT", body);
+      theme.save(colors);
+      show(colors);
+      say(done);
+    } catch (error) {
+      say(error.message, "error");
+    } finally {
+      save.disabled = reset.disabled = false;
+    }
+  }
+  save.addEventListener("click", () => {
+    const colors = values();
+    store(colors, "Saved. Every page now uses these colors.");
+  });
+  reset.addEventListener("click", () => store({ accent: "", accent2: "" }, "Back to Tulane green and blue."));
+
+  show(null);
+  call("GET").then(show).catch(() => say("The saved colors could not be loaded.", "error"));
+
+  return section("Site colors",
+    "The site's two main colors, on every page. The main color is the header bars, buttons and links; " +
+      "the second is the line under each header, hovers, and the Manager and Admin buttons on the home page.",
+    main.row, second.row, previewBox, el("div", { class: "color-actions" }, save, reset), message);
+}
+
 async function boot() {
   const app = document.getElementById("app");
   try {
     const response = await fetch("/api/admin/info");
-    if (response.status === 404) {
+    // Only the FastAPI app answers in JSON. Its 404 means "not an admin";
+    // any other answer - GitHub Pages' own "page not found", which is what
+    // this request gets on the live site - means there is no app here, so
+    // the page falls back to Supabase below. (Treating every 404 as "not an
+    // admin" told the live site's admins "Admins only." until 2026-09-30.)
+    const fromApp = (response.headers.get("content-type") || "").includes("json");
+    if (response.status === 404 && fromApp) {
       app.replaceChildren(el("p", { class: "empty", text: "Admins only." }));
       return;
     }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok || !fromApp) throw new Error(`HTTP ${response.status}`);
     const info = await response.json();
     app.replaceChildren(
       managersSection(info.managers),
       usersSection(info.users, info.managers),
       backendsSection(info.backends),
-      linksSection(info.links)
+      linksSection(info.links),
+      colorsSection("api")
     );
   } catch (error) {
     // No backend answered, which is the normal case on GitHub Pages: this
@@ -236,10 +369,11 @@ async function explainWithoutBackend(app) {
     app.replaceChildren(el("p", { class: "empty", text: "Admins only." }));
     return;
   }
-  app.replaceChildren(el("p", { class: "empty", text:
-    "Signed in as an admin. This page reads from the app's own API, which is " +
-    "not running here - start it locally to see managers, users and storage " +
-    "backends." }));
+  app.replaceChildren(
+    colorsSection("supabase"),
+    el("p", { class: "empty", text:
+      "The managers, users and storage backends come from the app's own API, which is " +
+      "not running here - start it locally to see them." }));
 }
 
 boot();

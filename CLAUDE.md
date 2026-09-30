@@ -441,8 +441,51 @@ section sends the list to it as an `lgd-open-apartments` event whenever it
 loads or is saved. With none accepting, the popup says "No apartments are
 available at this time." (the user's wording) and Add applicant is
 greyed out. That is the page's choice only - `create_applicant` does not
-check the list. The applicant page does not read it yet. **004 must be
+check the list.
+
+**The applicant page shows Apply only while some property is accepting
+applications** (the user, same day); otherwise "No apartments are
+available at this time." stands in its place, and Check application
+status stays. It asks `accepting_applications()` (in 004, signed out,
+yes or no only) or the FastAPI app's `/api/accepting-applications`. Apply
+starts hidden so it never flashes; if neither answers it shows, since the
+signup's own email-on-file check still holds. **004 must be
 applied to the live database** like the others.
+
+## Site colors
+
+The admin page's **Site colors** section (the user, 2026-09-30: "change the
+sites two main colors") sets the two colors every site page is built on:
+`--accent`, the main color (Tulane green: header bars, buttons, links),
+and `--accent2`, the second (Tulane light blue: the line under each
+header, hovers, the home page's Manager and Admin buttons). A color picker
+and a `#rrggbb` box each, a live preview, **Save colors**, and **Back to
+Tulane green and blue**, which clears them.
+
+They are two rows of `site_settings` (`key` 'accent' / 'accent2'), in
+`app/db.py` and `supabase/migrations/005_site_colors.sql`: locked to the
+browser, read by anyone through `get_site_colors()` (every page shows
+them, signed out too), written only by an admin through
+`set_site_colors(accent, accent2)`. The FastAPI app has `GET` (public) and
+`PUT` (admin) `/api/site-colors`.
+
+`shared/theme.js` puts them on the page. It is loaded in the `<head>` of
+the six site pages (home, applicant, resident, manager, admin, login -
+not the printed documents or the rent register, which print in their own
+colors), sets the variables on `<html>` itself so they outrank each page's
+stylesheet and the `?org=o` orange scheme, and keeps the last colors in
+localStorage so a page never flashes the old ones before it has asked
+again. With none saved it sets nothing and every page keeps its own.
+The text on the main color is worked out from it (white, or dark ink on a
+light color); the second color always carries dark ink, so the admin
+section warns when a dark one is picked. `theme.js` holds a copy of
+`auth.js`'s Supabase address and publishable key; a test keeps them equal.
+
+**The admin page on GitHub Pages** used to say "Admins only." to everyone,
+admins included: it asked the FastAPI app for `/api/admin/info`, got
+GitHub's own "page not found", and read every 404 as a refusal. Only the
+app answers in JSON, so now only a JSON 404 means "not an admin"; anything
+else falls back to Supabase, which lets an admin in to Site colors.
 
 ## A manager adds an applicant (the first "less print" feature)
 

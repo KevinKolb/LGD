@@ -105,3 +105,21 @@ def test_the_manager_page_has_reports_coming_soon() -> None:
     section = section[:section.index("</section>")]
     assert '<span class="step" aria-hidden="true">6</span>' in section
     assert "<h2>Reports</h2>" in section and "Coming soon." in section
+
+
+def test_anyone_can_ask_whether_applications_are_open(client) -> None:
+    """Yes or no, signed out - the applicant page's Apply button."""
+    assert client.get("/api/accepting-applications", auth=None).json() == {"accepting": False}
+    put(client, STEVE, [CAMP_B])
+    assert client.get("/api/accepting-applications", auth=None).json() == {"accepting": True}
+
+
+def test_the_applicant_page_shows_apply_only_while_some_property_is_open() -> None:
+    """The user, 2026-09-30: no Apply button when no property is accepting
+    applications - a simple statement instead."""
+    page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
+    assert '<button type="button" id="choose-apply" hidden>Apply</button>' in page
+    assert '<p class="none-open" id="none-open" hidden>No apartments are available at this time.</p>' in page
+    assert 'document.getElementById("choose-apply").hidden = !accepting;' in page
+    sql = MIGRATION.read_text(encoding="utf-8")
+    assert "grant execute on function public.accepting_applications() to anon, authenticated;" in sql

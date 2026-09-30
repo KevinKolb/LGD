@@ -21,6 +21,8 @@
     /* localStorage unavailable (e.g. private browsing) - default colors. */
   }
 </script>
+<!-- The two main colors an admin chose, if any (shared/theme.js). -->
+<script src="../shared/theme.js"></script>
 <link rel="icon" href="../favicon.ico?v=2" sizes="any">
 <link rel="icon" href="../shared/icons/house.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
@@ -148,6 +150,8 @@
   .msg.error { color: var(--danger); }
   .msg.ok { color: var(--ok); }
   .signin-hint { margin: 14px 0 0; }
+  .none-open { margin: 0; padding: 14px 16px; text-align: center; font-size: 16px; font-weight: 600;
+               border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
   /* The page opens on two buttons only, one above the other. */
   .choices { display: flex; flex-direction: column; gap: 14px; padding: 28px 22px; }
   .choices button { width: 100%; padding: 16px; font-size: 16px; }
@@ -199,7 +203,11 @@
        "Coming soon". Each button opens its own popup (the user,
        2026-09-29), over the two buttons. -->
   <section class="choices" id="choices">
-    <button type="button" id="choose-apply">Apply</button>
+    <!-- Apply only while some property is accepting applications (the
+         user, 2026-09-30); a plain statement in its place otherwise. It
+         starts hidden, so it never shows and then vanishes. -->
+    <button type="button" id="choose-apply" hidden>Apply</button>
+    <p class="none-open" id="none-open" hidden>No apartments are available at this time.</p>
     <button type="button" class="secondary" id="choose-status">Check application status</button>
   </section>
 
@@ -288,6 +296,29 @@
     stepDetails.hidden = true;
     stepEmail.hidden = false;
   }
+
+  // Is any property accepting applications? The FastAPI app answers at
+  // /api/accepting-applications when it served this page; on GitHub Pages
+  // Supabase's accepting_applications (migration 004) does, signed out.
+  // If neither answers, Apply shows: the signup still checks the email is
+  // on file, so nobody gets further than they should.
+  async function acceptingApplications() {
+    try {
+      const response = await fetch(auth.root + "api/accepting-applications", { cache: "no-store" });
+      if (response.ok && (response.headers.get("content-type") || "").includes("json")) {
+        return (await response.json()).accepting;
+      }
+    } catch (error) {
+      /* No FastAPI app here - the normal case on GitHub Pages. */
+    }
+    return auth.acceptingApplications();
+  }
+  acceptingApplications()
+    .catch(() => true)
+    .then((accepting) => {
+      document.getElementById("choose-apply").hidden = !accepting;
+      document.getElementById("none-open").hidden = Boolean(accepting);
+    });
 
   document.getElementById("choose-apply").addEventListener("click", () => {
     applyPopup.showModal();

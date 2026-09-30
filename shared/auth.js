@@ -196,6 +196,15 @@
   }
 
   /**
+   * Whether any property is accepting applications - yes or no, asked
+   * signed out (supabase/migrations/004's accepting_applications). The
+   * applicant page shows its Apply button only while it is.
+   */
+  async function acceptingApplications() {
+    return (await request("/rest/v1/rpc/accepting_applications", { body: {} })) === true;
+  }
+
+  /**
    * Create a login - only for an address already on file; anyone else is
    * stopped here with NOT_ON_FILE, before Supabase sends any email. (001's
    * trigger holds the same line for a signup sent any other way.)
@@ -443,6 +452,7 @@
     updatePassword,
     profile,
     emailOnFile,
+    acceptingApplications,
     NOT_ON_FILE,
     rpc,
     consumeLinkFromUrl,

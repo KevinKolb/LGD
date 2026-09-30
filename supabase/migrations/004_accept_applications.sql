@@ -122,4 +122,24 @@ $fn$;
 revoke all on function public.set_open_apartments(json) from public, anon;
 grant execute on function public.set_open_apartments(json) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- accepting_applications - anyone, signed in or not
+-- ---------------------------------------------------------------------------
+--
+-- The applicant page shows its Apply button only while some property is
+-- accepting applications (the user, 2026-09-30), and a statement instead
+-- otherwise - asked before anyone has signed in. It answers yes or no and
+-- nothing more: not which apartments, nor whose.
+create or replace function public.accepting_applications()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $fn$
+  select exists (select 1 from public.open_apartments)
+$fn$;
+revoke all on function public.accepting_applications() from public;
+grant execute on function public.accepting_applications() to anon, authenticated;
+
 notify pgrst, 'reload schema';

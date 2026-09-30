@@ -138,6 +138,16 @@ CREATE TABLE IF NOT EXISTS open_apartments (
     opened_at   TEXT NOT NULL,
     PRIMARY KEY (manager_id, address, unit)
 );
+
+-- Site-wide settings an admin chooses: so far the two main colors,
+-- 'accent' and 'accent2' as "#rrggbb" (the user, 2026-09-30). Supabase
+-- gets the same table from supabase/migrations/005.
+CREATE TABLE IF NOT EXISTS site_settings (
+    key         TEXT PRIMARY KEY,
+    value       TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    updated_by  TEXT
+);
 """
 
 APPLICATION_COLUMNS = [
@@ -767,6 +777,39 @@ async def list_residents(db_path: str, *, manager_id: str | None) -> list[dict[s
     return await _rows(db_path, query, *args)
 
 
+COLOR_PATTERN = re.compile(r"^#[0-9a-f]{6}$")
+
+
+class SiteColorsError(ValueError):
+    """Why the colors could not be saved - the wording of set_site_colors
+    in supabase/migrations/005."""
+
+
+async def get_site_colors(db_path: str) -> dict[str, str | None]:
+    """The two main colors an admin chose, or None for each page's own."""
+    rows = await _rows(db_path, "SELECT key, value FROM site_settings WHERE key IN ('accent', 'accent2')")
+    values = {row["key"]: row["value"] for row in rows}
+    return {"accent": values.get("accent"), "accent2": values.get("accent2")}
+
+
+async def set_site_colors(db_path: str, *, accent: str | None, accent2: str | None,
+                          person_id: str | None) -> dict[str, str | None]:
+    """Save both colors, or with both empty go back to each page's own."""
+    accent = (accent or "").strip().lower()
+    accent2 = (accent2 or "").strip().lower()
+    if not accent and not accent2:
+        await _write(db_path, "DELETE FROM site_settings WHERE key IN ('accent', 'accent2')")
+        return await get_site_colors(db_path)
+    if not (COLOR_PATTERN.match(accent) and COLOR_PATTERN.match(accent2)):
+        raise SiteColorsError("Each color needs to look like #1f5d4c.")
+    for key, value in (("accent", accent), ("accent2", accent2)):
+        await _write(db_path, "DELETE FROM site_settings WHERE key = ?", key)
+        await _write(db_path,
+                     "INSERT INTO site_settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)",
+                     key, value, _now(), person_id)
+    return await get_site_colors(db_path)
+
+
 class OpenApartmentsError(ValueError):
     """Why the list of apartments accepting applications could not be
     saved - worded for the manager page, as in supabase/migrations/004."""
@@ -781,6 +824,12 @@ async def list_open_apartments(db_path: str, *, manager_id: str | None) -> list[
         "SELECT address, unit, opened_at FROM open_apartments WHERE manager_id = ? "
         "ORDER BY address, unit",
         manager_id)
+
+
+async def accepting_applications(db_path: str) -> bool:
+    """Whether any property, any company, is accepting applications - the
+    applicant page's Apply button (accepting_applications in migration 004)."""
+    return bool(await _rows(db_path, "SELECT 1 FROM open_apartments LIMIT 1"))
 
 
 async def set_open_apartments(db_path: str, *, manager_id: str | None,

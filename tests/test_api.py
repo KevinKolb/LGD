@@ -119,7 +119,7 @@ def test_applicant_page_is_public_with_no_login(client) -> None:
     is kept, unpublished, in _saved/applicant_form.html."""
     response = client.get("/applicant/", auth=None)
     assert response.status_code == 200
-    assert 'id="choose-apply">Apply</button>' in response.text
+    assert 'id="choose-apply" hidden>Apply</button>' in response.text
     assert "application-form" not in response.text
 
 
