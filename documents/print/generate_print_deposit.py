@@ -150,9 +150,9 @@ def render_list(block: str) -> tuple[str, list[int]]:
 # (see QUESTIONS in the lease generator): "Received from ___ on ___ ___
 # dollars $___ As Security Deposit for ___", then the holding deposit's
 # "sum of $___". The premises has its own id.
-DEPOSIT_FILLS = ("lessee", "signed-date", "deposit-words", "deposit", None, "holding")
+DEPOSIT_FILLS = ("lessee", "received-date", "deposit-words", "deposit", None, "holding")
 # The popup questions this document asks.
-QUESTIONS = ("lessee", "deposit", "holding", "signed")
+QUESTIONS = ("lessee", "deposit", "holding", "received")
 
 
 def render_signatures(labels: list[str]) -> str:

@@ -413,7 +413,7 @@
 <main class="sheet">
 <h1 class="company">Lower Garden District Properties, Inc.</h1>
 <p class="subtitle">SECURITY DEPOSIT AGREEMENT</p>
-<p class="fill">Received from <span data-fill="lessee" class="blank medium"></span> on <span data-fill="signed-date" class="blank word"></span></p>
+<p class="fill">Received from <span data-fill="lessee" class="blank medium"></span> on <span data-fill="received-date" class="blank word"></span></p>
 <p class="fill"><span data-fill="deposit-words" class="blank medium"></span> dollars $<span data-fill="deposit" class="blank word"></span></p>
 <p class="fill">As Security Deposit for <span class="blank medium" id="premises"></span></p>
 <div class="execution-block">
@@ -517,8 +517,8 @@
       <input type="text" id="q-holding" data-q="holding" data-money inputmode="decimal" value="$">
     </div>
     <div class="question">
-      <label for="q-signed">Signing date <span class="optional">(optional)</span></label>
-      <span class="date-row"><input type="date" id="q-signed" data-q="signed"><span class="today"><input type="checkbox" class="switch" id="q-signed-today" data-today-for="q-signed"><label for="q-signed-today">Today</label></span></span>
+      <label for="q-received">Deposit received date <span class="optional">(optional)</span></label>
+      <span class="date-row"><input type="date" id="q-received" data-q="received"><span class="today"><input type="checkbox" class="switch" id="q-received-today" data-today-for="q-received"><label for="q-received-today">Today</label></span></span>
     </div>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
     <div class="picker-actions">
@@ -1006,7 +1006,12 @@
       values["signed-day"] = signedParts.day;
       values["signed-month"] = signedParts.month;
       values["signed-year"] = signedParts.year;
-      values["signed-date"] = signedParts.month + " " + signed.getDate() + ", " + signed.getFullYear();
+    }
+    // Each document has its own date (the user, 2026-09-30): the lease is
+    // signed on one day, the deposit may be received on another.
+    var received = parseDate(answer("received"));
+    if (received) {
+      values["received-date"] = dateParts(received).month + " " + received.getDate() + ", " + received.getFullYear();
     }
     return values;
   }

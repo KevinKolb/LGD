@@ -137,10 +137,19 @@ def test_the_page_script_parses(real_output, tmp_path):
 
 
 def test_the_deposit_blanks_are_tagged_with_what_fills_them(gen, real_output):
-    """Received from (lessees) on (signing date) (amount in words) dollars
+    """Received from (lessees) on (the date received) (amount in words) dollars
     $(amount) ... for (premises); then the holding deposit."""
     tags = re.findall(r'<span (?:data-fill="([\w-]+)" )?class="blank', real_output)
     assert tuple(tag or None for tag in tags) == gen.DEPOSIT_FILLS
+
+
+def test_the_deposit_has_its_own_date(gen, real_output):
+    """The user, 2026-09-30: a date for each document - the deposit form asks
+    when it was received, not the lease's signing date."""
+    assert "received" in gen.QUESTIONS and "signed" not in gen.QUESTIONS
+    assert '<input type="date" id="q-received" data-q="received">' in real_output
+    assert '<input type="checkbox" class="switch" id="q-received-today" data-today-for="q-received">' in real_output
+    assert 'values["received-date"]' in real_output
 
 
 def test_every_lessee_signature_has_an_email_line_beside_it(real_output):

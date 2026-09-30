@@ -1023,7 +1023,12 @@ __PROPERTIES_JSON__
       values["signed-day"] = signedParts.day;
       values["signed-month"] = signedParts.month;
       values["signed-year"] = signedParts.year;
-      values["signed-date"] = signedParts.month + " " + signed.getDate() + ", " + signed.getFullYear();
+    }
+    // Each document has its own date (the user, 2026-09-30): the lease is
+    // signed on one day, the deposit may be received on another.
+    var received = parseDate(answer("received"));
+    if (received) {
+      values["received-date"] = dateParts(received).month + " " + received.getDate() + ", " + received.getFullYear();
     }
     return values;
   }
@@ -1125,8 +1130,9 @@ __PROPERTIES_JSON__
 # the page; some keys are worked out from an answer rather than asked (see
 # fillValues in the script): lessor and signed-city are fixed, net-rent is
 # the rent less the $50 early-payment deduction, deposit-words is the
-# deposit written out, start-*/end-*/signed-* are a date's parts, and the
-# lease's end month is the start date plus the term, less a day.
+# deposit written out, start-*/end-*/signed-* are a date's parts,
+# received-date is the deposit's own date written out, and the lease's end
+# month is the start date plus the term, less a day.
 QUESTIONS = {
     "lessee": ("Lessee name(s)", "text"),
     "occupants": ("Occupants", "text"),
@@ -1135,7 +1141,8 @@ QUESTIONS = {
     "rent": ("Monthly rental rate", "money"),
     "deposit": ("Security deposit", "money"),
     "holding": ("Holding deposit", "money"),
-    "signed": ("Signing date", "date"),
+    "signed": ("Lease signing date", "date"),
+    "received": ("Deposit received date", "date"),
 }
 # A box that starts as another's answer and keeps following it until
 # someone types their own: the deposit is a month's rent, the occupants

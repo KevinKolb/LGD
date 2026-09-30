@@ -533,7 +533,7 @@
       <input type="text" id="q-deposit" data-q="deposit" data-money inputmode="decimal" value="$" data-follows="q-rent">
     </div>
     <div class="question">
-      <label for="q-signed">Signing date <span class="optional">(optional)</span></label>
+      <label for="q-signed">Lease signing date <span class="optional">(optional)</span></label>
       <span class="date-row"><input type="date" id="q-signed" data-q="signed"><span class="today"><input type="checkbox" class="switch" id="q-signed-today" data-today-for="q-signed"><label for="q-signed-today">Today</label></span></span>
     </div>
     <ul class="picker-summary" id="picker-summary" aria-live="polite"></ul>
@@ -1022,7 +1022,12 @@
       values["signed-day"] = signedParts.day;
       values["signed-month"] = signedParts.month;
       values["signed-year"] = signedParts.year;
-      values["signed-date"] = signedParts.month + " " + signed.getDate() + ", " + signed.getFullYear();
+    }
+    // Each document has its own date (the user, 2026-09-30): the lease is
+    // signed on one day, the deposit may be received on another.
+    var received = parseDate(answer("received"));
+    if (received) {
+      values["received-date"] = dateParts(received).month + " " + received.getDate() + ", " + received.getFullYear();
     }
     return values;
   }

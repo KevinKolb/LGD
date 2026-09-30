@@ -63,12 +63,15 @@ def test_the_popup_asks_each_question_once(real_output):
     assert popup.count('id="picker-unit"') == 1
     asked = re.findall(r'<div class="question" data-for-docs="([^"]+)">\s*<label for="q-(\w+)"', popup)
     assert [key for _, key in asked] == ["lessee", "occupants", "start", "term", "rent", "deposit",
-                                         "holding", "signed"]
+                                         "holding", "signed", "received"]
     docs = {key: set(for_docs.split()) for for_docs, key in asked}
     assert docs["deposit"] == {"application", "lease", "deposit"}
     assert docs["holding"] == {"application", "deposit"}
     assert docs["lessee"] == {"lease", "deposit"}
     assert docs["start"] == {"lease"}
+    # Each document its own date (the user, 2026-09-30).
+    assert docs["signed"] == {"lease"}
+    assert docs["received"] == {"deposit"}
     assert "Which documents, and for which apartment?" in popup
 
 def test_the_popup_offers_each_document_as_a_checkbox(real_output):

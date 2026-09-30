@@ -1041,7 +1041,12 @@
       values["signed-day"] = signedParts.day;
       values["signed-month"] = signedParts.month;
       values["signed-year"] = signedParts.year;
-      values["signed-date"] = signedParts.month + " " + signed.getDate() + ", " + signed.getFullYear();
+    }
+    // Each document has its own date (the user, 2026-09-30): the lease is
+    // signed on one day, the deposit may be received on another.
+    var received = parseDate(answer("received"));
+    if (received) {
+      values["received-date"] = dateParts(received).month + " " + received.getDate() + ", " + received.getFullYear();
     }
     return values;
   }
