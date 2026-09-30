@@ -96,3 +96,12 @@ def test_each_accepting_apartment_is_a_tag_with_an_x_to_stop_it() -> None:
     assert 'stop.setAttribute("aria-label", `Stop accepting applications for ${name}`);' in page
     assert "stop.addEventListener(\"click\", () => stopAccepting(apartment, stop));" in page
     assert "open = await saveOpen(rest);" in page
+
+
+def test_the_manager_page_has_reports_coming_soon() -> None:
+    """The user, 2026-09-30: "add a reports coming soon to managers page"."""
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    section = page[page.index('<section id="reports">'):]
+    section = section[:section.index("</section>")]
+    assert '<span class="step" aria-hidden="true">6</span>' in section
+    assert "<h2>Reports</h2>" in section and "Coming soon." in section

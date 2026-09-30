@@ -382,7 +382,8 @@ prints exactly as its own page does (checked at every address), so the
 single-document pages are no longer linked from the manager page; they
 stay as files, and `app/main.py` still serves the lease one. The steps
 are now 1 Accept Applications, 2 Applicants, 3 Paper Documents Generator,
-4 Monthly Rent Register, 5 Legal. **Regenerate it after editing any of the three masters or
+4 Monthly Rent Register, 5 Legal, 6 Reports (only "Coming soon." for now,
+the user, 2026-09-30). **Regenerate it after editing any of the three masters or
 `properties.json`**, alongside that document's own page. The addendum is
 left out: no longer in use, and it names a fixed address.
 
