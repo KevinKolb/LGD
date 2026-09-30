@@ -168,9 +168,12 @@
      under the paper either. -->
 <div class="paper-buttons">
   <a href="index.html">Back</a>
+  <a href="#" id="save-register" data-save-pdf hidden>Save PDF</a>
   <a href="#" id="print-register" hidden>Print</a>
 </div>
 <script src="../shared/auth.js"></script>
+<!-- Save PDF beside Print (the user, 2026-09-30). -->
+<script src="../shared/save-pdf.js"></script>
 <script>
 "use strict";
 (function () {
@@ -399,6 +402,7 @@
       status.hidden = true;
       table.hidden = false;
       printLink.hidden = false;
+      document.getElementById("save-register").hidden = false;
     } catch (error) {
       fail(error.message || "The rent register could not be loaded.");
     }

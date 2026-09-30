@@ -189,7 +189,7 @@ def test_every_site_page_gets_a_home_button():
         assert '<script src="../shared/footer.js"></script>' not in html, page
         buttons = html[html.index('<div class="paper-buttons">'):]
         buttons = buttons[:buttons.index("</div>")]
-        assert re.findall(r">([A-Za-z]+)</a>", buttons) == ["Back", "Print"], page
+        assert re.findall(r">([A-Za-z ]+)</a>", buttons) == ["Back", "Save PDF", "Print"], page
 
 def test_the_footer_lists_applicant_first_and_no_sign_in():
     """Applicant, Resident, Manager, Admin; no Sign in link - pages that

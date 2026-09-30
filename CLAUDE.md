@@ -266,6 +266,20 @@ popup closes, so it can never print a lease before its apartment is
 picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
 `render_head` opens, which keeps the popup and buttons out of the zoom.
 
+**Save PDF sits beside every Print button** (the user, 2026-09-30) - the
+documents, the two legal pages and the rent register. It is
+`shared/save-pdf.js`: a short popup says where "Save as PDF" is on this
+device (iPhone: Share -> Save to Files; Android: the printer name -> Save
+as PDF; a computer: Destination -> Save as PDF), and Continue opens the
+same print window as Print. So the PDF is exactly the printed pages -
+font, page counters and breaks - which a script library drawing its own
+PDF would not be; the page's title (already "Residential Lease - 1534
+Camp St." and the like) is the suggested file name. The documents load
+nothing, so `DOC_BUTTONS` inlines the file when generating (it is plain
+ES5 with no backslashes for that reason, and uses no font of its own,
+since every font in a document starts with Gelasio); **regenerate the
+documents after editing it**. It shows and hides with Print.
+
 **Every site page has a Home link** (the user, 2026-09-29). `shared/footer.js`,
 which every site page but the home page loads (the home page has no
 footer - its links only repeated the card's buttons, the user, same day),

@@ -57,6 +57,7 @@ AUTO_PRINT = """
   // with #view to read on screen. No picker here, so the floating Print
   // button (lease.DOC_BUTTONS) shows straight away.
   document.getElementById("print-button").hidden = false;
+  document.getElementById("save-button").hidden = false;
   window.addEventListener("load", function () {
     if (window.location.hash === "#view") { return; }
     var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();

@@ -617,13 +617,20 @@ LEASE_FOOTER_NOTE = """
 # Back returns to the page that opened this one - everything opens in the
 # same tab - or, opened directly, to the manager page. Print waits for the
 # embedded font, for the same reason the auto-print does; documents with a
-# popup show it once the popup closes.
+# popup show it once the popup closes. Save PDF (the user, 2026-09-30) is
+# shared/save-pdf.js, inlined since a document loads nothing: it says where
+# "Save as PDF" is on this device, then opens the same print window, so the
+# PDF is exactly the printed pages. It shows and hides with Print.
 DOC_BUTTONS = """
 </main>
 <div class="float-buttons">
   <a href="../../manager/" id="back-button">Back</a>
+  <button type="button" id="save-button" data-save-pdf hidden>Save PDF</button>
   <button type="button" id="print-button" hidden>Print</button>
 </div>
+<script>
+__SAVE_PDF__
+</script>
 <script>
   document.getElementById("print-button").addEventListener("click", function () {
     var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
@@ -650,6 +657,8 @@ DOC_BUTTONS = """
   fitSheets();
   window.addEventListener("resize", fitSheets);
 </script>"""
+SAVE_PDF_FILE = REPO_ROOT / "shared" / "save-pdf.js"
+DOC_BUTTONS = DOC_BUTTONS.replace("__SAVE_PDF__", SAVE_PDF_FILE.read_text(encoding="utf-8").strip())
 
 PICKER_FOOTER = """
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
@@ -906,6 +915,7 @@ __PROPERTIES_JSON__
     picker.hidden = true;
     floatingBack.hidden = false;
     document.getElementById("print-button").hidden = false;
+    document.getElementById("save-button").hidden = false;
     if (window.location.hash === "#view") { return; }
     pageLoaded.then(function () {
       var fontsReady = (document.fonts && document.fonts.ready)

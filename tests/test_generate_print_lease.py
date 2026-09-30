@@ -460,11 +460,14 @@ def test_printing_waits_for_the_apartment_to_be_picked(real_output):
     assert "window.print()" in script[:script.index("properties.forEach")]
     # The only other call is the floating Print button's, and that button
     # starts hidden and is shown only by finish() - so it too waits.
-    assert real_output.count("window.print()") == 2
+    # The third is Save PDF's (shared/save-pdf.js), which shows with Print.
+    assert real_output.count("window.print()") == 3
     assert '<button type="button" id="print-button" hidden>Print</button>' in real_output
+    assert '<button type="button" id="save-button" data-save-pdf hidden>Save PDF</button>' in real_output
     finish = script[:script.index("properties.forEach")]
     assert 'getElementById("print-button").hidden = false' in finish
     assert real_output.count('getElementById("print-button").hidden = false') == 1
+    assert 'getElementById("save-button").hidden = false' in finish
 
 
 def test_back_and_print_float_on_screen_and_never_print(real_output):
@@ -599,7 +602,7 @@ def test_documents_float_back_and_print_but_no_home(real_output):
     2026-09-29) - Back returns to the page that opened it."""
     buttons = real_output[real_output.index('<div class="float-buttons">'):]
     buttons = buttons[:buttons.index("</div>")]
-    assert buttons.index('id="back-button"') < buttons.index('id="print-button"')
+    assert buttons.index('id="back-button"') < buttons.index('id="save-button"') < buttons.index('id="print-button"')
     assert "Home" not in buttons
     assert 'id="picker-home"' not in real_output
     assert 'id="home-button"' not in real_output
@@ -672,3 +675,11 @@ def test_every_signature_has_a_date_line_beside_it(real_output):
     row = real_output[real_output.index("  .sig-row {"):]
     assert "margin-top: 0.3in;" in row[:row.index("}")]
     assert ".sig-row .sig-line { flex: 1 1 0; max-width: none; margin-top: 0; }" in real_output
+
+
+def test_save_pdf_is_the_shared_script_inlined(real_output):
+    """Save PDF beside Print (the user, 2026-09-30): shared/save-pdf.js,
+    inlined, since a document loads nothing."""
+    shared = (Path(__file__).resolve().parent.parent / "shared" / "save-pdf.js").read_text(encoding="utf-8").strip()
+    assert shared in real_output
+    assert "\\" not in shared  # it is inlined through a Python string

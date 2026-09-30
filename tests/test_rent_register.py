@@ -205,7 +205,7 @@ def test_the_register_is_a_sheet_of_paper_with_back_and_print_only() -> None:
     assert "width: 8.5in;" in page and "min-height: 11in;" in page and "padding: 0.5in;" in page
     buttons = page[page.index('<div class="paper-buttons">'):]
     buttons = buttons[:buttons.index("</div>")]
-    assert re.findall(r">([A-Za-z ]+)</a>", buttons) == ["Back", "Print"]
+    assert re.findall(r">([A-Za-z ]+)</a>", buttons) == ["Back", "Save PDF", "Print"]
     assert "<script src=\"../shared/footer.js\"></script>" not in page  # which would add Home
     assert "change-month" not in page
     assert 'const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];' in page
