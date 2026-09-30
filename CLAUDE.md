@@ -595,6 +595,30 @@ not have is still listed, at the bottom, not dropped. Data comes from
 FastAPI app; both let in only a manager or admin, scoped to their company
 (an admin sees all).
 
+**By month** (the user, 2026-09-30: "choose a month before opening
+register ... choose year and month ... mind lease dates if exist when
+showing who resident is"). The register opens on a popup asking the month
+and year (it starts on `?month=YYYY-MM` if the address has one, else this
+month); the heading then reads "Month of September 2026", and **Change
+month** floats beside Back and Print. `supabase/migrations/006` adds:
+
+- `people.lease_start` / `lease_end` ("YYYY-MM-DD", either may be empty).
+  `list_residents(month)` (it replaces 003's no-argument one) leaves out a
+  resident whose recorded lease covers no day of that month; one with no
+  dates always shows. **Nothing sets lease dates yet** - SQL, like
+  placing a resident.
+- `rent_payments` (`manager_id`, `address`, `unit`, `month`,
+  `received_on`, ...), one row per apartment per month, locked to the
+  browser; `list_rent_payments(month)` and `set_rent_payment(month,
+  address, unit, received_on)` (an empty date takes it off), managers and
+  admins, own company only. The FastAPI app has `GET /api/residents?month=`,
+  `GET`/`PUT /api/rent-payments`.
+
+On screen each Date received is a date box, saved the moment it changes
+(its border turns green, or red with the old date put back on failure).
+In print the box is hidden and the recorded date shows as text, or the
+cell stays blank for the pen - still one letter-size sheet.
+
 **Putting a resident in a unit has no screen yet** - it is a row in
 `properties` and the person's `property_id`, done in the Supabase SQL
 editor. The first was Kevin Kolb (the user), made admin, manager and

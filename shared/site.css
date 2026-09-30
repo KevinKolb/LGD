@@ -24,6 +24,12 @@ body {
 }
 
 footer {
+  /* Border-box, so its padding sits inside the 100% rather than past it:
+     a page without its own border-box rule for every element (the rent
+     register) otherwise ran 48px wider than a phone, which zoomed the
+     whole page out and pushed its floating buttons below the screen. */
+  box-sizing: border-box;
+  flex-wrap: wrap;
   margin-top: auto;
   width: 100%;
   max-width: 900px;

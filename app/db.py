@@ -17,11 +17,12 @@ what tests use, and what running this on a laptop always used.
 from __future__ import annotations
 
 import asyncio
+import calendar
 import json
 import re
 import secrets
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -107,7 +108,11 @@ CREATE TABLE IF NOT EXISTS people (
     -- writes it ("1558 Camp St.", "A"; unit empty for a single house). Not
     -- property_id, which is where a resident lives.
     apply_address TEXT,
-    apply_unit   TEXT
+    apply_unit   TEXT,
+    -- A resident's lease, when known ("YYYY-MM-DD"; either may be empty).
+    -- The rent register shows a resident only in months it covers.
+    lease_start  TEXT,
+    lease_end    TEXT
 );
 CREATE INDEX IF NOT EXISTS people_property ON people (property_id);
 CREATE INDEX IF NOT EXISTS people_manager ON people (manager_id);
@@ -139,6 +144,20 @@ CREATE TABLE IF NOT EXISTS open_apartments (
     PRIMARY KEY (manager_id, address, unit)
 );
 
+-- The date each apartment's rent for a month was received (the user,
+-- 2026-09-30), one row per apartment per month, per company. Supabase gets
+-- the same table from supabase/migrations/006.
+CREATE TABLE IF NOT EXISTS rent_payments (
+    manager_id   TEXT NOT NULL,
+    address      TEXT NOT NULL,
+    unit         TEXT NOT NULL DEFAULT '',
+    month        TEXT NOT NULL,
+    received_on  TEXT NOT NULL,
+    recorded_at  TEXT NOT NULL,
+    recorded_by  TEXT,
+    PRIMARY KEY (manager_id, address, unit, month)
+);
+
 -- Site-wide settings an admin chooses: so far the two main colors,
 -- 'accent' and 'accent2' as "#rrggbb" (the user, 2026-09-30). Supabase
 -- gets the same table from supabase/migrations/005.
@@ -159,7 +178,7 @@ PERSON_COLUMNS = [
     "id", "full_name", "first_name", "last_name", "email", "phone",
     "property_id", "manager_id", "created_at",
     "is_applicant", "is_resident", "is_manager", "is_admin", "archived_at",
-    "apply_address", "apply_unit",
+    "apply_address", "apply_unit", "lease_start", "lease_end",
 ]
 ROLES = ("applicant", "resident", "manager", "admin")
 NEWS_COLUMNS = ["id", "manager_id", "headline", "article", "created_by", "created_at"]
@@ -221,6 +240,9 @@ ADDED_COLUMNS = [
     # The apartment an applicant is applying for (2026-09-29).
     ("people", "apply_address", "TEXT"),
     ("people", "apply_unit", "TEXT"),
+    # A resident's lease dates, for the rent register (2026-09-30).
+    ("people", "lease_start", "TEXT"),
+    ("people", "lease_end", "TEXT"),
     # The live applications table was created before the application form
     # grew these three, and CREATE TABLE IF NOT EXISTS will not add them.
     # Found on 2026-09-08 by comparing the deployed table against SCHEMA:
@@ -762,19 +784,88 @@ async def list_applicants(db_path: str, *, manager_id: str | None,
     return [applicant_view(row) for row in await _rows(db_path, query, *args)]
 
 
-async def list_residents(db_path: str, *, manager_id: str | None) -> list[dict[str, Any]]:
+MONTH_PATTERN = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
+DATE_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+
+
+class RentRegisterError(ValueError):
+    """Why the rent register could not do something - the wording of
+    supabase/migrations/006."""
+
+
+def month_bounds(month: str) -> tuple[str, str]:
+    """The first and last day of a "YYYY-MM" month, as "YYYY-MM-DD"."""
+    if not MONTH_PATTERN.match(month or ""):
+        raise RentRegisterError("Choose a month and a year.")
+    year, number = int(month[:4]), int(month[5:])
+    last = calendar.monthrange(year, number)[1]
+    return f"{month}-01", f"{month}-{last:02d}"
+
+
+async def list_residents(db_path: str, *, manager_id: str | None,
+                         month: str | None = None) -> list[dict[str, Any]]:
     """Residents with the unit they live in, for the monthly rent register:
-    one company's, or everyone's when `manager_id` is None (an admin). The
-    same fields as list_residents in supabase/migrations/003."""
+    one company's, or everyone's when `manager_id` is None (an admin). Given
+    a "YYYY-MM" month, a resident whose recorded lease does not cover any
+    day of it is left out; one with no lease dates always shows. The same
+    as list_residents in supabase/migrations/006."""
     query = ("SELECT p.id, p.full_name, p.email, p.phone, pr.address, "
-             "COALESCE(pr.apt, '') AS unit FROM people p "
+             "COALESCE(pr.apt, '') AS unit, p.lease_start, p.lease_end FROM people p "
              "JOIN properties pr ON pr.id = p.property_id WHERE p.is_resident = ?")
     args: list[Any] = [True]
     if manager_id is not None:
         query += " AND p.manager_id = ?"
         args.append(manager_id)
+    if month is not None:
+        first_day, last_day = month_bounds(month)
+        query += (" AND COALESCE(NULLIF(p.lease_start, ''), '0000-01-01') <= ?"
+                  " AND COALESCE(NULLIF(p.lease_end, ''), '9999-12-31') >= ?")
+        args += [last_day, first_day]
     query += " ORDER BY pr.address, pr.apt, p.full_name"
     return await _rows(db_path, query, *args)
+
+
+async def list_rent_payments(db_path: str, *, manager_id: str | None,
+                             month: str) -> list[dict[str, Any]]:
+    """The company's recorded dates for one month."""
+    month_bounds(month)
+    if manager_id is None:
+        return []
+    return await _rows(
+        db_path,
+        "SELECT address, unit, month, received_on FROM rent_payments "
+        "WHERE manager_id = ? AND month = ? ORDER BY address, unit",
+        manager_id, month)
+
+
+async def set_rent_payment(db_path: str, *, manager_id: str | None, month: str,
+                           address: str, unit: str, received_on: str,
+                           person_id: str | None) -> dict[str, Any]:
+    """Record the date an apartment's rent for a month was received; an
+    empty date takes it back off. The rules of set_rent_payment in 006."""
+    month_bounds(month)
+    if manager_id is None:
+        raise RentRegisterError("Your login is not filed under a company.")
+    address, unit, received_on = address.strip(), unit.strip(), (received_on or "").strip()
+    if not address or len(address) > 200 or len(unit) > 20:
+        raise RentRegisterError("That apartment does not look right.")
+    if received_on:
+        try:
+            if not DATE_PATTERN.match(received_on):
+                raise ValueError
+            date.fromisoformat(received_on)
+        except ValueError:
+            raise RentRegisterError("That date does not look right.")
+    await _write(db_path,
+                 "DELETE FROM rent_payments WHERE manager_id = ? AND address = ? AND unit = ? AND month = ?",
+                 manager_id, address, unit, month)
+    if not received_on:
+        return {"address": address, "unit": unit, "month": month, "received_on": None}
+    await _write(db_path,
+                 "INSERT INTO rent_payments (manager_id, address, unit, month, received_on, "
+                 "recorded_at, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 manager_id, address, unit, month, received_on, _now(), person_id)
+    return {"address": address, "unit": unit, "month": month, "received_on": received_on}
 
 
 COLOR_PATTERN = re.compile(r"^#[0-9a-f]{6}$")

@@ -48,7 +48,34 @@
   .company { font-size: 11pt; font-weight: 700; margin: 0; text-align: center; }
   h1 { font-size: 16pt; margin: 2px 0 10px; text-align: center; letter-spacing: .04em; }
   .month { text-align: center; margin: 0 0 14px; font-size: 11pt; }
-  .month .blank { display: inline-block; width: 2.4in; border-bottom: 1px solid var(--line); }
+  .month .blank { display: inline-block; min-width: 2.4in; border-bottom: 1px solid var(--line); font-weight: 700; }
+  /* Date received: a date box on screen, saved as soon as it is picked;
+     on paper the recorded date, or the blank cell to write one in. */
+  td.received { padding: 2px 4px; }
+  td.received input {
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 9.5pt;
+    padding: 2px 3px; border: 1px solid #c8c8c8; border-radius: 3px; background: #fff;
+  }
+  td.received.saving input { border-color: #999; }
+  td.received.saved input { border-color: var(--accent); }
+  td.received.failed input { border-color: #a4262c; background: #fdecea; }
+  td.received .on-paper { display: none; }
+  /* The month popup, before anything else. */
+  dialog.month-popup {
+    width: min(360px, calc(100vw - 32px)); border: 1px solid #ccc; border-radius: 10px;
+    padding: 20px 22px; box-shadow: 0 12px 40px rgba(0, 0, 0, .3); font-size: 11pt;
+  }
+  dialog.month-popup::backdrop { background: rgba(0, 0, 0, .45); }
+  dialog.month-popup h2 { margin: 0 0 12px; font-size: 14pt; }
+  dialog.month-popup .pickers { display: flex; gap: 10px; margin: 0 0 16px; }
+  dialog.month-popup label { display: flex; flex-direction: column; gap: 4px; flex: 1; font-size: 10pt; color: var(--muted); }
+  dialog.month-popup select { font: inherit; font-size: 16px; padding: 7px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; color: var(--ink); }
+  dialog.month-popup .buttons { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
+  dialog.month-popup button, dialog.month-popup a {
+    font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  }
+  dialog.month-popup a { background: #fff; color: var(--accent); }
   .status { color: var(--muted); text-align: center; }
   .status.error { color: #a4262c; }
   table { width: 100%; border-collapse: collapse; }
@@ -71,6 +98,8 @@
     body { padding: 0; font-size: 9.5pt; }
     th { background: none; }
     .status { display: none; }
+    td.received input { display: none; }
+    td.received .on-paper { display: block; }
     .register { zoom: 1 !important; }
   }
 </style>
@@ -79,7 +108,7 @@
 <div class="register">
   <p class="company">Lower Garden District Properties, Inc.</p>
   <h1>MONTHLY RENT REGISTER</h1>
-  <p class="month">Month of <span class="blank"></span></p>
+  <p class="month">Month of <span class="blank" id="month-name"></span></p>
   <p class="status" id="status" role="status">Loading…</p>
   <div>
     <table id="register" hidden>
@@ -92,8 +121,25 @@
     </table>
   </div>
 </div>
+<!-- The month and year come first (the user, 2026-09-30): the register is
+     for one month, which decides whose lease is shown and whose rent dates
+     are recorded. -->
+<dialog class="month-popup" id="month-dialog" aria-labelledby="month-dialog-title">
+  <form id="month-form">
+    <h2 id="month-dialog-title">Which month?</h2>
+    <div class="pickers">
+      <label>Month <select id="pick-month"></select></label>
+      <label>Year <select id="pick-year"></select></label>
+    </div>
+    <div class="buttons">
+      <a href="index.html">Back</a>
+      <button type="submit">Open register</button>
+    </div>
+  </form>
+</dialog>
 <div class="site-float">
   <a class="back-button" href="index.html">Back</a>
+  <a class="back-button" href="#" id="change-month" hidden>Change month</a>
   <a class="back-button" href="#" id="print-register" hidden>Print</a>
 </div>
 <script src="../shared/auth.js"></script>
@@ -103,10 +149,20 @@
   const status = document.getElementById("status");
   const table = document.getElementById("register");
   const printLink = document.getElementById("print-register");
+  const changeLink = document.getElementById("change-month");
+  const monthDialog = document.getElementById("month-dialog");
+  const pickMonth = document.getElementById("pick-month");
+  const pickYear = document.getElementById("pick-year");
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                  "August", "September", "October", "November", "December"];
+  let via = null;         // "api" or "supabase", once known
+  let properties = null;  // documents/properties.json, loaded once
+  let month = null;       // "YYYY-MM" on show
 
   function fail(text) {
     status.textContent = text;
     status.className = "status error";
+    status.hidden = false;
   }
 
   // Who is asking, and where the data comes from: the FastAPI app when it
@@ -127,13 +183,44 @@
     return "supabase";
   }
 
-  async function residents(via) {
-    if (via === "api") {
-      const response = await fetch("/api/residents");
-      if (!response.ok) throw new Error("The residents could not be loaded.");
-      return (await response.json()).residents;
+  async function api(path, options) {
+    const response = await fetch(path, options);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof payload.detail === "string" ? payload.detail : "That did not work.");
     }
-    return window.LGD.auth.rpc("list_residents", {});
+    return payload;
+  }
+
+  // Residents whose recorded lease covers the month (or who have no lease
+  // dates), and the rent dates recorded for it.
+  async function residents() {
+    if (via === "api") return (await api(`/api/residents?month=${month}`)).residents;
+    return window.LGD.auth.rpc("list_residents", { month });
+  }
+  async function payments() {
+    if (via === "api") return (await api(`/api/rent-payments?month=${month}`)).payments;
+    return window.LGD.auth.rpc("list_rent_payments", { month });
+  }
+  async function savePayment(address, unit, receivedOn) {
+    const body = { month, address, unit, received_on: receivedOn };
+    if (via === "api") {
+      return (await api("/api/rent-payments", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      })).payment;
+    }
+    return window.LGD.auth.rpc("set_rent_payment", body);
+  }
+
+  function monthName(value) {
+    return `${MONTHS[Number(value.slice(5)) - 1]} ${value.slice(0, 4)}`;
+  }
+
+  // "2026-09-03" reads "Sep 3, 2026" on paper.
+  function paperDate(value) {
+    if (!value) return "";
+    const [y, m, d] = value.split("-").map(Number);
+    return `${MONTHS[m - 1].slice(0, 3)} ${d}, ${y}`;
   }
 
   function cell(className, lines) {
@@ -148,11 +235,43 @@
     return td;
   }
 
+  // The date box for one apartment, saved the moment it changes; clearing
+  // it takes the date back off.
+  function receivedCell(address, unit, receivedOn) {
+    const td = cell("received", []);
+    const place = unit ? `${address}, Unit ${unit}` : address;
+    const input = document.createElement("input");
+    input.type = "date";
+    input.value = receivedOn || "";
+    input.setAttribute("aria-label", `Date rent received for ${place}`);
+    const onPaper = document.createElement("span");
+    onPaper.className = "on-paper";
+    onPaper.textContent = paperDate(receivedOn);
+    let saved = input.value;
+    input.addEventListener("change", async () => {
+      td.className = "received saving";
+      try {
+        const payment = await savePayment(address, unit, input.value);
+        saved = payment.received_on || "";
+        onPaper.textContent = paperDate(saved);
+        td.className = "received saved";
+      } catch (error) {
+        input.value = saved;
+        td.className = "received failed";
+        input.title = error.message;
+      }
+    });
+    td.append(input, onPaper);
+    return td;
+  }
+
   // One row per unit (a house with no units is one row), every tenant of
   // that unit in it, one under the other; a unit with nobody on file
   // leaves its tenant blank to write in.
-  function render(properties, people) {
+  function render(people, paid) {
+    table.querySelectorAll("tbody").forEach((body) => body.remove());
     const key = (address, unit) => `${address}|${unit || ""}`;
+    const dates = new Map(paid.map((p) => [key(p.address, p.unit), p.received_on]));
     const byUnit = new Map();
     for (const person of people) {
       const k = key(person.address, person.unit);
@@ -165,15 +284,16 @@
       body.className = "building";
       const units = property.units.length ? property.units : [""];
       for (const unit of units) {
-        const tenants = byUnit.get(key(property.address, unit)) || [];
-        placed.add(key(property.address, unit));
+        const k = key(property.address, unit);
+        const tenants = byUnit.get(k) || [];
+        placed.add(k);
         const row = document.createElement("tr");
         row.append(
           cell("apartment", [unit ? `${property.address}, Unit ${unit}` : property.address]),
           cell("", tenants.map((t) => t.full_name)),
           cell("email", tenants.map((t) => t.email)),
           cell("", tenants.map((t) => t.phone)),
-          cell("received", [])
+          receivedCell(property.address, unit, dates.get(k))
         );
         body.append(row);
       }
@@ -190,7 +310,8 @@
         row.append(
           cell("apartment", [person.unit ? `${person.address}, Unit ${person.unit}` : person.address]),
           cell("", [person.full_name]), cell("email", [person.email]),
-          cell("", [person.phone]), cell("received", [])
+          cell("", [person.phone]),
+          receivedCell(person.address, person.unit, dates.get(key(person.address, person.unit)))
         );
         body.append(row);
       }
@@ -207,23 +328,71 @@
   fitSheet();
   window.addEventListener("resize", fitSheet);
 
-  printLink.addEventListener("click", async (event) => {
+  printLink.addEventListener("click", (event) => {
     event.preventDefault();
     window.print();
   });
 
-  (async function () {
+  // The popup: every month, and a few years either side of this one.
+  // It opens on the month in the address (?month=2026-09), else this one.
+  const today = new Date();
+  MONTHS.forEach((name, index) => pickMonth.add(new Option(name, String(index + 1).padStart(2, "0"))));
+  for (let year = today.getFullYear() - 3; year <= today.getFullYear() + 1; year += 1) {
+    pickYear.add(new Option(String(year), String(year)));
+  }
+  function askMonth() {
+    const wanted = new URLSearchParams(window.location.search).get("month") || month
+      || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    if (/^[0-9]{4}-[0-9]{2}$/.test(wanted)) {
+      pickMonth.value = wanted.slice(5);
+      if (![...pickYear.options].some((o) => o.value === wanted.slice(0, 4))) {
+        pickYear.add(new Option(wanted.slice(0, 4), wanted.slice(0, 4)));
+      }
+      pickYear.value = wanted.slice(0, 4);
+    }
+    monthDialog.showModal();
+  }
+  changeLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    askMonth();
+  });
+
+  async function open(chosen) {
+    month = chosen;
+    const url = new URL(window.location.href);
+    url.searchParams.set("month", month);
+    history.replaceState(null, "", url);
+    document.getElementById("month-name").textContent = monthName(month);
+    document.title = `Rent Register - ${monthName(month)}`;
+    status.textContent = "Loading…";
+    status.className = "status";
+    status.hidden = false;
     try {
-      const via = await backend();
-      if (!via) return;
-      const [propertiesResponse, people] = await Promise.all([
-        fetch("../documents/properties.json", { cache: "no-store" }), residents(via),
-      ]);
-      const properties = (await propertiesResponse.json()).properties;
-      render(properties, people);
+      const [people, paid] = await Promise.all([residents(), payments()]);
+      render(people, paid);
       status.hidden = true;
       table.hidden = false;
       printLink.hidden = false;
+      changeLink.hidden = false;
+    } catch (error) {
+      fail(error.message || "The rent register could not be loaded.");
+    }
+  }
+
+  document.getElementById("month-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    monthDialog.close();
+    open(`${pickYear.value}-${pickMonth.value}`);
+  });
+
+  (async function () {
+    try {
+      via = await backend();
+      if (!via) return;
+      const response = await fetch("../documents/properties.json", { cache: "no-store" });
+      properties = (await response.json()).properties;
+      status.hidden = true;
+      askMonth();
     } catch (error) {
       fail(error.message || "The rent register could not be loaded.");
     }

@@ -506,13 +506,53 @@ async def api_list_applicants(archived: bool = False,
 
 
 @app.get("/api/residents")
-async def api_list_residents(user: User = Depends(current_user)) -> dict[str, Any]:
+async def api_list_residents(month: str | None = None,
+                             user: User = Depends(current_user)) -> dict[str, Any]:
     """Residents and their units, for the manager page's rent register -
-    this company's, or every company's for an admin."""
+    this company's, or every company's for an admin. With ?month=YYYY-MM,
+    only residents whose recorded lease covers that month."""
     require_dashboard_role(user)
     settings = get_settings()
     manager_id = None if user.is_admin else user.manager_id
-    return {"residents": await db.list_residents(settings.db_path, manager_id=manager_id)}
+    try:
+        residents = await db.list_residents(settings.db_path, manager_id=manager_id, month=month)
+    except db.RentRegisterError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"residents": residents}
+
+
+class RentPaymentRequest(BaseModel):
+    month: str = Field(max_length=7)
+    address: str = Field(max_length=200)
+    unit: str = Field(default="", max_length=20)
+    received_on: str = Field(default="", max_length=10)
+
+
+@app.get("/api/rent-payments")
+async def api_list_rent_payments(month: str, user: User = Depends(current_user)) -> dict[str, Any]:
+    """The dates this company's rent was received in a month."""
+    require_dashboard_role(user)
+    try:
+        payments = await db.list_rent_payments(get_settings().db_path, manager_id=user.manager_id, month=month)
+    except db.RentRegisterError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"payments": payments}
+
+
+@app.put("/api/rent-payments")
+async def api_set_rent_payment(payload: RentPaymentRequest,
+                               user: User = Depends(current_user)) -> dict[str, Any]:
+    """Record (or, with no date, take back) the date an apartment's rent
+    for a month was received."""
+    require_dashboard_role(user)
+    try:
+        payment = await db.set_rent_payment(
+            get_settings().db_path, manager_id=user.manager_id, month=payload.month,
+            address=payload.address, unit=payload.unit, received_on=payload.received_on,
+            person_id=user.person_id)
+    except db.RentRegisterError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"payment": payment}
 
 
 class SiteColorsRequest(BaseModel):
