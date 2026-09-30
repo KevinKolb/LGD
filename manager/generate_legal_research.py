@@ -266,9 +266,24 @@ PAGE = """<!doctype html>
   </p>
 </main>
 
-<!-- Back to the manager page; shared/footer.js adds Home beside it. -->
-<div class="site-float"><a class="back-button" href="index.html">Back</a></div>
-<script src="../shared/footer.js"></script>
+<!-- Back and Print only, floating like the documents' and the rent
+     register's (the user, 2026-09-30: "remove footer on pages at this level,
+     just back and print"). No shared/footer.js, so no site footer and no
+     Home. -->
+<style>
+  .paper-buttons {{ position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; gap: 10px; }}
+  .paper-buttons a {{
+    padding: 10px 20px; border: 1px solid #1f5d4c; border-radius: 999px;
+    background: #fff; color: #1f5d4c; font: inherit; text-decoration: none;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
+  }}
+  .paper-buttons a.print {{ background: #1f5d4c; color: #fff; }}
+  @media print {{ .paper-buttons {{ display: none; }} }}
+</style>
+<div class="paper-buttons">
+  <a href="index.html">Back</a>
+  <a href="#" class="print" onclick="window.print(); return false;">Print</a>
+</div>
 </body>
 </html>
 """

@@ -121,9 +121,11 @@ def test_the_real_log_renders_its_five_source_lists(real_output):
     assert real_output.count("<ol>") == 5
 
 
-def test_the_page_carries_the_shared_stylesheet_and_footer(real_output):
-    assert '<link rel="stylesheet" href="../shared/site.css">' in real_output
-    assert '<script src="../shared/footer.js"></script>' in real_output
+def test_the_page_has_back_and_print_and_no_footer(real_output):
+    """Like the documents and the rent register (the user, 2026-09-30)."""
+    assert '<script src="../shared/footer.js"></script>' not in real_output
+    assert '<a href="index.html">Back</a>' in real_output
+    assert 'onclick="window.print(); return false;">Print</a>' in real_output
 
 
 def test_the_page_says_where_it_came_from(real_output):
@@ -166,9 +168,9 @@ def test_generated_file_on_disk_matches_a_fresh_run(real_output):
 
 
 def test_every_site_page_gets_a_home_button():
-    """Home is a plain footer link, first, on every page but home itself;
-    only the document-style legal pages also float it, beside their Back
-    (the user, 2026-09-29)."""
+    """Home is a plain footer link, first, on every site page but home
+    itself (the user, 2026-09-29)."""
+    import re
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
     footer = (root / "shared" / "footer.js").read_text(encoding="utf-8")
@@ -179,9 +181,15 @@ def test_every_site_page_gets_a_home_button():
         html = (root / page / "index.html").read_text(encoding="utf-8")
         assert "shared/footer.js" in html, page
         assert 'class="site-float"' not in html, page
-    for page in ("legal_research.html", "legal_review.html"):
+    # The pages opened from the Manager Portal - the legal pages, like the
+    # rent register and the documents - have no footer and no Home: they
+    # float Back and Print only (the user, 2026-09-30).
+    for page in ("legal_research.html", "legal_review.html", "rent_register.html"):
         html = (root / "manager" / page).read_text(encoding="utf-8")
-        assert html.index('<div class="site-float">') < html.index('src="../shared/footer.js"'), page
+        assert '<script src="../shared/footer.js"></script>' not in html, page
+        buttons = html[html.index('<div class="paper-buttons">'):]
+        buttons = buttons[:buttons.index("</div>")]
+        assert re.findall(r">([A-Za-z]+)</a>", buttons) == ["Back", "Print"], page
 
 def test_the_footer_lists_applicant_first_and_no_sign_in():
     """Applicant, Resident, Manager, Admin; no Sign in link - pages that

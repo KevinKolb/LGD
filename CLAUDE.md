@@ -251,7 +251,7 @@ and filled, at desktop and phone widths, and none changed.
 The manager page opens every document (and the legal pages) in the same
 tab and has no Print buttons. Instead each document floats **Back** and
 **Print** (`DOC_BUTTONS` in the lease generator, reused by the others;
-the legal pages float Back only). Back uses `history.back()` when this site
+the legal pages and the rent register float the same two). Back uses `history.back()` when this site
 opened the page, else goes to the manager page. Print waits on
 `document.fonts.ready` like the auto-print, and stays hidden until the
 popup closes, so it can never print a lease before its apartment is
@@ -262,10 +262,13 @@ picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
 which every site page but the home page loads (the home page has no
 footer - its links only repeated the card's buttons, the user, same day),
 puts "Home" first in the footer, as a plain
-link like the others, on every page but the home page itself. Only the
-document-style legal pages float it too: they put their Back in a
-`.site-float` group *before* the script tag, and Home joins it on the left;
-a page with no such group floats nothing. The documents don't load that script (they are
+link like the others, on every page but the home page itself. (footer.js
+still adds a floating Home to any `.site-float` group, but no page has one
+now.) **The pages opened from the Manager Portal - the two legal pages and
+the rent register - have no footer and no Home** (the user, 2026-09-30:
+"remove footer on pages at this level, just back and print"): they don't
+load footer.js, and float **Back** and **Print** only (`.paper-buttons`),
+like the documents. The documents don't load that script (they are
 self-contained files), and **the documents have no Home** (the user,
 the same day, after one was added): they float Back and Print only, and
 Back returns to the page that opened them. While a document's popup is
