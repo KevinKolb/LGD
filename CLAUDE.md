@@ -599,8 +599,13 @@ FastAPI app; both let in only a manager or admin, scoped to their company
 register ... choose year and month ... mind lease dates if exist when
 showing who resident is"). The register opens on a popup asking the month
 and year (it starts on `?month=YYYY-MM` if the address has one, else this
-month); the heading then reads "Month of September 2026", and **Change
-month** floats beside Back and Print. `supabase/migrations/006` adds:
+month); the heading then reads "Month of September 2026". On screen it is
+a sheet of Letter paper (the user, same day: "look like a piece of
+paper") - 8.5 x 11 with @page's 0.5in margins, white on grey with a
+shadow, zoomed to fit a phone - with only **Back** and **Print** floating
+(the user: no Home, no Change month; to change month, go Back and open it
+again). So, like the documents, it does not load `shared/footer.js`
+(which adds Home to a `.site-float` group) and has no site footer. `supabase/migrations/006` adds:
 
 - `people.lease_start` / `lease_end` ("YYYY-MM-DD", either may be empty).
   `list_residents(month)` (it replaces 003's no-argument one) leaves out a
@@ -616,8 +621,10 @@ month** floats beside Back and Print. `supabase/migrations/006` adds:
 
 On screen each Date received is a date box, saved the moment it changes
 (its border turns green, or red with the old date put back on failure).
-In print the box is hidden and the recorded date shows as text, or the
-cell stays blank for the pen - still one letter-size sheet.
+In print the box is hidden and the recorded date shows as text with the
+day of the week ("Thu, Sep 3, 2026", the user, same day), or the cell
+stays blank for the pen - still one letter-size sheet. Text in every cell
+is left-aligned and vertically centered.
 
 **Putting a resident in a unit has no screen yet** - it is a row in
 `properties` and the person's `property_id`, done in the Supabase SQL

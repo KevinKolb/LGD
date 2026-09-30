@@ -42,9 +42,24 @@
     line-height: 1.3;
     padding: 16px 16px 96px;
   }
-  /* The paper sheet's own width; on a phone it is zoomed down to fit
-     (fitSheet below), like the documents, rather than reflowed. */
+  /* On screen the register is the sheet of Letter paper it prints on (the
+     user, 2026-09-30: "look like a piece of paper"): 8.5 x 11 with the
+     same 0.5in margins as @page, so it reads exactly as it will print -
+     the same look as the documents' .sheet. On a phone it is zoomed down
+     to fit (fitSheet below) rather than reflowed. */
   .register { width: 7.5in; margin: 0 auto; }
+  @media screen {
+    html, body { background: #e9e7e2; }
+    body { padding: 12px 0 88px; }
+    .register {
+      box-sizing: border-box;
+      width: 8.5in;
+      min-height: 11in;
+      padding: 0.5in;
+      background: #fff;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, .18);
+    }
+  }
   .company { font-size: 11pt; font-weight: 700; margin: 0; text-align: center; }
   h1 { font-size: 16pt; margin: 2px 0 10px; text-align: center; letter-spacing: .04em; }
   .month { text-align: center; margin: 0 0 14px; font-size: 11pt; }
@@ -92,9 +107,18 @@
   thead { display: table-header-group; }  /* the header row again on every printed page */
   tbody.building tr:first-child td { border-top-width: 2px; }
   .vacant { color: var(--muted); font-style: italic; }
-  .site-float a#print-register { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .paper-buttons {
+    position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; gap: 10px;
+  }
+  .paper-buttons a {
+    padding: 10px 20px; border: 1px solid var(--accent); border-radius: 999px;
+    background: #fff; color: var(--accent); font: inherit; font-size: 11pt; text-decoration: none;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
+  }
+  .paper-buttons a[hidden] { display: none; }
+  .paper-buttons a#print-register { background: var(--accent); color: #fff; }
   @media print {
-    footer { display: none; }
+    .paper-buttons { display: none; }
     body { padding: 0; font-size: 9.5pt; }
     th { background: none; }
     .status { display: none; }
@@ -137,10 +161,14 @@
     </div>
   </form>
 </dialog>
-<div class="site-float">
-  <a class="back-button" href="index.html">Back</a>
-  <a class="back-button" href="#" id="change-month" hidden>Change month</a>
-  <a class="back-button" href="#" id="print-register" hidden>Print</a>
+<!-- Back and Print only, floating like the printed documents' (the user,
+     2026-09-30: no Home, no Change month). Not a .site-float group, which
+     shared/footer.js would add Home to - and this page, like the
+     documents, does not load that script, so it has no site footer
+     under the paper either. -->
+<div class="paper-buttons">
+  <a href="index.html">Back</a>
+  <a href="#" id="print-register" hidden>Print</a>
 </div>
 <script src="../shared/auth.js"></script>
 <script>
@@ -149,7 +177,6 @@
   const status = document.getElementById("status");
   const table = document.getElementById("register");
   const printLink = document.getElementById("print-register");
-  const changeLink = document.getElementById("change-month");
   const monthDialog = document.getElementById("month-dialog");
   const pickMonth = document.getElementById("pick-month");
   const pickYear = document.getElementById("pick-year");
@@ -216,11 +243,14 @@
     return `${MONTHS[Number(value.slice(5)) - 1]} ${value.slice(0, 4)}`;
   }
 
-  // "2026-09-03" reads "Sep 3, 2026" on paper.
+  // "2026-09-03" reads "Thu, Sep 3, 2026" on paper - with the day of the
+  // week (the user, 2026-09-30).
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   function paperDate(value) {
     if (!value) return "";
     const [y, m, d] = value.split("-").map(Number);
-    return `${MONTHS[m - 1].slice(0, 3)} ${d}, ${y}`;
+    const day = DAYS[new Date(y, m - 1, d).getDay()];
+    return `${day}, ${MONTHS[m - 1].slice(0, 3)} ${d}, ${y}`;
   }
 
   function cell(className, lines) {
@@ -352,10 +382,6 @@
     }
     monthDialog.showModal();
   }
-  changeLink.addEventListener("click", (event) => {
-    event.preventDefault();
-    askMonth();
-  });
 
   async function open(chosen) {
     month = chosen;
@@ -373,7 +399,6 @@
       status.hidden = true;
       table.hidden = false;
       printLink.hidden = false;
-      changeLink.hidden = false;
     } catch (error) {
       fail(error.message || "The rent register could not be loaded.");
     }
@@ -399,6 +424,5 @@
   })();
 })();
 </script>
-<script src="../shared/footer.js"></script>
 </body>
 </html>

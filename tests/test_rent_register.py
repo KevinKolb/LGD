@@ -195,3 +195,18 @@ def test_the_footer_never_runs_wider_than_the_page() -> None:
     footer = css[css.index("footer {"):]
     footer = footer[:footer.index("}")]
     assert "box-sizing: border-box;" in footer and "width: 100%;" in footer
+
+
+def test_the_register_is_a_sheet_of_paper_with_back_and_print_only() -> None:
+    """The user, 2026-09-30: "look like a piece of paper", then "no home
+    button", "no change month button", "show day of the week when
+    printing"."""
+    page = REGISTER.read_text(encoding="utf-8")
+    assert "width: 8.5in;" in page and "min-height: 11in;" in page and "padding: 0.5in;" in page
+    buttons = page[page.index('<div class="paper-buttons">'):]
+    buttons = buttons[:buttons.index("</div>")]
+    assert re.findall(r">([A-Za-z ]+)</a>", buttons) == ["Back", "Print"]
+    assert "<script src=\"../shared/footer.js\"></script>" not in page  # which would add Home
+    assert "change-month" not in page
+    assert 'const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];' in page
+    assert "return `${day}, ${MONTHS[m - 1].slice(0, 3)} ${d}, ${y}`;" in page
