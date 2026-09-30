@@ -94,11 +94,16 @@ def test_the_manager_page_has_the_section_before_the_register() -> None:
     section = section[:section.index("</section>")]
     assert '<span class="step" aria-hidden="true">4</span>' in section and "<h2>Resident Entry</h2>" in section
     assert page.index("<h2>Resident Entry</h2>") < page.index("<h2>Monthly Rent Register</h2>")
-    start = page.index('<dialog class="popup" id="resident-dialog"')
+    start = page.index('<dialog class="popup wide" id="resident-dialog"')
     popup = page[start:page.index("</dialog>", start)]
     assert popup.count(" required") == 1  # the apartment, and nothing else
-    for name in ("first_name", "last_name", "email", "phone", "lease_start", "lease_end"):
+    for name in ("first_name", "last_name", "email", "phone"):
         assert f'name="{name}"' in popup
+    # Wider, and no lease dates asked for now (the user, 2026-09-30); an
+    # edit sends back the dates the resident already has.
+    assert '<dialog class="popup wide" id="resident-dialog"' in page
+    assert "lease_start" not in popup and "lease_end" not in popup
+    assert 'values.lease_start = editing.lease_start || "";' in page
     assert 'window.LGD.auth.rpc("save_resident", values)' in page
     assert 'window.LGD.auth.rpc("remove_resident", { person_id: person.id })' in page
 
@@ -109,3 +114,11 @@ def test_the_migration_checks_the_caller_and_keeps_to_their_company() -> None:
     assert "revoke all on function public.remove_resident(text) from public, anon;" in sql
     assert sql.count("not (caller.is_manager or caller.is_admin)") == 3
     assert "revoke all on function public.lgd_property_id(text, text, text) from public, anon, authenticated;" in sql
+
+
+def test_a_button_views_the_current_residents() -> None:
+    """The user, 2026-09-30: "make a button to view current residents" -
+    those whose lease covers this month, or who have no lease dates."""
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert 'id="view-residents" aria-pressed="false">View current residents</button>' in page
+    assert 'return window.LGD.auth.rpc("list_residents", { month });' in page

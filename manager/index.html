@@ -190,6 +190,8 @@
     box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
   }
   dialog.popup::backdrop { background: rgba(0, 0, 0, .45); }
+  /* Resident Entry's popup: room for two fields a row (the user, 2026-09-30). */
+  dialog.popup.wide { width: min(640px, calc(100vw - 32px)); }
   dialog.popup h2 { margin: 0 0 6px; font-size: 18px; color: var(--accent); }
   dialog.popup .field-grid.single { grid-template-columns: 1fr; }
   dialog.popup .form-msg { margin: 0 0 12px; }
@@ -463,17 +465,17 @@
     </p>
     <div class="actions">
       <button type="button" class="button-link" id="open-add-resident">Add resident</button>
-      <button type="button" class="secondary" id="view-residents" aria-pressed="false">View residents</button>
+      <button type="button" class="secondary" id="view-residents" aria-pressed="false">View current residents</button>
     </div>
     <p class="form-msg" id="resident-msg" role="status" aria-live="polite"></p>
-    <ul class="applicant-list" id="resident-list" aria-label="Residents" hidden></ul>
+    <ul class="applicant-list" id="resident-list" aria-label="Current residents" hidden></ul>
   </section>
 
   <!-- Add or change a resident. Only the apartment is required (the user,
        2026-09-30: "let manager provide as little info as they can, all
        optional"). Saved through save_resident (supabase/migrations/007) or
        POST /api/residents. -->
-  <dialog class="popup" id="resident-dialog" aria-labelledby="resident-dialog-title">
+  <dialog class="popup wide" id="resident-dialog" aria-labelledby="resident-dialog-title">
     <form id="resident-form" novalidate>
       <h2 id="resident-dialog-title">Add resident</h2>
       <div class="field-grid single">
@@ -492,8 +494,6 @@
         <label>Last name <input id="resident-last" name="last_name" autocomplete="off" maxlength="100"></label>
         <label>Email <input id="resident-email" name="email" type="email" autocomplete="off" maxlength="254"></label>
         <label>Phone <input id="resident-phone" name="phone" type="tel" inputmode="tel" autocomplete="off" maxlength="40"></label>
-        <label>Lease start <input id="resident-start" name="lease_start" type="date"></label>
-        <label>Lease end <input id="resident-end" name="lease_end" type="date"></label>
       </div>
       <p class="form-msg" id="resident-form-msg" role="status" aria-live="polite"></p>
       <div class="actions">
@@ -889,9 +889,9 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     last_name: document.getElementById("resident-last"),
     email: document.getElementById("resident-email"),
     phone: document.getElementById("resident-phone"),
-    lease_start: document.getElementById("resident-start"),
-    lease_end: document.getElementById("resident-end"),
   };
+  // Lease dates are not asked for now (the user, 2026-09-30); the database
+  // still holds them, and editing someone keeps whatever they have.
   let properties = [];
   let editing = null;   // the person being changed, or null when adding
   let showing = false;
@@ -914,9 +914,17 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     return payload;
   }
 
+  // Current residents (the user, 2026-09-30): those whose lease covers
+  // this month - so an ended lease drops off - and anyone with no lease
+  // dates, which is everyone entered here for now.
+  function thisMonth() {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  }
   async function fetchResidents() {
-    if (usingApi()) return (await api("/api/residents")).residents;
-    return window.LGD.auth.rpc("list_residents", {});
+    const month = thisMonth();
+    if (usingApi()) return (await api(`/api/residents?month=${month}`)).residents;
+    return window.LGD.auth.rpc("list_residents", { month });
   }
 
   async function saveResident(values) {
@@ -966,7 +974,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     showUnits();
     if (editing) {
       fields.unit.value = editing.unit || "";
-      for (const key of ["first_name", "last_name", "email", "phone", "lease_start", "lease_end"]) {
+      for (const key of ["first_name", "last_name", "email", "phone"]) {
         fields[key].value = editing[key] || "";
       }
     }
@@ -989,7 +997,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     if (!residents.length) {
       const item = document.createElement("li");
       item.className = "empty";
-      item.textContent = "No residents entered yet.";
+      item.textContent = "No current residents entered yet.";
       list.append(item);
       return;
     }
@@ -1028,7 +1036,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
 
   async function refresh() {
     viewButton.setAttribute("aria-pressed", String(showing));
-    viewButton.textContent = showing ? "Hide residents" : "View residents";
+    viewButton.textContent = showing ? "Hide current residents" : "View current residents";
     list.hidden = !showing;
     if (!showing) return;
     try {
@@ -1059,7 +1067,11 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       (values.address ? fields.unit : fields.address).focus();
       return;
     }
-    if (editing) values.person_id = editing.id;
+    if (editing) {
+      values.person_id = editing.id;
+      values.lease_start = editing.lease_start || "";
+      values.lease_end = editing.lease_end || "";
+    }
     save.disabled = true;
     say(formMessage, "Saving…");
     try {

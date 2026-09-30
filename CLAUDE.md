@@ -634,12 +634,15 @@ Step 4 on the manager page, **temporary** (the user, 2026-09-30: "to get
 the rent register up and running for 10/1 add a temporary manager section
 called resident entry. let there be more than one resident per unit. let
 manager provide as little info as they can, all optional ... this will
-expand to user accounts at some point"). **Add resident** opens a popup
-where only the apartment (and its unit, for a building with units) is
-required; first and last name, email, phone, lease start and lease end are
-all optional. A resident with no name shows as their email, or
-"Resident". **View residents** lists them, each with **Edit** (the same
-popup, filled in) and **Remove** (after a confirm).
+expand to user accounts at some point"). **Add resident** opens a wide
+popup where only the apartment (and its unit, for a building with units)
+is required; first and last name, email and phone are optional. Lease
+dates are not asked for now (the user, same day) - the database still
+holds them, and Edit sends back whatever a resident already has. A
+resident with no name shows as their email, or "Resident". **View current
+residents** lists those whose lease covers this month, or who have no
+lease dates (everyone, for now), each with **Edit** (the same popup,
+filled in) and **Remove** (after a confirm).
 
 A resident is an ordinary `people` row - `is_resident`, and `property_id`
 pointing at a `properties` row for the apartment, made on first use - so
