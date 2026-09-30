@@ -76,3 +76,14 @@ def test_the_migration_locks_the_new_table_and_checks_the_caller() -> None:
     assert sql.count("not (caller.is_manager or caller.is_admin)") == 2
     # Always the caller's company, never one the browser sends.
     assert "manager_id text" not in sql.split("set_open_apartments(apartments json)")[1].split("as $fn$")[0]
+
+
+def test_add_applicant_offers_only_apartments_accepting_applications() -> None:
+    """The user, 2026-09-30: "offer only the apartments that are accepting
+    applications", and when there are none, "No apartments are available at
+    this time." """
+    page = MANAGER_PAGE.read_text(encoding="utf-8")
+    assert 'document.dispatchEvent(new CustomEvent("lgd-open-apartments", { detail: open }));' in page
+    assert 'document.addEventListener("lgd-open-apartments", (event) => {' in page
+    assert "if (openUnits(property).length) fields.address.add(" in page
+    assert 'say(formMessage, "No apartments are available at this time.", "error");' in page

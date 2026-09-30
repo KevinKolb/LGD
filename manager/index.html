@@ -667,7 +667,14 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     return window.LGD.auth.rpc("set_open_apartments", { apartments });
   }
 
+  // The Add applicant popup offers only these apartments (the user,
+  // 2026-09-30), so it hears every change to the list.
+  function announce() {
+    document.dispatchEvent(new CustomEvent("lgd-open-apartments", { detail: open }));
+  }
+
   function showSummary() {
+    announce();
     summary.textContent = open.length
       ? "Accepting applications for " + open.map((a) => place(a.address, a.unit)).join("; ") + "."
       : "Not accepting applications for any apartment.";
@@ -825,14 +832,35 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     } catch (error) {
       properties = [];
     }
+    showAddresses();
+  }
+
+  // Only the apartments accepting applications (step 1, Accept
+  // Applications) are offered - the user, 2026-09-30. Its section sends
+  // the list whenever it loads or is saved.
+  let openKeys = new Set();
+  const openKey = (address, unit) => `${address}|${unit || ""}`;
+  document.addEventListener("lgd-open-apartments", (event) => {
+    openKeys = new Set(event.detail.map((a) => openKey(a.address, a.unit)));
+    showAddresses();
+  });
+
+  function openUnits(property) {
+    if (!property.units.length) return openKeys.has(openKey(property.address, "")) ? [""] : [];
+    return property.units.filter((unit) => openKeys.has(openKey(property.address, unit)));
+  }
+
+  function showAddresses() {
+    fields.address.length = 1;  // keeps "Choose…"
     for (const property of properties) {
-      fields.address.add(new Option(property.address, property.address));
+      if (openUnits(property).length) fields.address.add(new Option(property.address, property.address));
     }
+    showUnits();
   }
 
   function showUnits() {
     const property = properties.find((p) => p.address === fields.address.value);
-    const units = property ? property.units : [];
+    const units = property ? openUnits(property).filter(Boolean) : [];
     fields.unit.length = 0;
     fields.unit.add(new Option("Choose…", ""));
     for (const unit of units) fields.unit.add(new Option(unit, unit));
@@ -982,6 +1010,12 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
     say(formMessage, "");
     form.hidden = false;
     added.hidden = true;
+    const none = fields.address.length <= 1;
+    button.disabled = none;
+    if (none) {
+      // The user's wording, 2026-09-30.
+      say(formMessage, "No apartments are available at this time.", "error");
+    }
     dialog.showModal();
     fields.email.focus();
   });

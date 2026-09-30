@@ -431,9 +431,14 @@ SECURITY DEFINER, manager or admin only, always the caller's own company.
 An apartment already open keeps its `opened_at` when the list is saved
 again. The FastAPI app has the same as `GET`/`PUT /api/open-apartments`.
 
-Nothing else reads the list yet: the applicant page and the Add applicant
-popup still offer every apartment. **004 must be applied to the live
-database** like the others.
+**The Add applicant popup offers only these apartments** (the user, same
+day): only buildings with a unit accepting, and only those units. The
+section sends the list to it as an `lgd-open-apartments` event whenever it
+loads or is saved. With none accepting, the popup says "No apartments are
+available at this time." (the user's wording) and Add applicant is
+greyed out. That is the page's choice only - `create_applicant` does not
+check the list. The applicant page does not read it yet. **004 must be
+applied to the live database** like the others.
 
 ## A manager adds an applicant (the first "less print" feature)
 
