@@ -663,7 +663,7 @@ __SEND_PDF__
 </script>"""
 SAVE_PDF_FILE = REPO_ROOT / "shared" / "save-pdf.js"
 # Send (the user, 2026-10-01): documents/print/send-pdf.js, inlined the
-# same way; it loads vendor/html2pdf.bundle.min.js only when pressed.
+# same way; it loads its libraries from vendor/ only when pressed.
 SEND_PDF_FILE = Path(__file__).resolve().parent / "send-pdf.js"
 DOC_BUTTONS = (DOC_BUTTONS.replace("__SAVE_PDF__", SAVE_PDF_FILE.read_text(encoding="utf-8").strip())
                .replace("__SEND_PDF__", SEND_PDF_FILE.read_text(encoding="utf-8").strip()))

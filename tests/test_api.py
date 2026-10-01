@@ -84,9 +84,9 @@ def test_print_route_serves_the_blank_lease(client) -> None:
 
 
 def test_print_route_serves_the_send_buttons_script_as_a_script(client) -> None:
-    """Send loads vendor/html2pdf.bundle.min.js from beside the document;
+    """Send loads its libraries from vendor/ beside the document;
     served as HTML, a browser could refuse to run it."""
-    response = client.get("/documents/print/vendor/html2pdf.bundle.min.js")
+    response = client.get("/documents/print/vendor/jspdf.umd.min.js")
     assert response.status_code == 200
     assert "javascript" in response.headers["content-type"]
     assert client.get("/documents/print/lease_print.html").headers["content-type"].startswith("text/html")

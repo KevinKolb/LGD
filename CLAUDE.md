@@ -286,16 +286,23 @@ sheet for now but will add domain and email service too soon"): Back,
 Send, Save, Print. A browser cannot email a file by itself, and the
 print window cannot hand its PDF to a script, so Send makes the PDF in
 the page - `documents/print/send-pdf.js`, inlined by `DOC_BUTTONS` like
-save-pdf.js (ES5, no backslashes, no font of its own), which loads
-`documents/print/vendor/html2pdf.bundle.min.js` (html2pdf.js 0.10.2, MIT,
-vendored; see its README) only when pressed. Each visible document is
-drawn as one tall picture at the printed width and cut into Letter pages
-by `pageCuts`: as full as a page will go, only between lines of text,
-never through anything kept whole (signature rows, the execution block,
-rows of fields), each document starting a new page, with the same "Page X
-of Y" lines. Checked at 1534 Camp: 6, 8 and 11 pages for the lease, lease
-and deposit, and all three - the same as the printout - at about 470 KB a
-page. Its pages are pictures, so Print and Save PDF stay the exact ones.
+save-pdf.js (ES5, no backslashes, no font of its own), which loads two
+vendored libraries (MIT; see `documents/print/vendor/README.md`) only when
+pressed: **modern-screenshot** draws each visible document with the
+browser's own rendering and the embedded font, at the printed width, and
+**jsPDF** puts the pages in the file. In between, `pageCuts` cuts each
+picture into Letter pages: as full as a page will go, only between lines
+of text, never through anything kept whole (signature rows, the execution
+block, rows of fields), each document starting a new page, with the same
+"Page X of Y" lines. Checked at 1534 Camp: 6, 8 and 11 pages for the
+lease, lease and deposit, and all three - the same as the printout - at
+about 450 KB a page. Its pages are pictures, so Print and Save stay the
+exact ones. **It was html2pdf.js at first** (the same day), whose
+html2canvas redraws text itself: the user found the sent copy's
+formatting off - numbers in old-style figures (it ignores
+`lining-nums`), underlines through the letters - while Save was fine.
+html2canvas's own foreignObject mode lost the embedded font (it fell back
+to Times and re-wrapped every line), so it was replaced.
 Each document is its own picture, at most 16 million pixels, because an
 iPhone refuses a bigger canvas (lease and deposit together would be 19).
 The popup says "Making the PDF...", then offers **Share** - a second tap,

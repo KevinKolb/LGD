@@ -769,15 +769,16 @@
  * attached; the address is typed in Mail, since a share sheet cannot be
  * told a recipient.
  *
- * Unlike Save PDF, the browser's print window cannot hand its PDF to a
- * script, so this one is drawn in the page by html2pdf.js
- * (vendor/html2pdf.bundle.min.js, loaded only when Send is pressed) as
- * a tall picture of each document, laid out at the printed width, and cut
- * into Letter pages here (pageCuts): each page as full as it will go, cut
- * only between lines of text, never through a signature block, and each
- * later document starting a new page, with the same "Page X of Y" lines.
- * Its pages are pictures of the text and may end a line or two away from
- * the printout's; Print and Save PDF remain exact.
+ * Unlike Save, the browser's print window cannot hand its PDF to a
+ * script, so this one is made in the page, from two libraries in vendor/
+ * loaded only when Send is pressed: modern-screenshot draws each document
+ * with the browser's own rendering and the embedded font (so the text,
+ * numbers and underlines look as on screen), at the printed width; pageCuts
+ * here cuts that picture into Letter pages - each as full as it will go,
+ * only between lines of text, never through a signature block, each later
+ * document starting a new page - and jsPDF puts them in the file with the
+ * same "Page X of Y" lines. Its pages are pictures of the text and may end
+ * a line away from the printout's; Print and Save remain exact.
  *
  * The share needs a fresh tap (browsers allow a share only straight after
  * one), so the popup says "Making the PDF..." and then offers Share. Where
@@ -789,21 +790,26 @@
 (function () {
   "use strict";
 
-  var LIBRARY = "vendor/html2pdf.bundle.min.js";
+  var LIBRARIES = ["vendor/modern-screenshot.js", "vendor/jspdf.umd.min.js"];
   var loading = null;
 
-  function loadLibrary() {
-    if (window.html2pdf) { return Promise.resolve(window.html2pdf); }
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  function loadLibraries() {
     if (!loading) {
-      loading = new Promise(function (resolve, reject) {
-        var script = document.createElement("script");
-        script.src = LIBRARY;
-        script.onload = function () { resolve(window.html2pdf); };
-        script.onerror = function () {
-          loading = null;
-          reject(new Error("Sending could not start. Check the connection and try again."));
-        };
-        document.head.appendChild(script);
+      loading = Promise.all(LIBRARIES.map(loadScript)).then(function () {
+        return { shot: window.modernScreenshot, jsPDF: window.jspdf.jsPDF };
+      }, function () {
+        loading = null;
+        throw new Error("Sending could not start. Check the connection and try again.");
       });
     }
     return loading;
@@ -967,32 +973,36 @@
   // unless that would pass the limit (a 7-page lease comes close).
   var MAX_CANVAS_PIXELS = 16000000;
 
-  // One document's pages: [{ image, heightIn }], cut by pageCuts.
-  function documentPages(html2pdf, sheet) {
+  // One document's pages: [{ image, heightIn }], cut by pageCuts. The
+  // copy sits off screen inside a holder, so the picture is of the copy
+  // alone, not of where it was put.
+  function documentPages(libs, sheet) {
     var holder = el("div", "position:absolute;left:-10000px;top:0;");
-    holder.className = "pdf-capture";
+    var capture = el("div");
+    capture.className = "pdf-capture";
     var copy = sheet.cloneNode(true);
     copy.removeAttribute("id");
-    holder.appendChild(copy);
+    capture.appendChild(copy);
+    holder.appendChild(capture);
     document.body.appendChild(holder);
-    var box = holder.getBoundingClientRect();
-    var cuts = pageCuts(holder);
+    function remove() {
+      if (holder.parentNode) { holder.parentNode.removeChild(holder); }
+    }
+    var box = capture.getBoundingClientRect();
+    var cuts = pageCuts(capture);
     var scale = Math.min(2, Math.sqrt(MAX_CANVAS_PIXELS / (box.width * box.height)));
-    // html2pdf lays out its own copy; one without the off-screen position.
-    var source = holder.cloneNode(true);
-    source.removeAttribute("style");
-    holder.parentNode.removeChild(holder);
-    return html2pdf().set({
-      margin: [MARGIN_IN, MARGIN_IN, MARGIN_IN, MARGIN_IN],
-      html2canvas: { scale: scale, backgroundColor: "#ffffff" },
-      jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-      pagebreak: { mode: [] }
-    }).from(source).toCanvas().get("canvas").then(function (canvas) {
-      var ratio = canvas.width / box.width;
+    return libs.shot.domToCanvas(capture, {
+      scale: scale,
+      width: Math.ceil(box.width),
+      height: Math.ceil(box.height),
+      backgroundColor: "#ffffff"
+    }).then(function (canvas) {
+      remove();
+      var ratio = canvas.width / Math.ceil(box.width);
       var pages = [];
       for (var i = 0; i + 1 < cuts.length; i++) {
         var from = Math.round(cuts[i] * ratio);
-        var height = Math.max(1, Math.round(cuts[i + 1] * ratio) - from);
+        var height = Math.max(1, Math.min(canvas.height, Math.round(cuts[i + 1] * ratio)) - from);
         var slice = document.createElement("canvas");
         slice.width = canvas.width;
         slice.height = height;
@@ -1006,12 +1016,12 @@
       canvas.height = 0;
       return pages;
     }, function (error) {
-      if (holder.parentNode) { holder.parentNode.removeChild(holder); }
+      remove();
       throw error;
     });
   }
 
-  function makePdf(html2pdf) {
+  function makePdf(libs) {
     var style = el("style", null, CAPTURE_STYLE);
     document.head.appendChild(style);
     function cleanUp() {
@@ -1024,22 +1034,15 @@
     var done = fontsReady;
     sheets().forEach(function (sheet) {
       done = done.then(function () {
-        return documentPages(html2pdf, sheet).then(function (more) {
+        return documentPages(libs, sheet).then(function (more) {
           pages = pages.concat(more);
         });
       });
     });
     return done.then(function () {
-      // An empty PDF to draw the pages into: html2pdf makes it, from a blank
-      // box, so none of its own page images end up inside the file.
-      return html2pdf().set({
-        margin: 0,
-        jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
-      }).from(el("div", "width:1px;height:1px;")).toPdf().get("pdf");
-    }).then(function (pdf) {
-      var blank = pdf.internal.getNumberOfPages();
+      var pdf = new libs.jsPDF({ unit: "in", format: "letter", orientation: "portrait" });
       pages.forEach(function (page, i) {
-        pdf.addPage();
+        if (i > 0) { pdf.addPage(); }
         pdf.addImage(page.image, "JPEG", MARGIN_IN, MARGIN_IN, 8.5 - 2 * MARGIN_IN, page.heightIn);
         // "Lower Garden District Properties, Inc. - Page 1 of 8", top and
         // bottom, counting the whole file as a printout does.
@@ -1050,11 +1053,8 @@
         pdf.text(line, 4.25, 0.5, { align: "center" });
         pdf.text(line, 4.25, 10.6, { align: "center" });
       });
-      for (var i = 0; i < blank; i++) { pdf.deletePage(1); }
-      return pdf.output("blob");
-    }).then(function (blob) {
       cleanUp();
-      return new File([blob], fileName(), { type: "application/pdf" });
+      return new File([pdf.output("blob")], fileName(), { type: "application/pdf" });
     }, function (error) {
       cleanUp();
       throw error;
@@ -1074,7 +1074,7 @@
 
   function send() {
     var box = popup();
-    loadLibrary().then(makePdf).then(function (file) {
+    loadLibraries().then(makePdf).then(function (file) {
       if (box.isClosed()) { return; }
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         box.say("Ready. Tap Share, then choose Mail - " + documentName() + " will be attached.");

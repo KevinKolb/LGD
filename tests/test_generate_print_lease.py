@@ -694,9 +694,14 @@ def test_send_shares_a_pdf_made_in_the_page(real_output):
     script = (here / "send-pdf.js").read_text(encoding="utf-8").strip()
     assert script in real_output
     assert "\\" not in script  # it is inlined through a Python string
-    assert 'var LIBRARY = "vendor/html2pdf.bundle.min.js";' in script
-    assert (here / "vendor" / "html2pdf.bundle.min.js").is_file()
-    assert (here / "vendor" / "html2pdf-LICENSE.txt").is_file()
+    # The browser's own rendering, with the embedded font (modern-screenshot),
+    # not html2canvas's redrawing, which lost the lining figures and ran
+    # underlines through the letters (the user, 2026-10-01).
+    assert 'var LIBRARIES = ["vendor/modern-screenshot.js", "vendor/jspdf.umd.min.js"];' in script
+    for name in ("modern-screenshot.js", "modern-screenshot-LICENSE.txt",
+                 "jspdf.umd.min.js", "jspdf-LICENSE.txt"):
+        assert (here / "vendor" / name).is_file(), name
+    assert "html2pdf" not in script and "html2canvas" not in script
     assert "navigator.share({ files: [file]" in script
     assert '<button type="button" id="send-button" data-send-pdf hidden>Send</button>' in real_output
     finish = real_output[real_output.index("function finish"):]
