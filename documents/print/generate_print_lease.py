@@ -626,7 +626,7 @@ DOC_BUTTONS = """
 <div class="float-buttons">
   <a href="../../manager/" id="back-button">Back</a>
   <button type="button" id="send-button" data-send-pdf hidden>Send</button>
-  <button type="button" id="save-button" data-save-pdf hidden>Save PDF</button>
+  <button type="button" id="save-button" data-save-pdf hidden>Save</button>
   <button type="button" id="print-button" hidden>Print</button>
 </div>
 <script>

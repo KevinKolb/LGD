@@ -282,7 +282,7 @@ PAGE = """<!doctype html>
 </style>
 <div class="paper-buttons">
   <a href="index.html">Back</a>
-  <a href="#" data-save-pdf>Save PDF</a>
+  <a href="#" data-save-pdf>Save</a>
   <a href="#" class="print" onclick="window.print(); return false;">Print</a>
 </div>
 <!-- Save PDF beside Print (the user, 2026-09-30). -->

@@ -36,7 +36,7 @@
         script.onload = function () { resolve(window.html2pdf); };
         script.onerror = function () {
           loading = null;
-          reject(new Error("The PDF maker could not be loaded. Check the connection and try again."));
+          reject(new Error("Sending could not start. Check the connection and try again."));
         };
         document.head.appendChild(script);
       });
@@ -63,7 +63,7 @@
     var box = el("div", "background:#fff;color:#1c1c1a;border-radius:8px;padding:24px 22px 20px;" +
       "max-width:340px;width:calc(100% - 48px);font-size:16px;line-height:1.4;");
     var title = el("h2", "margin:0 0 12px;font-size:18px;", "Send");
-    var message = el("p", "margin:0 0 18px;", "Making the PDF...");
+    var message = el("p", "margin:0 0 18px;", "Getting " + documentName() + " ready...");
     var row = el("div", "display:flex;gap:10px;justify-content:flex-end;");
     var cancel = el("button", BUTTON + "background:#fff;color:" + ACCENT + ";", "Cancel");
     cancel.type = "button";
@@ -106,9 +106,26 @@
     return heading ? heading.textContent.replace(/[ ]+/g, " ").trim() : "";
   }
 
+  // What the page holds, in words: its title up to " - " ("Lease and
+  // security deposit - 1534 Camp St." is "the lease and security
+  // deposit"). The buttons and popups name the document, never the file
+  // type (the user, 2026-10-01).
+  function documentName() {
+    var name = (document.title || "").split(" - ")[0].trim();
+    return name ? "the " + name.toLowerCase() : "this document";
+  }
+
+  // Today as 20261001, on the end of a saved file's name (the user,
+  // 2026-10-01).
+  function dateStamp() {
+    var now = new Date();
+    function two(n) { return (n < 10 ? "0" : "") + n; }
+    return String(now.getFullYear()) + two(now.getMonth() + 1) + two(now.getDate());
+  }
+
   function fileName() {
     var name = (document.title || "Document").replace(/[^A-Za-z0-9 .,&()-]+/g, " ").replace(/[ ]+/g, " ").trim();
-    return name + ".pdf";
+    return name + " " + dateStamp() + ".pdf";
   }
 
   // The sheets, laid out as on paper: 6.8in of text inside the 0.85in
@@ -295,7 +312,7 @@
     loadLibrary().then(makePdf).then(function (file) {
       if (box.isClosed()) { return; }
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        box.say("The PDF is ready. Tap Share, then choose Mail - it will be attached.");
+        box.say("Ready. Tap Share, then choose Mail - " + documentName() + " will be attached.");
         box.offer("Share", function (close) {
           navigator.share({ files: [file], title: file.name }).then(close, function (error) {
             if (error && error.name === "AbortError") { return; }
@@ -303,7 +320,7 @@
           });
         });
       } else {
-        box.say("This browser cannot attach a file to an email itself. Download the PDF, then attach it to an email.");
+        box.say("This browser cannot attach a file to an email itself. Download " + documentName() + ", then attach it to an email.");
         box.offer("Download", function (close) {
           download(file);
           close();
@@ -311,7 +328,7 @@
       }
     }, function (error) {
       if (!box.isClosed()) {
-        box.say(error && error.message ? error.message : "The PDF could not be made.");
+        box.say(error && error.message ? error.message : "It could not be made ready to send.");
       }
     });
   }

@@ -16,6 +16,23 @@
 (function () {
   "use strict";
 
+  // What the page holds, in words: its title up to " - " ("Lease and
+  // security deposit - 1534 Camp St." is "the lease and security
+  // deposit"). The buttons and popups name the document, never the file
+  // type (the user, 2026-10-01).
+  function documentName() {
+    var name = (document.title || "").split(" - ")[0].trim();
+    return name ? "the " + name.toLowerCase() : "this document";
+  }
+
+  // Today as 20261001, on the end of a saved file's name (the user,
+  // 2026-10-01).
+  function dateStamp() {
+    var now = new Date();
+    function two(n) { return (n < 10 ? "0" : "") + n; }
+    return String(now.getFullYear()) + two(now.getMonth() + 1) + two(now.getDate());
+  }
+
   function steps() {
     var agent = navigator.userAgent || "";
     var ios = /iPhone|iPad|iPod/.test(agent) ||
@@ -25,10 +42,10 @@
               "Tap Save to Files, choose where, and tap Save."];
     }
     if (/Android/.test(agent)) {
-      return ["In the print window, tap the printer name at the top and choose Save as PDF.",
-              "Tap the round PDF button, then Save."];
+      return ["In the print window, tap the printer name at the top and choose the Save option.",
+              "Tap the round download button, then Save."];
     }
-    return ["In the print window, set Destination (or Printer) to Save as PDF.",
+    return ["In the print window, set Destination (or Printer) to the Save option.",
             "Click Save and choose where."];
   }
 
@@ -39,9 +56,24 @@
     return node;
   }
 
+  // The print window suggests the page's title as the file's name, so
+  // the date goes on the end of it while the window is open.
   function openPrint() {
     var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-    fontsReady.then(function () { window.print(); });
+    fontsReady.then(function () {
+      var title = document.title;
+      document.title = title + " " + dateStamp();
+      var restored = false;
+      function restore() {
+        if (restored) { return; }
+        restored = true;
+        document.title = title;
+        window.removeEventListener("afterprint", restore);
+      }
+      window.addEventListener("afterprint", restore);
+      window.print();
+      setTimeout(restore, 1000);
+    });
   }
 
   function savePdf() {
@@ -53,7 +85,7 @@
     overlay.setAttribute("aria-modal", "true");
     var box = el("div", "background:#fff;color:#1c1c1a;border-radius:8px;padding:24px 22px 20px;" +
       "max-width:340px;width:calc(100% - 48px);font-size:16px;line-height:1.4;");
-    box.appendChild(el("h2", "margin:0 0 12px;font-size:18px;", "Save as PDF"));
+    box.appendChild(el("h2", "margin:0 0 12px;font-size:18px;", "Save " + documentName()));
     var list = el("ol", "margin:0 0 18px;padding-left:22px;");
     steps().forEach(function (step) { list.appendChild(el("li", "margin-bottom:8px;", step)); });
     box.appendChild(list);

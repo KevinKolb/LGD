@@ -266,7 +266,8 @@ popup closes, so it can never print a lease before its apartment is
 picked. `DOC_BUTTONS` also closes the `<main class="sheet">` that
 `render_head` opens, which keeps the popup and buttons out of the zoom.
 
-**Save PDF sits beside every Print button** (the user, 2026-09-30) - the
+**Save sits beside every Print button** (the user, 2026-09-30; labelled
+"Save PDF" until 2026-10-01) - the
 documents, the two legal pages and the rent register. It is
 `shared/save-pdf.js`: a short popup says where "Save as PDF" is on this
 device (iPhone: Share -> Save to Files; Android: the printer name -> Save
@@ -282,7 +283,7 @@ documents after editing it**. It shows and hides with Print.
 
 **Send sits on every document** (the user, 2026-10-01: "phone share
 sheet for now but will add domain and email service too soon"): Back,
-Send, Save PDF, Print. A browser cannot email a file by itself, and the
+Send, Save, Print. A browser cannot email a file by itself, and the
 print window cannot hand its PDF to a script, so Send makes the PDF in
 the page - `documents/print/send-pdf.js`, inlined by `DOC_BUTTONS` like
 save-pdf.js (ES5, no backslashes, no font of its own), which loads
@@ -303,6 +304,14 @@ sheet's Mail gets the PDF attached; the address is typed in Mail. Where a
 browser cannot share a file (most Windows and Linux ones) it offers
 **Download** instead. When the site has a domain and an email service,
 Send should ask for the address and email the PDF itself.
+**No "PDF" on a button or in a popup** (the user, 2026-10-01): they name
+the document instead - "Save the lease", "Getting the lease and security
+deposit ready..." - from the page's title up to " - " (`documentName`, in
+both scripts); the print window's own option is called "the Save option".
+**A saved file's name ends in today's date**, "Lease - 1534 Camp St.
+20261001": Send names its file so, and Save puts the date on the page's
+title while the print window is open (the window suggests the title as
+the file name), then puts the title back.
 `app/main.py`'s `/documents/print/` route serves non-HTML files with their
 own type, so the library loads there too.
 

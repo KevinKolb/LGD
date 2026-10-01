@@ -463,7 +463,7 @@ def test_printing_waits_for_the_apartment_to_be_picked(real_output):
     # The third is Save PDF's (shared/save-pdf.js), which shows with Print.
     assert real_output.count("window.print()") == 3
     assert '<button type="button" id="print-button" hidden>Print</button>' in real_output
-    assert '<button type="button" id="save-button" data-save-pdf hidden>Save PDF</button>' in real_output
+    assert '<button type="button" id="save-button" data-save-pdf hidden>Save</button>' in real_output
     finish = script[:script.index("properties.forEach")]
     assert 'getElementById("print-button").hidden = false' in finish
     assert real_output.count('getElementById("print-button").hidden = false') == 1
@@ -705,3 +705,19 @@ def test_send_shares_a_pdf_made_in_the_page(real_output):
     buttons = buttons[:buttons.index("</div>")]
     assert (buttons.index('id="back-button"') < buttons.index('id="send-button"')
             < buttons.index('id="save-button"') < buttons.index('id="print-button"'))
+
+
+def test_save_and_send_name_the_document_and_date_the_file():
+    """The user, 2026-10-01: no "PDF" on a button or in a popup - they name
+    the document ("the lease") - and a saved file's name ends in the date,
+    like 20261001."""
+    root = Path(__file__).resolve().parent.parent
+    for path in (root / "shared" / "save-pdf.js", root / "documents" / "print" / "send-pdf.js"):
+        script = path.read_text(encoding="utf-8")
+        code = re.sub(r"/\*.*?\*/", "", script, flags=re.S)
+        code = re.sub(r"^\s*//.*$", "", code, flags=re.M)
+        shown = re.findall(r'"([^"]*)"', code)
+        assert not [text for text in shown if "PDF" in text and text != "jsPDF"], path
+        assert "function dateStamp()" in script and "function documentName()" in script
+    assert 'document.title = title + " " + dateStamp();' in (root / "shared" / "save-pdf.js").read_text()
+    assert 'return name + " " + dateStamp() + ".pdf";' in (root / "documents" / "print" / "send-pdf.js").read_text()
