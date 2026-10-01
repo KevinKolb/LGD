@@ -183,9 +183,11 @@ async def print_files(asset: str, user: User = Depends(current_user)):
     Pages (../documents/print/lease_print.html from the manager page), so one href
     works on both hosts. /api/blank-lease still serves the same file."""
     require_dashboard_role(user)
+    path = resolve_static_file(PRINT_DIR, asset)
+    # The documents are HTML; Send's PDF maker (vendor/) is a script.
     return FileResponse(
-        resolve_static_file(PRINT_DIR, asset),
-        media_type="text/html",
+        path,
+        media_type="text/html" if path.suffix == ".html" else None,
         headers={"Cache-Control": "no-store"},
     )
 

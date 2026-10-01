@@ -280,6 +280,32 @@ ES5 with no backslashes for that reason, and uses no font of its own,
 since every font in a document starts with Gelasio); **regenerate the
 documents after editing it**. It shows and hides with Print.
 
+**Send sits on every document** (the user, 2026-10-01: "phone share
+sheet for now but will add domain and email service too soon"): Back,
+Send, Save PDF, Print. A browser cannot email a file by itself, and the
+print window cannot hand its PDF to a script, so Send makes the PDF in
+the page - `documents/print/send-pdf.js`, inlined by `DOC_BUTTONS` like
+save-pdf.js (ES5, no backslashes, no font of its own), which loads
+`documents/print/vendor/html2pdf.bundle.min.js` (html2pdf.js 0.10.2, MIT,
+vendored; see its README) only when pressed. Each visible document is
+drawn as one tall picture at the printed width and cut into Letter pages
+by `pageCuts`: as full as a page will go, only between lines of text,
+never through anything kept whole (signature rows, the execution block,
+rows of fields), each document starting a new page, with the same "Page X
+of Y" lines. Checked at 1534 Camp: 6, 8 and 11 pages for the lease, lease
+and deposit, and all three - the same as the printout - at about 470 KB a
+page. Its pages are pictures, so Print and Save PDF stay the exact ones.
+Each document is its own picture, at most 16 million pixels, because an
+iPhone refuses a bigger canvas (lease and deposit together would be 19).
+The popup says "Making the PDF...", then offers **Share** - a second tap,
+because a browser allows a share only straight after one - and the share
+sheet's Mail gets the PDF attached; the address is typed in Mail. Where a
+browser cannot share a file (most Windows and Linux ones) it offers
+**Download** instead. When the site has a domain and an email service,
+Send should ask for the address and email the PDF itself.
+`app/main.py`'s `/documents/print/` route serves non-HTML files with their
+own type, so the library loads there too.
+
 **Every site page has a Home link** (the user, 2026-09-29). `shared/footer.js`,
 which every site page but the home page loads (the home page has no
 footer - its links only repeated the card's buttons, the user, same day),

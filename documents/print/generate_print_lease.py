@@ -625,11 +625,15 @@ DOC_BUTTONS = """
 </main>
 <div class="float-buttons">
   <a href="../../manager/" id="back-button">Back</a>
+  <button type="button" id="send-button" data-send-pdf hidden>Send</button>
   <button type="button" id="save-button" data-save-pdf hidden>Save PDF</button>
   <button type="button" id="print-button" hidden>Print</button>
 </div>
 <script>
 __SAVE_PDF__
+</script>
+<script>
+__SEND_PDF__
 </script>
 <script>
   document.getElementById("print-button").addEventListener("click", function () {
@@ -658,7 +662,11 @@ __SAVE_PDF__
   window.addEventListener("resize", fitSheets);
 </script>"""
 SAVE_PDF_FILE = REPO_ROOT / "shared" / "save-pdf.js"
-DOC_BUTTONS = DOC_BUTTONS.replace("__SAVE_PDF__", SAVE_PDF_FILE.read_text(encoding="utf-8").strip())
+# Send (the user, 2026-10-01): documents/print/send-pdf.js, inlined the
+# same way; it loads vendor/html2pdf.bundle.min.js only when pressed.
+SEND_PDF_FILE = Path(__file__).resolve().parent / "send-pdf.js"
+DOC_BUTTONS = (DOC_BUTTONS.replace("__SAVE_PDF__", SAVE_PDF_FILE.read_text(encoding="utf-8").strip())
+               .replace("__SEND_PDF__", SEND_PDF_FILE.read_text(encoding="utf-8").strip()))
 
 PICKER_FOOTER = """
 <div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title">
@@ -916,6 +924,7 @@ __PROPERTIES_JSON__
     floatingBack.hidden = false;
     document.getElementById("print-button").hidden = false;
     document.getElementById("save-button").hidden = false;
+    document.getElementById("send-button").hidden = false;
     if (window.location.hash === "#view") { return; }
     pageLoaded.then(function () {
       var fontsReady = (document.fonts && document.fonts.ready)

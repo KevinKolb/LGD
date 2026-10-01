@@ -683,3 +683,25 @@ def test_save_pdf_is_the_shared_script_inlined(real_output):
     shared = (Path(__file__).resolve().parent.parent / "shared" / "save-pdf.js").read_text(encoding="utf-8").strip()
     assert shared in real_output
     assert "\\" not in shared  # it is inlined through a Python string
+
+
+def test_send_shares_a_pdf_made_in_the_page(real_output):
+    """Send (the user, 2026-10-01: the phone's share sheet for now):
+    documents/print/send-pdf.js, inlined; it loads the vendored PDF maker
+    only when pressed, and shows with Print, never before an apartment is
+    picked."""
+    here = Path(__file__).resolve().parent.parent / "documents" / "print"
+    script = (here / "send-pdf.js").read_text(encoding="utf-8").strip()
+    assert script in real_output
+    assert "\\" not in script  # it is inlined through a Python string
+    assert 'var LIBRARY = "vendor/html2pdf.bundle.min.js";' in script
+    assert (here / "vendor" / "html2pdf.bundle.min.js").is_file()
+    assert (here / "vendor" / "html2pdf-LICENSE.txt").is_file()
+    assert "navigator.share({ files: [file]" in script
+    assert '<button type="button" id="send-button" data-send-pdf hidden>Send</button>' in real_output
+    finish = real_output[real_output.index("function finish"):]
+    assert 'getElementById("send-button").hidden = false' in finish[:finish.index("properties.forEach")]
+    buttons = real_output[real_output.index('<div class="float-buttons">'):]
+    buttons = buttons[:buttons.index("</div>")]
+    assert (buttons.index('id="back-button"') < buttons.index('id="send-button"')
+            < buttons.index('id="save-button"') < buttons.index('id="print-button"'))
