@@ -297,9 +297,7 @@ wall at a downward angle.
 tempered steel pins.
 
 No single item weighing more than eight (8) pounds may be hung on any plaster wall without
-Lessor's prior written consent.  If Lessor consents, Lessor or a contractor chosen by
-Lessor shall install the item, or supervise its installation, so that it is anchored
-into the wooden lath or studs behind the plaster.
+Lessor's prior written consent.
 
 Lessee shall not attempt to patch, spackle, mud, or paint over any nail holes, cracks, or
 chips upon move-out.  Improper amateur repairs to plaster walls often cause more cosmetic

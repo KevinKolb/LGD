@@ -241,3 +241,12 @@ change above has been reviewed and applied.
   "Email" line beside them, to be filled in by hand; the Lessor/Agent line
   does not. No wording in `lease.md` changed - the line is added by the
   generator (`signature_row`) - and no lease got longer.
+
+- **2026-10-01 - §20 WALLS (B) plaster: the installation sentence removed**
+  (the user). Deleted, in full: "If Lessor consents, Lessor or a contractor
+  chosen by Lessor shall install the item, or supervise its installation, so
+  that it is anchored into the wooden lath or studs behind the plaster." The
+  sentence before it - no item over eight (8) pounds without Lessor's prior
+  written consent - stays. Applied to `documents/lease.md`; the lease, the
+  combined documents page and the Plaster Walls Addendum (which reads §20 (B)
+  out of `lease.md`) regenerated.
