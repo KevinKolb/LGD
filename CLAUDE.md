@@ -18,7 +18,7 @@ the bar was set.
 So hardcoding LGD's name, address or phone into a page is *fine* for now — but
 say so when doing it, because every instance is a 2.0 migration. As of
 2026-09-08 those are: the printed lease's heading and the hub page heading, the
-resident page's contact block, the applicant page's company map, and
+applicant page's company map, and
 "New Orleans" as a default in the `properties` table and throughout the lease
 text itself. Since 2026-09-28, also the company name in every printed
 document's header (one `COMPANY_NAME`), and LGD's own buildings in
@@ -652,6 +652,21 @@ that was missing him. The other tables (`properties`, `open_apartments`,
 online form's submissions) are not people. 008 still creates
 `person_clients` when the whole set is re-run; 012, after it, folds it
 back in.
+
+**Each company's contact details are in the company table** (the user,
+2026-10-02: "resident page gets separate contact info blocks based on
+company. pull from single company table. edit company table with current
+lgd info, all fields"). `supabase/migrations/014_company_contact.sql`
+gives `managers` `contact_name`, `phone`, `phone_note`, `website` and
+`address` beside `name`, `signer_name` and `email`, and fills in LGD's:
+Pam and Steve Hartnett, 504.913.1556 (call or text),
+LGD@neworleans.properties, https://neworleans.properties, the office at
+1556 Camp St. (where the lease has rent paid), and Steve A. Hartnett as
+signer (his name heads the deposit form). Orange Street's are empty.
+`get_my_company()` (any signed-in person, their current company) feeds the
+resident page's Contact block, which was LGD's written into the page;
+signed out it says to sign in. The FastAPI app does not have these
+columns or the function.
 
 ## The Admin Portal
 

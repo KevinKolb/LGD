@@ -110,3 +110,19 @@ def test_a_welcome_under_every_title_and_no_login_on_home():
     assert 'if (bar && header.hasAttribute("data-no-home")) bar.hidden = !signedInHere();' in home
     manager = (ROOT / "manager" / "index.html").read_text(encoding="utf-8")
     assert 'document.getElementById("whoami").textContent = greeting' not in manager
+
+
+def test_the_resident_page_shows_its_own_companys_contact():
+    """The user, 2026-10-02: "separate contact info blocks based on
+    company. pull from single company table. edit company table with
+    current lgd info, all fields." Migration 014."""
+    sql = (ROOT / "supabase" / "migrations" / "014_company_contact.sql").read_text(encoding="utf-8")
+    for column in ("contact_name", "phone", "phone_note", "website", "address"):
+        assert f"alter table public.managers add column if not exists {column} text;" in sql
+    assert "where id = 'lgd';" in sql
+    assert "select * into company from public.managers m where m.id = caller.manager_id;" in sql
+    assert "grant execute on function public.get_my_company() to authenticated;" in sql
+    page = (ROOT / "resident" / "index.html").read_text(encoding="utf-8")
+    assert 'auth.rpc("get_my_company", {})' in page
+    # No company's details are written into the page any more.
+    assert "913.1556" not in page and "Pam and Steve" not in page

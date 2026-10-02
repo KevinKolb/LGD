@@ -109,18 +109,60 @@
 <main>
   <section>
     <h2>Contact</h2>
-    <p>
-      LGD (Lower Garden District Properties), Inc.<br>
-      Pam and Steve Hartnett<br>
-      <a href="tel:+15049131556">504.913.1556</a> (call or text)<br>
-      <a href="mailto:LGD@neworleans.properties">LGD@neworleans.properties</a><br>
-      <a href="https://neworleans.properties" target="_blank" rel="noopener">https://neworleans.properties</a>
-    </p>
+    <!-- Filled from the signed-in person's own company (get_my_company,
+         supabase/migrations/014) - each company has its own (the user,
+         2026-10-02: "separate contact info blocks based on company. pull
+         from single company table"). -->
+    <p id="contact" class="empty">Loading…</p>
   </section>
 </main>
 
 <script src="../shared/auth.js"></script>
 <script src="../shared/account.js"></script>
 <script src="../shared/home.js"></script>
+<script>
+"use strict";
+(async function () {
+  const box = document.getElementById("contact");
+  const say = (text) => { box.className = "empty"; box.textContent = text; };
+  const auth = window.LGD && window.LGD.auth;
+  try {
+    if (!auth || !auth.configured || !(await auth.session())) {
+      say("Sign in to see how to reach your property manager.");
+      return;
+    }
+    const company = await auth.rpc("get_my_company", {});
+    if (!company || !company.name) {
+      say("Your login is not linked to a property manager yet.");
+      return;
+    }
+    box.className = "";
+    box.replaceChildren();
+    const line = (...parts) => {
+      if (box.childNodes.length) box.append(document.createElement("br"));
+      box.append(...parts);
+    };
+    const link = (href, text, external) => {
+      const a = document.createElement("a");
+      a.href = href;
+      a.textContent = text;
+      if (external) { a.target = "_blank"; a.rel = "noopener"; }
+      return a;
+    };
+    line(company.name);
+    if (company.contact_name) line(company.contact_name);
+    if (company.address) line(company.address);
+    if (company.phone) {
+      const digits = company.phone.replace(/[^0-9]/g, "");
+      line(link("tel:+" + (digits.length === 10 ? "1" + digits : digits), company.phone),
+           company.phone_note ? ` (${company.phone_note})` : "");
+    }
+    if (company.email) line(link("mailto:" + company.email, company.email));
+    if (/^https?:[/][/]/.test(company.website || "")) line(link(company.website, company.website, true));
+  } catch (error) {
+    say("The contact information could not be loaded.");
+  }
+})();
+</script>
 </body>
 </html>
