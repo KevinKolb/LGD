@@ -7,7 +7,7 @@
       "city": "New Orleans",
       "state": "LA",
       "zip": "70130",
-      "units": ["1", "2", "3", "4", "5", "6", "7"],
+      "units": ["#1 (101)", "#2 (102)", "#3 (103)", "#4 (201)", "#5 (202)", "#6 (203)", "#7 (204)"],
       "lease_options": {
         "parking": "limited",
         "walls": "A",
@@ -91,7 +91,7 @@
       "city": "New Orleans",
       "state": "LA",
       "zip": "70130",
-      "units": ["1", "2", "3", "4", "5", "6"],
+      "units": ["#1", "#2", "#3", "#4", "#5", "#6"],
       "lease_options": {
         "parking": "not-available",
         "walls": "A",

@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../favicon.ico?v=2" sizes="any">
+<link rel="icon" href="../shared/icons/house.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
+<link rel="manifest" href="../shared/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="LGD PORTAL">
+<script src="../shared/theme.js"></script>
+<title>Properties</title>
+<!--
+  The first report (the user, 2026-10-02: "it's more of a graphic really.
+  it shows each house with each unit in it with each resident in it.
+  eventually houses will show status like lease expiring or vacant etc.").
+
+  One house per building in documents/properties.json (the client's own),
+  a box per unit inside it (a house with no units is one box), and every
+  resident of that unit in the box - from list_residents (supabase/
+  migrations/007) for this month, or /api/residents from the FastAPI app,
+  managers and admins only, like the rent register.
+
+  Status, so far: a unit with nobody on file is Vacant, and a resident
+  whose recorded lease ends within 60 days shows "Lease ends ...". More
+  statuses go in unitStatus() below.
+-->
+<style>
+  :root {
+    --accent: #006747; --accent2: #418fde; --ink: #1c1c1a; --muted: #6b6a66;
+    --vacant: #b4552d; --ending: #a07a00;
+  }
+  html, body { margin: 0; padding: 0; background: #f2f1ee; color: var(--ink); }
+  body {
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    padding: 20px 16px 96px;
+  }
+  .report { max-width: 1100px; margin: 0 auto; }
+  .company { margin: 0; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 2px 0 4px; text-align: center; font-size: 24px; }
+  .summary { margin: 0 0 22px; text-align: center; color: var(--muted); }
+  .summary b { color: var(--ink); }
+  .legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; margin: -12px 0 22px; font-size: 13px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .legend .l-occupied::before { background: #fff; border: 1px solid #bbb; }
+  .legend .l-vacant::before { background: #fbeee8; border: 1px solid var(--vacant); }
+  .legend .l-ending::before { background: #fdf6dc; border: 1px solid var(--ending); }
+  .status { text-align: center; color: var(--muted); }
+  .status.error { color: #a4262c; }
+
+  .street { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 28px 22px; align-items: end; }
+  /* A house: a roof over a body of units. */
+  .house { break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; }
+  .roof {
+    position: relative; height: 64px; margin: 0 -10px;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    background: var(--accent);
+  }
+  .facade {
+    background: #fff; border: 3px solid var(--accent); border-top: 0;
+    padding: 10px 10px 12px; display: flex; flex-direction: column; flex: 1;
+  }
+  .address { margin: 0 0 2px; text-align: center; font-size: 17px; font-weight: 700; }
+  .count { margin: 0 0 10px; text-align: center; font-size: 12px; color: var(--muted); }
+  .units { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .units.single { grid-template-columns: 1fr; }
+  .unit {
+    border: 1px solid #c9c7c1; border-radius: 4px; padding: 6px 8px 7px; background: #fafaf8;
+    min-height: 52px; box-sizing: border-box;
+  }
+  .unit-name { margin: 0 0 3px; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .02em; }
+  .resident { margin: 0; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+  .badge {
+    display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 6px; line-height: 1.3;
+    font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  }
+  .unit.vacant { background: #fbeee8; border-color: var(--vacant); }
+  .unit.vacant .badge { background: var(--vacant); color: #fff; }
+  .unit.ending { background: #fdf6dc; border-color: var(--ending); }
+  .unit.ending .badge { background: var(--ending); color: #fff; }
+  /* The door, under the units. */
+  .door { width: 30px; height: 40px; margin: 12px auto -12px; background: var(--accent); border-radius: 15px 15px 0 0; }
+
+  .paper-buttons { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; gap: 10px; }
+  .paper-buttons a {
+    padding: 10px 20px; border: 1px solid var(--accent); border-radius: 999px;
+    background: #fff; color: var(--accent); font: inherit; text-decoration: none;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .25);
+  }
+  .paper-buttons a[hidden] { display: none; }
+  .paper-buttons a#print-report { background: var(--accent); color: #fff; }
+  @page { size: letter; margin: 0.5in; }
+  @media print {
+    html, body { background: #fff; }
+    body { padding: 0; font-size: 12px; }
+    .paper-buttons, .status { display: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .street { grid-template-columns: repeat(3, 1fr); gap: 18px 14px; }
+  }
+  @media (max-width: 600px) {
+    .street { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="report">
+  <p class="company" id="company">LGD (Lower Garden District Properties), Inc.</p>
+  <h1>Properties</h1>
+  <p class="summary" id="summary"></p>
+  <div class="legend" id="legend" hidden>
+    <span class="l-occupied">Occupied</span>
+    <span class="l-vacant">Vacant</span>
+    <span class="l-ending">Lease ending within 60 days</span>
+  </div>
+  <p class="status" id="status" role="status">Loading…</p>
+  <div class="street" id="street"></div>
+</div>
+<!-- Back, Save and Print, floating like the rent register's. -->
+<div class="paper-buttons">
+  <a href="index.html">Back</a>
+  <a href="#" id="save-report" data-save-pdf hidden>Save</a>
+  <a href="#" id="print-report" hidden>Print</a>
+</div>
+<script src="../shared/auth.js"></script>
+<script src="../shared/save-pdf.js"></script>
+<script>
+"use strict";
+try {
+  const client = JSON.parse(localStorage.getItem("lgd-client") || "null");
+  if (client && client.name) document.getElementById("company").textContent = client.name;
+} catch (error) {
+  /* Nothing remembered: the default name stays. */
+}
+
+(function () {
+  const status = document.getElementById("status");
+  const street = document.getElementById("street");
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const ENDING_DAYS = 60;
+  let via = null;
+  let client = null;
+
+  function fail(text) {
+    status.textContent = text;
+    status.className = "status error";
+    status.hidden = false;
+  }
+
+  // As the rent register: the FastAPI app when it served this page,
+  // Supabase on GitHub Pages.
+  async function backend() {
+    try {
+      const response = await fetch("/api/config");
+      if (response.ok) {
+        client = (await response.json()).user.manager_id || null;
+        return "api";
+      }
+    } catch (error) {
+      /* No backend here - the normal case on GitHub Pages. */
+    }
+    const auth = window.LGD.auth;
+    if (!auth.configured) throw new Error("This site is not connected to its login service yet.");
+    const result = await auth.requireRole(["manager", "admin"]);
+    if (result.reason === "signed-out") return null;  // already heading to the login page
+    if (!result.ok) throw new Error("This report is for managers.");
+    client = result.profile.manager_id || null;
+    return "supabase";
+  }
+
+  // Residents whose lease covers this month, or who have no lease dates.
+  async function residents(month) {
+    if (via === "api") {
+      const response = await fetch(`/api/residents?month=${month}`);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof payload.detail === "string" ? payload.detail : "That did not work.");
+      return payload.residents;
+    }
+    return window.LGD.auth.rpc("list_residents", { month });
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function shortDate(value) {
+    const [y, m, d] = value.split("-").map(Number);
+    return `${MONTHS[m - 1]} ${d}, ${y}`;
+  }
+
+  // What a unit's box says about it. Vacant: nobody on file. Ending: the
+  // soonest recorded lease end among its residents is within 60 days.
+  function unitStatus(people, today) {
+    if (!people.length) return { kind: "vacant", text: "Vacant" };
+    const ends = people.map((p) => p.lease_end).filter((d) => /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(d || "")).sort();
+    if (ends.length) {
+      const [y, m, d] = ends[0].split("-").map(Number);
+      const days = (new Date(y, m - 1, d) - today) / 86400000;
+      if (days <= ENDING_DAYS) return { kind: "ending", text: `Lease ends ${shortDate(ends[0])}` };
+    }
+    return null;
+  }
+
+  function personName(person) {
+    return person.full_name || person.email || "Resident";
+  }
+
+  function render(properties, people) {
+    const key = (address, unit) => `${address}|${unit || ""}`;
+    const byUnit = new Map();
+    for (const person of people) {
+      const k = key(person.address, person.unit);
+      if (!byUnit.has(k)) byUnit.set(k, []);
+      byUnit.get(k).push(person);
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let unitCount = 0, vacant = 0, residentCount = 0;
+    const placed = new Set();
+    street.replaceChildren();
+
+    function house(address, units, single) {
+      const box = el("article", "house");
+      box.append(el("div", "roof"));
+      const facade = el("div", "facade");
+      facade.append(el("h2", "address", address));
+      const occupied = units.filter((u) => u.people.length).length;
+      facade.append(el("p", "count", single
+        ? (occupied ? "Occupied" : "Vacant")
+        : `${units.length} units, ${occupied} occupied`));
+      const grid = el("div", single ? "units single" : "units");
+      for (const unit of units) {
+        const state = unitStatus(unit.people, today);
+        const tile = el("div", "unit" + (state ? " " + state.kind : ""));
+        tile.append(el("p", "unit-name", unit.name || "Whole house"));
+        for (const person of unit.people) tile.append(el("p", "resident", personName(person)));
+        if (state) tile.append(el("span", "badge", state.text));
+        grid.append(tile);
+        unitCount += 1;
+        if (!unit.people.length) vacant += 1;
+        residentCount += unit.people.length;
+      }
+      facade.append(grid, el("div", "door"));
+      box.append(facade);
+      street.append(box);
+    }
+
+    for (const property of properties) {
+      const names = property.units.length ? property.units : [""];
+      house(property.address, names.map((name) => {
+        placed.add(key(property.address, name));
+        return { name, people: byUnit.get(key(property.address, name)) || [] };
+      }), !property.units.length);
+    }
+    // Anyone at an address or unit the table of apartments does not have
+    // still shows, in a house of their own, rather than being left off.
+    const stray = new Map();
+    for (const person of people) {
+      if (placed.has(key(person.address, person.unit))) continue;
+      if (!stray.has(person.address)) stray.set(person.address, new Map());
+      const units = stray.get(person.address);
+      if (!units.has(person.unit || "")) units.set(person.unit || "", []);
+      units.get(person.unit || "").push(person);
+    }
+    for (const [address, units] of stray) {
+      house(address, [...units].map(([name, list]) => ({ name, people: list })), false);
+    }
+
+    const summary = document.getElementById("summary");
+    summary.replaceChildren(
+      el("b", "", String(properties.length)), document.createTextNode(properties.length === 1 ? " building, " : " buildings, "),
+      el("b", "", String(unitCount)), document.createTextNode(unitCount === 1 ? " unit, " : " units, "),
+      el("b", "", String(residentCount)), document.createTextNode(residentCount === 1 ? " resident, " : " residents, "),
+      el("b", "", String(vacant)), document.createTextNode(" vacant"));
+  }
+
+  document.getElementById("print-report").addEventListener("click", (event) => {
+    event.preventDefault();
+    window.print();
+  });
+
+  (async function () {
+    try {
+      via = await backend();
+      if (!via) return;
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const [response, people] = await Promise.all([
+        fetch("../documents/properties.json", { cache: "no-store" }),
+        residents(month),
+      ]);
+      const properties = (await response.json()).properties
+        .filter((property) => !client || property.manager_id === client);
+      render(properties, people || []);
+      status.hidden = true;
+      document.getElementById("legend").hidden = false;
+      document.getElementById("print-report").hidden = false;
+      document.getElementById("save-report").hidden = false;
+    } catch (error) {
+      fail(error.message || "The report could not be loaded.");
+    }
+  })();
+})();
+</script>
+</body>
+</html>

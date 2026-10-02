@@ -98,13 +98,33 @@ def test_each_accepting_apartment_is_a_tag_with_an_x_to_stop_it() -> None:
     assert "open = await saveOpen(rest);" in page
 
 
-def test_the_manager_page_has_reports_coming_soon() -> None:
-    """The user, 2026-09-30: "add a reports coming soon to managers page"."""
+def test_the_manager_page_has_reports() -> None:
+    """The user, 2026-09-30: "add a reports coming soon to managers page";
+    then 2026-10-02, the first report: every house, its units and residents."""
     page = MANAGER_PAGE.read_text(encoding="utf-8")
     section = page[page.index('<section id="reports">'):]
     section = section[:section.index("</section>")]
     assert '<span class="step" aria-hidden="true">7</span>' in section
-    assert "<h2>Reports</h2>" in section and "Coming soon." in section
+    assert "<h2>Reports</h2>" in section and "Coming soon." not in section
+    assert 'href="property_report.html">Properties</a>' in section
+    report = (MANAGER_PAGE.parent / "property_report.html").read_text(encoding="utf-8")
+    # Managers only, the client's own buildings, every unit, vacant marked.
+    assert 'auth.requireRole(["manager", "admin"])' in report
+    assert "property.manager_id === client" in report
+    assert 'return { kind: "vacant", text: "Vacant" };' in report
+
+
+def test_units_are_named_as_on_paper() -> None:
+    """The user, 2026-10-02: "change names of units to match what's on
+    paper. #2 (102) for example" - and 011 renames them in the database."""
+    import json
+    props = {p["address"]: p["units"] for p in json.loads(
+        (MANAGER_PAGE.parent.parent / "documents" / "properties.json").read_text(encoding="utf-8"))["properties"]}
+    assert props["1364 Camp St."] == ["#1 (101)", "#2 (102)", "#3 (103)", "#4 (201)", "#5 (202)", "#6 (203)", "#7 (204)"]
+    assert props["1521 St. Andrew St."] == ["#1", "#2", "#3", "#4", "#5", "#6"]
+    migration = (MANAGER_PAGE.parent.parent / "supabase" / "migrations" / "011_unit_names.sql").read_text(encoding="utf-8")
+    for table in ("properties", "open_apartments", "rent_payments", "people"):
+        assert f"update public.{table} " in migration
 
 
 def test_anyone_can_ask_whether_applications_are_open(client) -> None:

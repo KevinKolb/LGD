@@ -466,8 +466,8 @@ prints exactly as its own page does (checked at every address), so the
 single-document pages are no longer linked from the manager page; they
 stay as files, and `app/main.py` still serves the lease one. The steps
 are now 1 Accept Applications, 2 Applicants, 3 Paper Documents Generator,
-4 Resident Entry, 5 Monthly Rent Register, 6 Legal, 7 Reports (only
-"Coming soon." for now, the user, 2026-09-30). **Regenerate it after editing any of the three masters or
+4 Resident Entry, 5 Monthly Rent Register, 6 Legal, 7 Reports (see
+"The Properties report"). **Regenerate it after editing any of the three masters or
 `properties.json`**, alongside that document's own page. The addendum is
 left out: no longer in use, and it names a fixed address.
 
@@ -882,6 +882,34 @@ The first resident, Kevin Kolb (the user: admin, manager and resident at
 1558 Camp St., Unit A), was put there on 2026-09-29 by a SQL snippet given
 to him rather than a committed migration - this repository is public, and
 it held his phone number - before Resident Entry existed.
+
+## The Properties report
+
+Step 7, Reports, on the manager page; the first report (the user,
+2026-10-02: "it's more of a graphic really. it shows each house with each
+unit in it with each resident in it. eventually houses will show status
+like lease expiring or vacant etc."). `manager/property_report.html`
+draws a house per building of the current client's in
+`documents/properties.json` - a roof, the address, a box per unit (a
+house with no units is one "Whole house" box) and every resident of that
+unit, from `list_residents(month)` for this month (or `/api/residents`),
+managers and admins only. A summary line counts buildings, units,
+residents and vacancies. **Status lives in `unitStatus()`**: so far
+Vacant (nobody on file) and "Lease ends ..." (a recorded `lease_end`
+within 60 days); add the next one there, with a colour and a legend
+entry. A resident at an address or unit the file lacks gets a house of
+their own rather than being dropped. Back, Save and Print float like the
+rent register's; it prints in colour, three houses across.
+
+**Unit names are as written on paper** (the user, same day: "#2 (102)
+for example"): 1364 Camp's units are "#1 (101)" ... "#7 (204)", 1521 St.
+Andrew's "#1" ... "#6", 1558 Camp's A, B, C. A unit is stored by its
+name everywhere (`properties.apt`, `open_apartments`, `rent_payments`,
+`people.apply_unit`), so renaming one in `properties.json` needs a
+migration renaming it in those too - `supabase/migrations/011_unit_names.sql`
+did this one. The FastAPI app's local SQLite was not migrated. Printed
+documents read "1364 Camp St., Unit #2 (102)"; page counts at every
+address were unchanged.
 
 ## The house icon
 
