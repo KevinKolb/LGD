@@ -601,7 +601,7 @@ function unlock(greeting, backend, client) {
   document.getElementById("gate").hidden = true;
   document.querySelector("header").hidden = false;
   document.querySelector("main").hidden = false;
-  if (greeting) document.getElementById("whoami").textContent = greeting;
+  // The welcome under the title is shared/home.js's, as on every page.
   window.LGD_DASHBOARD = { backend, client: client || null };
   document.dispatchEvent(new CustomEvent("lgd-dashboard-ready"));
 }

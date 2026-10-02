@@ -550,8 +550,17 @@ and a two-site admin:
   ("Manager Portal - momandpop.com") until a signed-in login's client is
   known (`list_my_clients`, remembered as `lgd-client` only while signed
   in, forgotten when signed out), then that client's name.
-- **Login/Logout** is in the header of the home, applicant, resident,
-  manager and admin pages (`shared/account.js`); sign-in has Home only.
+- **Login/Logout** is in the header of the applicant, resident, manager
+  and admin pages (`shared/account.js`); sign-in has Home only, and the
+  home page shows **Logout only, and only while signed in** (the user,
+  2026-10-02: "no login on home page, only logoff if necessary") -
+  signing in starts from a role's button.
+- **A welcome under every page's title** (the user, same day: "generic
+  welcome message under page title, personalized if login"): "Welcome."
+  signed out, "Welcome back, Kevin." signed in (the first word of the
+  name on file; just "Welcome back." while that is still an email).
+  `shared/home.js` writes it - into the manager page's `#whoami`, which no
+  longer greets on its own.
 - **The site picker** shows only in headers marked `data-client-picker`
   (manager, admin) and only for a login linked to more than one client.
 - **Home, signed in, shows only the roles held** (Manager for an admin

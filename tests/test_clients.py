@@ -74,3 +74,15 @@ def test_manager_and_admin_are_one_credential():
     sql = (ROOT / "supabase" / "migrations" / "009_managers_are_admins.sql").read_text(encoding="utf-8")
     assert "update public.people set is_manager = true where is_admin and not is_manager;" in sql
     assert "not (caller.is_manager or caller.is_admin)" in sql
+
+
+def test_a_welcome_under_every_title_and_no_login_on_home():
+    """The user, 2026-10-02: "no login on home page, only logoff if
+    necessary. put a generic welcome message under page title, personalized
+    if login"."""
+    home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
+    assert 'welcome.textContent = signedInHere() ? "" : "Welcome.";' in home
+    assert '"Welcome back, " + first + "."' in home
+    assert 'if (bar && header.hasAttribute("data-no-home")) bar.hidden = !signedInHere();' in home
+    manager = (ROOT / "manager" / "index.html").read_text(encoding="utf-8")
+    assert 'document.getElementById("whoami").textContent = greeting' not in manager

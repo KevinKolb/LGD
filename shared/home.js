@@ -109,6 +109,7 @@
       position: fixed; top: 16px; left: 16px; z-index: 20;
       border-color: var(--accent, #1f5d4c); color: var(--accent, #1f5d4c); background: #fff;
     }
+    header.site-header #account-bar[hidden] { display: none !important; }
     @media print { .hdr-home, .hdr-actions { display: none; } }`;
   document.head.append(style);
 
@@ -176,6 +177,10 @@
   const placeAccount = () => {
     const bar = document.getElementById("account-bar");
     if (bar && bar.parentNode !== actions) actions.append(bar);
+    // The home page shows Logout when someone is signed in, and no Login
+    // (the user, 2026-10-02: "no login on home page, only logoff if
+    // necessary") - signing in starts from a role's button.
+    if (bar && header.hasAttribute("data-no-home")) bar.hidden = !signedInHere();
     // The gear sits just left of Login/Logout.
     const gear = actions.querySelector(".hdr-gear");
     if (gear && bar && gear.nextElementSibling !== bar) actions.insertBefore(gear, bar);
@@ -228,14 +233,44 @@
   if (!signedInHere()) forget();
   showClient(remembered);
 
+  // A welcome under the title on every page (the user, 2026-10-02: "put a
+  // generic welcome message under page title, personalized if login"):
+  // "Welcome." signed out, "Welcome back, Kevin." signed in. The manager
+  // page's own line (#whoami) is used where there is one.
+  let welcome = titles.querySelector("#whoami");
+  if (!welcome) {
+    welcome = document.createElement("p");
+    welcome.className = "hdr-welcome";
+    const title = titles.querySelector("h1");
+    if (title) title.after(welcome);
+    else titles.append(welcome);
+  }
+  welcome.textContent = signedInHere() ? "" : "Welcome.";
+  async function greet(auth) {
+    let who = null;
+    try {
+      who = await auth.profile();
+    } catch (error) {
+      /* The login service did not answer: a plain welcome. */
+    }
+    const first = who ? String(who.display_name || "").trim().split(/[ ]+/)[0] : "";
+    // A name that is still an email (an applicant who has not signed up
+    // yet has their email there) is no name to greet.
+    welcome.textContent = first && first.indexOf("@") < 0 ? "Welcome back, " + first + "." : "Welcome back.";
+  }
+
   async function clients() {
     const auth = window.LGD && window.LGD.auth;
     if (!auth) return;
     if (!(await auth.session())) {
       forget();
       showClient(null);
+      welcome.textContent = "Welcome.";
+      const bar = document.getElementById("account-bar");
+      if (bar && header.hasAttribute("data-no-home")) bar.hidden = true;
       return;
     }
+    greet(auth);
     let list;
     try {
       list = await auth.rpc("list_my_clients");
