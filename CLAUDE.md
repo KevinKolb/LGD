@@ -1000,7 +1000,11 @@ images the background for the house not above text"), with the address on
 a light band at the top, a clear strip of photo, and the unit boxes nearly
 opaque over the rest; the address still opens Google Maps. Every LGD
 building has one now (sent by the user); only 123 Canal St. shows a map.
-Unlike a map, a photo prints. Back, Save and Print float like the
+Unlike a map, a photo prints. **The houses are landscape and plain** (the
+user, same day: "make houses more landscape. remove green door. simple
+shape"): at least 430px wide (two across on a computer and in print, one
+on a phone), a low roof without overhang, no door, and the unit boxes as
+many across as fit. Back, Save and Print float like the
 rent register's; it prints in colour, three houses across.
 
 **Unit names are as written on paper** (the user, same day: "#2 (102)

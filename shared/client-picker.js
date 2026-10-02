@@ -50,7 +50,13 @@
         background-position: right 19px center, right 14px center;
         background-size: 5px 5px; background-repeat: no-repeat;
       }
-      @media (max-width: 600px) { .paper-buttons select.paper-client { max-width: 120px; } }
+      /* A phone: four floating buttons on one row inside 320px. */
+      @media (max-width: 600px) {
+        .paper-buttons { gap: 6px !important; right: 8px !important; }
+        .paper-buttons select.paper-client { max-width: 92px; font-size: 10pt; padding: 9px 24px 9px 10px;
+          background-position: right 13px center, right 8px center; }
+        .paper-buttons a { padding: 9px 12px !important; font-size: 10pt !important; }
+      }
       @media print { .paper-buttons select.paper-client { display: none; } }`;
     document.head.append(style);
 
