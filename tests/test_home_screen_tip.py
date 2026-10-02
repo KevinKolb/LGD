@@ -20,3 +20,12 @@ def test_only_on_a_phone_or_tablet_and_only_the_first_time():
     assert "if (localStorage.getItem(SEEN)) return;" in script
     assert re.search(r"localStorage\.setItem\(SEEN,", script)
     assert '"(display-mode: standalone)"' in script
+
+
+def test_logout_shows_on_the_home_page_only_when_signed_in():
+    """The user, 2026-10-02: "logout button on home screen"."""
+    assert '<button type="button" id="home-logout" hidden>Logout</button>' in PAGE
+    assert '<script src="shared/auth.js"></script>' in PAGE
+    script = PAGE[PAGE.index('const button = document.getElementById("home-logout");') - 400:]
+    assert "if (!session) return;" in script
+    assert "await auth.signOut();" in script

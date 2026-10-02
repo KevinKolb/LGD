@@ -591,9 +591,11 @@ them, signed out too), written only by an admin through
 `PUT` (admin) `/api/site-colors`.
 
 `shared/theme.js` puts them on the page. It is loaded in the `<head>` of
-the six site pages (home, applicant, resident, manager, admin, login -
-not the printed documents or the rent register, which print in their own
-colors), sets the variables on `<html>` itself so they outrank each page's
+five site pages (applicant, resident, manager, admin, login - not the
+printed documents or the rent register, which print in their own colors,
+and **not the home page, which is always Tulane green and blue**: the
+user, 2026-10-02, "lock colors on home page with no login as tulane
+colors"; its `?org=o` orange scheme went too), sets the variables on `<html>` itself so they outrank each page's
 stylesheet and the `?org=o` orange scheme, and keeps the last colors in
 localStorage so a page never flashes the old ones before it has asked
 again. With none saved it sets nothing and every page keeps its own.
@@ -798,6 +800,10 @@ the generated documents and legal research included, carries the same
 five head lines; `tests/test_icons.py` checks each one. The name on a home
 screen is "LGD PORTAL", which is also the home page's title bar (the
 user, 2026-09-29).
+
+**The home page has a Logout button** under its card, only while
+someone is signed in (the user, 2026-10-02: "logout button on home
+screen"); it loads `shared/auth.js` for that alone.
 
 **The home page tells a phone how to add it to the home screen** (the
 user, 2026-09-30: "the first time the person goes to the page"): a popup

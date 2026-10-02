@@ -12,7 +12,7 @@ from tests.conftest import ADMIN, STEVE
 ROOT = Path(__file__).resolve().parent.parent
 THEME = ROOT / "shared" / "theme.js"
 MIGRATION = ROOT / "supabase" / "migrations" / "005_site_colors.sql"
-SITE_PAGES = ["index.html", "applicant/index.html", "resident/index.html", "manager/index.html",
+SITE_PAGES = ["applicant/index.html", "resident/index.html", "manager/index.html",
               "admin/index.html", "login/index.html"]
 
 
@@ -98,3 +98,12 @@ def test_the_admin_page_always_says_what_happened() -> None:
     assert "with the role${who.roles.length > 1 ? \"s\" : \"\"}: ${who.role_label}." in page
     assert "this login has no record on file yet" in page
     assert 'if (app.textContent.trim() === "Loading…") {' in page
+
+
+def test_the_home_page_is_always_tulane_green_and_blue():
+    """The user, 2026-10-02: the home page, which nobody signs in to, keeps
+    its own colors - no admin colors, no orange scheme."""
+    page = (ROOT / "index.html").read_text(encoding="utf-8")
+    assert "theme.js" not in page.split("<!--")[0] + page.split("-->", 1)[1]
+    assert "theme-orange" not in page and "lgd-org" not in page
+    assert "--accent: #285c4d;" in page and "--accent2: #71c5e8;" in page
