@@ -103,15 +103,15 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     assert response.status_code == 200
     # The header bar, titled momandpop.com, with no Home (the user,
     # 2026-10-02); the card no longer names a company.
-    assert '<header data-no-home>\n  <h1>momandpop.com</h1>\n</header>' in response.text
+    assert '<header data-no-home>\n  <h1 data-client>momandpop.com</h1>\n</header>' in response.text
     assert '<script src="shared/home.js"></script>' in response.text
     # A line after Applicant, and one before Manager and Admin, which are
     # in Tulane light blue.
     assert response.text.count('<hr class="links-divider">') == 2
     links = response.text[response.text.index('<div class="links">'):]
     assert links.index('href="login/?next=applicant/"') < links.index("<hr") < links.index('href="login/?next=resident/"')
-    assert '<a class="staff" href="manager/">Manager</a>' in response.text
-    assert '<a class="staff" href="admin/">Admin</a>' in response.text
+    assert '<a class="staff" href="manager/" data-role="manager">Manager</a>' in response.text
+    assert '<a class="staff" href="admin/" data-role="admin">Admin</a>' in response.text
     assert 'href="login/?next=applicant/"' in response.text
     assert 'href="login/?next=resident/"' in response.text
     # The role links, in the same order as every other page's footer.
@@ -138,8 +138,8 @@ def test_applicant_and_resident_sign_in_first() -> None:
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
     page = (root / "index.html").read_text(encoding="utf-8")
-    assert '<a href="login/?next=applicant/">Applicant</a>' in page
-    assert '<a href="login/?next=resident/">Resident</a>' in page
+    assert '<a href="login/?next=applicant/" data-role="applicant">Applicant</a>' in page
+    assert '<a href="login/?next=resident/" data-role="resident">Resident</a>' in page
     assert "data-soon>" not in page
     login = (root / "login" / "index.html").read_text(encoding="utf-8")
     assert 'if (linkType || new URLSearchParams(window.location.search).has("next")) {' in login

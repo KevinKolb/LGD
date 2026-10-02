@@ -261,7 +261,7 @@
   .gate {
     max-width: 340px;
     width: calc(100% - 48px);
-    margin: 12vh auto 0;
+    margin: 40px auto 0;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -304,22 +304,26 @@
 </style>
 </head>
 <body>
+
+<!-- The header shows from the start - Home and Login/Logout are the way
+     out for someone this page turns away (the user, 2026-10-02: "fix all
+     access problems"); only <main> waits for the login check. The client
+     picker belongs to the staff pages (data-client-picker). -->
+<header data-client-picker>
+  <div>
+    <p class="company" data-client>momandpop.com</p>
+    <h1>Manager Portal</h1>
+    <p id="whoami"></p>
+  </div>
+</header>
+
 <div class="gate" id="gate">
-  <h1>Manager Portal</h1>
   <p class="msg" id="gate-msg">Checking your access&hellip;</p>
   <a class="gate-button" id="gate-login" href="../login/" hidden>Sign in</a>
   <button type="button" class="gate-button secondary" id="gate-signout" hidden>
     Sign out
   </button>
 </div>
-
-<header hidden>
-  <div>
-    <p class="company" data-client>LGD (Lower Garden District Properties), Inc.</p>
-    <h1>Manager Portal</h1>
-    <p id="whoami">Welcome</p>
-  </div>
-</header>
 
 <main hidden>
   <section id="accepting">

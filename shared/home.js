@@ -133,11 +133,32 @@
   placeAccount();
   new MutationObserver(placeAccount).observe(header, { childList: true, subtree: true });
 
-  // The current client's name, wherever the page asks for it.
+  // The name at the top of every page, and in the browser tab:
+  // "momandpop.com" until a signed-in login's client is known, then that
+  // client's name (the user, 2026-10-02). Each page marks it data-client -
+  // the home page's title, the company line above the others' titles.
+  const BRAND = "momandpop.com";
+  const pageTitle = document.title;
   function showClient(client) {
-    if (!client || !client.name) return;
-    for (const line of document.querySelectorAll(".company[data-client]")) {
-      line.textContent = client.name;
+    const name = (client && client.name) || BRAND;
+    for (const line of document.querySelectorAll("[data-client]")) {
+      line.textContent = name;
+    }
+    document.title = header.hasAttribute("data-no-home") || pageTitle === BRAND
+      ? name : pageTitle + " - " + name;
+  }
+  function signedInHere() {
+    try {
+      return Boolean(localStorage.getItem("lgd-auth"));
+    } catch (error) {
+      return false;
+    }
+  }
+  function forget() {
+    try {
+      localStorage.removeItem(CLIENT_KEY);
+    } catch (error) {
+      /* nothing kept */
     }
   }
   function remember(client) {
@@ -147,15 +168,24 @@
       /* Private browsing: the name just is not carried to other pages. */
     }
   }
+  // At once, from what this browser remembers - only while signed in.
+  let remembered = null;
   try {
-    showClient(JSON.parse(localStorage.getItem(CLIENT_KEY) || "null"));
+    remembered = signedInHere() ? JSON.parse(localStorage.getItem(CLIENT_KEY) || "null") : null;
   } catch (error) {
     /* Nothing remembered yet. */
   }
+  if (!signedInHere()) forget();
+  showClient(remembered);
 
   async function clients() {
     const auth = window.LGD && window.LGD.auth;
-    if (!auth || !(await auth.session())) return;
+    if (!auth) return;
+    if (!(await auth.session())) {
+      forget();
+      showClient(null);
+      return;
+    }
     let list;
     try {
       list = await auth.rpc("list_my_clients");
@@ -167,8 +197,9 @@
     remember(current);
     showClient(current);
     // The picker is for the staff pages, the ones with Login/Logout.
-    if (list.length < 2 || !document.getElementById("account-bar")
-        || header.hasAttribute("data-no-home")) return;
+    // The picker is for the staff pages (header data-client-picker), and
+    // only for a login linked to more than one client.
+    if (list.length < 2 || !header.hasAttribute("data-client-picker")) return;
 
     const picker = document.createElement("select");
     picker.className = "hdr-client";

@@ -102,7 +102,7 @@
 </head>
 <body>
 <header>
-  <p class="company" id="company-name"></p>
+  <p class="company" data-client>momandpop.com</p>
   <h1>Resident Portal</h1>
 </header>
 
@@ -119,25 +119,8 @@
   </section>
 </main>
 
-<script>
-"use strict";
-
-// Management company shown under the heading, picked by a ?company= URL
-// param rather than a login. Same two options as the applicant page.
-// This constant was missing here, which threw a ReferenceError on every
-// load of this page and stopped the rest of its script running.
-const COMPANY_NAMES = {
-  orange: "Orange Street, Inc.",
-  lgd: "LGD (Lower Garden District Properties), Inc.",
-};
-
-function showCompanyName() {
-  const company = new URLSearchParams(window.location.search).get("company");
-  document.getElementById("company-name").textContent = COMPANY_NAMES[company] || "";
-}
-
-showCompanyName();
-</script>
+<script src="../shared/auth.js"></script>
+<script src="../shared/account.js"></script>
 <script src="../shared/home.js"></script>
 </body>
 </html>

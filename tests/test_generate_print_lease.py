@@ -378,7 +378,9 @@ def test_the_apartment_table_is_inlined_not_fetched(gen, real_output):
     start = real_output.index('<script type="application/json" id="lease-properties">')
     body = real_output[real_output.index(">", start) + 1:real_output.index("</script>", start)]
     assert json.loads(body) == gen.load_properties()
-    assert "fetch(" not in real_output
+    # The one fetch is the sign-in check on the website, never the data.
+    assert real_output.count("fetch(") == 1
+    assert 'fetch("/api/config")' in real_output
 
 
 def test_the_premises_blank_is_the_one_the_picker_fills(real_output):
@@ -731,3 +733,11 @@ def test_save_and_send_name_the_document_and_date_the_file():
         assert "function dateStamp()" in script and "function documentName()" in script
     assert 'document.title = title + " " + dateStamp();' in (root / "shared" / "save-pdf.js").read_text()
     assert 'return name + " " + dateStamp() + ".pdf";' in (root / "documents" / "print" / "send-pdf.js").read_text()
+
+
+def test_a_document_on_the_website_asks_a_signed_out_visitor_to_sign_in(real_output):
+    """The user, 2026-10-02: "fix all access problems" - no stored login on
+    the website, and the document sends them to sign in and back. Opened as
+    a file it checks nothing."""
+    assert 'if (!/^https?:$/.test(window.location.protocol)) { return; }' in real_output
+    assert 'new URL("../../login/?next=" + encodeURIComponent(window.location.href)' in real_output

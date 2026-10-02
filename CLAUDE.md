@@ -534,6 +534,41 @@ starts hidden so it never flashes; if neither answers it shows, since the
 signup's own email-on-file check still holds. **004 must be
 applied to the live database** like the others.
 
+## Navigation and access, page by page
+
+Settled on 2026-10-02 (the user: "go through and fix and improve nav on
+all pages. fix all access problems. site selector only appears if a login
+has more than one site assigned", and "page title and name in header is
+always momandpop.com until a client/company is identified (after login)
+then momandpop.com is replaced with company/client"). Checked by opening
+every page signed out and as an applicant, a resident, a one-site manager
+and a two-site admin:
+
+- **The name**: every site page's header carries a `data-client` line -
+  the home page's title, the company line above the others' titles - and
+  `shared/home.js` puts "momandpop.com" there and in the browser tab
+  ("Manager Portal - momandpop.com") until a signed-in login's client is
+  known (`list_my_clients`, remembered as `lgd-client` only while signed
+  in, forgotten when signed out), then that client's name.
+- **Login/Logout** is in the header of the home, applicant, resident,
+  manager and admin pages (`shared/account.js`); sign-in has Home only.
+- **The site picker** shows only in headers marked `data-client-picker`
+  (manager, admin) and only for a login linked to more than one client.
+- **Home, signed in, shows only the roles held** (Manager for an admin
+  too), Applicant and Resident straight to their pages; signed out, all
+  four, each through sign-in. One button left: "Welcome back.".
+- **Manager page**: its header (Home, Logout) shows from the start; a
+  login without the role gets the refusal under it, never a bare page.
+- **Applicant page**: Apply (which makes an account) only while signed out.
+- **The legal checklist and research log** were open to anyone: now
+  `shared/staff-gate.js` (after `auth.js`, in the head) hides the page
+  until a manager or admin is confirmed - signed out, to sign in and back;
+  otherwise "This page is for managers." with Home.
+- **The printed documents** on the website send a visitor with no stored
+  login to sign in and back (a check in `DOC_BUTTONS`; opened as a file,
+  or served by the FastAPI app, nothing changes). The rent register and
+  admin page already turned non-staff away.
+
 ## Clients: a login may work for several companies
 
 The user, 2026-10-02: "make site available to different clients. logins

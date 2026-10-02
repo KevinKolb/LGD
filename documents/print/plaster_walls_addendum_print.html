@@ -920,6 +920,22 @@
 })();
 </script>
 <script>
+  // Signed in only (the user, 2026-10-02: "fix all access problems"): on
+  // the website with no stored login, sign in first and come back. Served
+  // by the FastAPI app, HTTP Basic already checked (/api/config answers);
+  // opened as a file, nothing to check.
+  (function () {
+    if (!/^https?:$/.test(window.location.protocol)) { return; }
+    var stored = null;
+    try { stored = localStorage.getItem("lgd-auth"); } catch (e) {}
+    if (stored) { return; }
+    fetch("/api/config").then(function (response) {
+      if (!response.ok) { throw new Error("no app"); }
+    }).catch(function () {
+      window.location.replace(new URL("../../login/?next=" + encodeURIComponent(window.location.href),
+                                      window.location.href).href);
+    });
+  })();
   document.getElementById("print-button").addEventListener("click", function () {
     var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
     fontsReady.then(function () { window.print(); });

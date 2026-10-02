@@ -170,7 +170,7 @@
      2026-10-02: "give home page the header minus home button. title on
      home page will be momandpop.com for now"). -->
 <header data-no-home>
-  <h1>momandpop.com</h1>
+  <h1 data-client>momandpop.com</h1>
 </header>
 <main>
   <p class="hint">Choose your role.</p>
@@ -179,12 +179,12 @@
          2026-10-02: "applicant and resident go straight to login"); the
          sign-in page sends them on, and straight through if they already
          are. -->
-    <a href="login/?next=applicant/">Applicant</a>
+    <a href="login/?next=applicant/" data-role="applicant">Applicant</a>
     <hr class="links-divider">
-    <a href="login/?next=resident/">Resident</a>
+    <a href="login/?next=resident/" data-role="resident">Resident</a>
     <hr class="links-divider">
-    <a class="staff" href="manager/">Manager</a>
-    <a class="staff" href="admin/">Admin</a>
+    <a class="staff" href="manager/" data-role="manager">Manager</a>
+    <a class="staff" href="admin/" data-role="admin">Admin</a>
   </div>
 </main>
 
@@ -216,6 +216,47 @@
 <script src="shared/auth.js"></script>
 <script src="shared/account.js"></script>
 <script src="shared/home.js"></script>
+<script>
+"use strict";
+// Signed in, only the roles this login holds (the user, 2026-10-02: "fix
+// and improve nav ... fix all access problems"): no Manager or Admin
+// button for a resident to be turned away by, and Applicant and Resident
+// straight to their pages. Signed out, every role, each through sign-in.
+(async function () {
+  const auth = window.LGD && window.LGD.auth;
+  if (!auth || !auth.configured || !(await auth.session())) return;
+  let profile = null;
+  try {
+    profile = await auth.profile();
+  } catch (error) {
+    return;   // the login service did not answer: keep every button
+  }
+  if (!profile || !profile.roles || !profile.roles.length) return;
+  const roles = profile.roles;
+  const show = {
+    applicant: roles.includes("applicant"),
+    resident: roles.includes("resident"),
+    manager: roles.includes("manager") || roles.includes("admin"),
+    admin: roles.includes("admin"),
+  };
+  const links = document.querySelector(".links");
+  for (const [role, on] of Object.entries(show)) {
+    const link = links.querySelector(`[data-role="${role}"]`);
+    if (!on) link.remove();
+    else if (role === "applicant" || role === "resident") link.href = role + "/";
+  }
+  // A divider only between two buttons that are both still there.
+  for (const rule of links.querySelectorAll("hr")) {
+    if (!rule.previousElementSibling || rule.previousElementSibling.tagName === "HR"
+        || !rule.nextElementSibling || rule.nextElementSibling.tagName === "HR") rule.remove();
+  }
+  for (const rule of links.querySelectorAll("hr")) {
+    if (!rule.nextElementSibling) rule.remove();
+  }
+  document.querySelector("p.hint").textContent =
+    links.querySelectorAll("a").length > 1 ? "Choose your role." : "Welcome back.";
+})();
+</script>
 <script>
 "use strict";
 

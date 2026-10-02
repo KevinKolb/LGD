@@ -31,3 +31,30 @@ def test_lists_show_only_the_current_client_even_to_an_admin():
     lists = SQL[SQL.index("Lists show the client being worked in"):]
     assert lists.count("and p.manager_id is not distinct from caller.manager_id") == 2
     assert "caller.is_admin or p.manager_id" not in lists
+
+
+def test_the_picker_is_only_on_staff_pages_and_only_for_several_clients():
+    home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
+    assert 'if (list.length < 2 || !header.hasAttribute("data-client-picker")) return;' in home
+    for page, picker in (("manager", True), ("admin", True), ("applicant", False), ("resident", False)):
+        html = (ROOT / page / "index.html").read_text(encoding="utf-8")
+        assert ("<header data-client-picker>" in html) is picker, page
+
+
+def test_the_name_is_momandpop_until_a_client_is_known():
+    home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
+    assert 'const BRAND = "momandpop.com";' in home
+    assert "const name = (client && client.name) || BRAND;" in home
+    for page in ("applicant", "resident", "manager", "admin", "login"):
+        html = (ROOT / page / "index.html").read_text(encoding="utf-8")
+        assert '<p class="company" data-client>momandpop.com</p>' in html, page
+    assert "<h1 data-client>momandpop.com</h1>" in (ROOT / "index.html").read_text(encoding="utf-8")
+
+
+def test_the_legal_pages_are_for_managers():
+    for page in ("legal_review.html", "legal_research.html"):
+        html = (ROOT / "manager" / page).read_text(encoding="utf-8")
+        head = html[:html.index("</head>")]
+        assert head.index('<script src="../shared/auth.js">') < head.index('<script src="../shared/staff-gate.js">'), page
+    gate = (ROOT / "shared" / "staff-gate.js").read_text(encoding="utf-8")
+    assert 'auth.requireRole(["manager", "admin"])' in gate

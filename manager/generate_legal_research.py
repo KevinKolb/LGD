@@ -177,6 +177,9 @@ PAGE = """<!doctype html>
 <meta name="apple-mobile-web-app-title" content="LGD PORTAL">
 <link rel="stylesheet" href="../shared/site.css">
 <title>{title}</title>
+<!-- Managers and admins only (shared/staff-gate.js). -->
+<script src="../shared/auth.js"></script>
+<script src="../shared/staff-gate.js"></script>
 <style>
   :root {{
     --bg: #f6f5f2;

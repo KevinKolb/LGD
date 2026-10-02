@@ -187,7 +187,7 @@
 </head>
 <body>
 <header>
-  <p class="company">LGD (Lower Garden District Properties), Inc.</p>
+  <p class="company" data-client>momandpop.com</p>
   <h1>Applicant Portal</h1>
 </header>
 
@@ -315,9 +315,11 @@
   }
   acceptingApplications()
     .catch(() => true)
-    .then((accepting) => {
-      document.getElementById("choose-apply").hidden = !accepting;
-      document.getElementById("none-open").hidden = Boolean(accepting);
+    .then(async (accepting) => {
+      // Apply creates an account, so it is for someone not signed in yet.
+      const signedIn = auth.configured && Boolean(await auth.session());
+      document.getElementById("choose-apply").hidden = !accepting || signedIn;
+      document.getElementById("none-open").hidden = Boolean(accepting) || signedIn;
     });
 
   document.getElementById("choose-apply").addEventListener("click", () => {
@@ -412,6 +414,7 @@
   });
 })();
 </script>
+<script src="../shared/account.js"></script>
 <script src="../shared/home.js"></script>
 </body>
 </html>

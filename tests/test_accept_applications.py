@@ -120,6 +120,7 @@ def test_the_applicant_page_shows_apply_only_while_some_property_is_open() -> No
     page = (ROOT / "applicant" / "index.html").read_text(encoding="utf-8")
     assert '<button type="button" id="choose-apply" hidden>Apply</button>' in page
     assert '<p class="none-open" id="none-open" hidden>No apartments are available at this time.</p>' in page
-    assert 'document.getElementById("choose-apply").hidden = !accepting;' in page
+    # And only while nobody is signed in: Apply makes an account.
+    assert 'document.getElementById("choose-apply").hidden = !accepting || signedIn;' in page
     sql = MIGRATION.read_text(encoding="utf-8")
     assert "grant execute on function public.accepting_applications() to anon, authenticated;" in sql
