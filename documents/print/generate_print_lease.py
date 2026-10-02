@@ -168,7 +168,7 @@ BLANK = re.compile(r"_{2,}")
 # need their own copy. Hardcoded LGD: a 2.0 migration (see CLAUDE.md).
 # LLC became Inc on 2026-09-28, at the user's request, and the user set
 # this exact form - comma and period - for every document the same day.
-COMPANY_NAME = "Lower Garden District Properties, Inc."
+COMPANY_NAME = "LGD (Lower Garden District Properties), Inc."
 
 TITLE = "Residential Lease"
 SUBTITLE = "RESIDENTIAL LEASE"

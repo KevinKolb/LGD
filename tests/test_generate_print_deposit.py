@@ -34,7 +34,7 @@ def real_output(gen) -> str:
 
 def test_the_header_matches_the_lease_format(real_output):
     body = real_output[real_output.index("<body>"):]
-    assert '<h1 class="company">Lower Garden District Properties, Inc.</h1>' in body
+    assert '<h1 class="company">LGD (Lower Garden District Properties), Inc.</h1>' in body
     assert '<p class="subtitle">SECURITY DEPOSIT AGREEMENT</p>' in body
     assert "<title>Security Deposit Agreement</title>" in real_output
 

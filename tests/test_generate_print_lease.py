@@ -137,7 +137,7 @@ def test_the_manager_name_heads_the_lease(real_output):
     every manager in accounts.json. Printing a name here means the form is
     LGD's; another manager would need their own copy."""
     body = real_output[real_output.index("<body>") :]
-    assert "Lower Garden District Properties, Inc." in body
+    assert "LGD (Lower Garden District Properties), Inc." in body
     assert "LLC" not in real_output
     assert "RESIDENTIAL LEASE" in body
     # The name comes first, above the document type.
@@ -165,7 +165,7 @@ def test_page_number_counter_is_at_the_top_and_bottom_of_every_page(real_output)
     assert page_rule.count("counter(page)") == 2
     assert page_rule.count("counter(pages)") == 2
     # The manager name leads both, so a loose page is identifiable.
-    assert page_rule.count("Lower Garden District Properties, Inc. — Page ") == 2
+    assert page_rule.count("LGD (Lower Garden District Properties), Inc. — Page ") == 2
 
 
 def test_printing_paginates_the_same_on_a_phone_as_on_a_desktop(real_output):

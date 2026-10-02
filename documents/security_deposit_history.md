@@ -62,3 +62,11 @@ when a change is made; nothing already written down gets edited.
   both sets of three - under the deposit terms and under the holding
   deposit. Filled in by hand; no wording changed, and the form is still
   two pages.
+
+- **2026-10-02 - Company name: "LGD (Lower Garden District Properties),
+  Inc."** (the user, for everything; it was "Lower Garden District
+  Properties, Inc."). Changed in `generate_print_lease.py`'s
+  `COMPANY_NAME`, which every printed document shares - the header, the
+  "Page X of Y" lines and, on the lease, the Lessor blank. No wording in
+  the master changed. Every printed document regenerated; page counts at
+  every address unchanged.

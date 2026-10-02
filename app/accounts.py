@@ -60,13 +60,13 @@ STARTER: dict[str, Any] = {
     "managers": [
         {
             "id": "lgd",
-            "name": "Lower Garden District Properties, Inc.",
+            "name": "LGD (Lower Garden District Properties), Inc.",
             "signer_name": "REPLACE ME",
             "email": "replace-me@example.com",
         },
         {
             "id": "robertson",
-            "name": "Orange Street LLC",
+            "name": "Orange Street, Inc.",
             "signer_name": "REPLACE ME",
             "email": "replace-me@example.com",
         },

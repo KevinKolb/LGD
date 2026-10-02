@@ -250,3 +250,11 @@ change above has been reviewed and applied.
   written consent - stays. Applied to `documents/lease.md`; the lease, the
   combined documents page and the Plaster Walls Addendum (which reads §20 (B)
   out of `lease.md`) regenerated.
+
+- **2026-10-02 - Company name: "LGD (Lower Garden District Properties),
+  Inc."** (the user, for everything; it was "Lower Garden District
+  Properties, Inc."). Changed in `generate_print_lease.py`'s
+  `COMPANY_NAME`, which every printed document shares - the header, the
+  "Page X of Y" lines and, on the lease, the Lessor blank. No wording in
+  the master changed. Every printed document regenerated; page counts at
+  every address unchanged.

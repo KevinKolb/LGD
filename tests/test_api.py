@@ -66,7 +66,7 @@ def test_shared_assets_are_served_with_no_login(client) -> None:
 
     script = client.get("/shared/home.js", auth=None)
     assert script.status_code == 200
-    assert 'home.textContent = "Home";' in script.text
+    assert 'home.append(icon, "Home");' in script.text
 
 
 def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None:
@@ -103,8 +103,8 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     assert response.status_code == 200
     # The company name once, in the card: "... Inc. Portal".
     body = response.text[response.text.index("</head>"):]
-    assert body.count("Lower Garden District Properties, Inc.") == 1
-    assert "<h1>Lower Garden District Properties, Inc. Portal</h1>" in response.text
+    assert body.count("LGD (Lower Garden District Properties), Inc.") == 1
+    assert "<h1>LGD (Lower Garden District Properties), Inc. Portal</h1>" in response.text
     # A line after Applicant, and one before Manager and Admin, which are
     # in Tulane light blue.
     assert response.text.count('<hr class="links-divider">') == 2

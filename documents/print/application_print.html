@@ -25,7 +25,7 @@
     size: letter;
     margin: 0.85in;
     @top-center {
-      content: "Lower Garden District Properties, Inc. — Page " counter(page)
+      content: "LGD (Lower Garden District Properties), Inc. — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-variant-numeric: lining-nums;
@@ -33,7 +33,7 @@
       color: #444;
     }
     @bottom-center {
-      content: "Lower Garden District Properties, Inc. — Page " counter(page)
+      content: "LGD (Lower Garden District Properties), Inc. — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-variant-numeric: lining-nums;
@@ -445,7 +445,7 @@
 </head>
 <body>
 <main class="sheet">
-<h1 class="company">Lower Garden District Properties, Inc.</h1>
+<h1 class="company">LGD (Lower Garden District Properties), Inc.</h1>
 <p class="subtitle">APPLICATION FOR APARTMENT</p>
 <p class="field row"><span class="label">Address of property</span><span class="blank fixed" id="premises" style="flex-grow: 20"></span><span class="label">Desired Date of occupancy</span><span class="blank fixed" style="flex-grow: 12"></span></p>
 <p class="field row"><span class="label">Monthly rental rate $</span><span class="blank fixed" data-fill="rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" data-fill="term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" data-fill="deposit" style="flex-grow: 6"></span></p>
@@ -921,7 +921,7 @@
       pages.forEach(function (page, i) {
         if (i > 0) { pdf.addPage(); }
         pdf.addImage(page.image, "JPEG", MARGIN_IN, MARGIN_IN, 8.5 - 2 * MARGIN_IN, page.heightIn);
-        // "Lower Garden District Properties, Inc. - Page 1 of 8", top and
+        // "LGD (Lower Garden District Properties), Inc. - Page 1 of 8", top and
         // bottom, counting the whole file as a printout does.
         var line = (header ? header + " - " : "") + "Page " + (i + 1) + " of " + pages.length;
         pdf.setFont("times", "normal");
@@ -1422,7 +1422,7 @@
   }
 
   // --- What fills the blanks -----------------------------------------
-  var COMPANY = "Lower Garden District Properties, Inc.";
+  var COMPANY = "LGD (Lower Garden District Properties), Inc.";
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
                 "August", "September", "October", "November", "December"];
 

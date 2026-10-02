@@ -102,15 +102,15 @@
 </head>
 <body>
 <header>
-  <h1>RESIDENT PORTAL</h1>
-  <p id="company-name"></p>
+  <p class="company" id="company-name"></p>
+  <h1>Resident Portal</h1>
 </header>
 
 <main>
   <section>
     <h2>Contact</h2>
     <p>
-      Lower Garden District Properties, Inc.<br>
+      LGD (Lower Garden District Properties), Inc.<br>
       Pam and Steve Hartnett<br>
       <a href="tel:+15049131556">504.913.1556</a> (call or text)<br>
       <a href="mailto:LGD@neworleans.properties">LGD@neworleans.properties</a><br>
@@ -127,8 +127,8 @@
 // This constant was missing here, which threw a ReferenceError on every
 // load of this page and stopped the rest of its script running.
 const COMPANY_NAMES = {
-  orange: "Orange Street LLC",
-  lgd: "Lower Garden District Properties, Inc.",
+  orange: "Orange Street, Inc.",
+  lgd: "LGD (Lower Garden District Properties), Inc.",
 };
 
 function showCompanyName() {

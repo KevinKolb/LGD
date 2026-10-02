@@ -52,3 +52,11 @@ in git history.
   "Monthly salary $". The holding deposit's "the sum of $____" already had
   it. In the popup, the rent and deposit boxes accept only digits, "$" and
   ".", start with "$", and keep a single "$" however many are typed.
+
+- **2026-10-02 - Company name: "LGD (Lower Garden District Properties),
+  Inc."** (the user, for everything; it was "Lower Garden District
+  Properties, Inc."). Changed in `generate_print_lease.py`'s
+  `COMPANY_NAME`, which every printed document shares - the header, the
+  "Page X of Y" lines and, on the lease, the Lessor blank. No wording in
+  the master changed. Every printed document regenerated; page counts at
+  every address unchanged.

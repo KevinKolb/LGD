@@ -130,7 +130,7 @@
 </head>
 <body>
 <div class="register">
-  <p class="company">Lower Garden District Properties, Inc.</p>
+  <p class="company" id="company">LGD (Lower Garden District Properties), Inc.</p>
   <h1>MONTHLY RENT REGISTER</h1>
   <p class="month">Month of <span class="blank" id="month-name"></span></p>
   <p class="status" id="status" role="status">Loading…</p>
@@ -176,6 +176,15 @@
 <script src="../shared/save-pdf.js"></script>
 <script>
 "use strict";
+
+// The client the manager is working in (shared/home.js keeps it in this
+// browser, "lgd-client"; the data below is already that client's).
+try {
+  const client = JSON.parse(localStorage.getItem("lgd-client") || "null");
+  if (client && client.name) document.getElementById("company").textContent = client.name;
+} catch (error) {
+  /* Nothing remembered: the default name stays. */
+}
 (function () {
   const status = document.getElementById("status");
   const table = document.getElementById("register");

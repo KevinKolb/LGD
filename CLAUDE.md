@@ -322,20 +322,22 @@ the file name), then puts the title back.
 `app/main.py`'s `/documents/print/` route serves non-HTML files with their
 own type, so the library loads there too.
 
-**No footer; Home in the header** (the user, 2026-10-02: "really just
-need a back button in upper right. don't need the footer. talkin bout 4
-main pages, not home", then the same day "logout and back buttons same
-size" and "rename back to home and put it in a better place").
-`shared/home.js` replaced `shared/footer.js` (the row of
-Home/Applicant/Resident/Manager/Admin links at the bottom of every page,
-deleted with its CSS); it was briefly `shared/back.js`. It is loaded just
-before `</body>` on the applicant, resident, manager and admin pages and
-on sign-in - not the home page. It gives the header a top row: **Home** on
-the left, in line with the title, and the account control (Login/Logout,
-from `shared/account.js`, loaded first) on the right, both 84 x 32px, with
-the title beneath, so on a phone neither squeezes the title. Home always
-goes to the home page. The sign-in page has no header bar, so there Home
-floats in the top-left corner. **The pages opened from the Manager Portal - the
+**No footer; one header bar** (the user, 2026-10-02: "really just need a
+back button in upper right. don't need the footer", then "logout and back
+buttons same size", "rename back to home and put it in a better place"
+and "make the header better man, cmon"). `shared/home.js` replaced
+`shared/footer.js` (deleted, with its CSS; it was briefly `back.js`). It
+is loaded just before `</body>` on the applicant, resident, manager and
+admin pages and on sign-in - not the home page - and lays the page's own
+`<header>` out as one bar: **Home** (a pill with the house icon, always to
+the home page) on the left, then the titles (the company line, small
+capitals, above the page title), then the client picker and Login/Logout
+(`shared/account.js`, moved in whenever it lands) on the right - all
+pills of one height. On a phone the buttons take the top row, one line
+even on an iPhone SE, and the titles go beneath. The sign-in page has no
+header bar, so Home floats in its top-left corner. Page titles are
+"Applicant Portal", "Resident Portal", "Manager Portal", "Admin Portal".
+**The pages opened from the Manager Portal - the
 two legal pages and the rent register - have no Back in a header**: they
 float **Back** and **Print** (`.paper-buttons`), like the documents. The documents (self-contained files) load neither, and **the documents have no Home** (the user,
 the same day, after one was added): they float Back and Print only, and
@@ -522,6 +524,39 @@ yes or no only) or the FastAPI app's `/api/accepting-applications`. Apply
 starts hidden so it never flashes; if neither answers it shows, since the
 signup's own email-on-file check still holds. **004 must be
 applied to the live database** like the others.
+
+## Clients: a login may work for several companies
+
+The user, 2026-10-02: "make site available to different clients. logins
+will be linked to clients ... logins can be linked to more than client."
+A **client** is a row of `managers` (the companies): 'lgd', "LGD (Lower
+Garden District Properties), Inc." (renamed from "Lower Garden District
+Properties, Inc." the same day, everywhere, `COMPANY_NAME` included), and
+'robertson', "Orange Street, Inc." (that id is the starter accounts', kept
+as data). `supabase/migrations/008_clients.sql` adds `person_clients`
+(`person_id`, `manager_id`; locked to the browser), linking a person to
+every client they work for, and **`people.manager_id` becomes the client
+they are working in now** - so every function since 002, which scopes to
+`caller.manager_id`, follows it unchanged. A trigger links anyone filed
+under a client (an applicant or resident added in it). `list_my_clients()`
+and `set_current_client(client)` (only one the caller is linked to) are
+for signed-in callers. 008 also makes `list_applicants` and
+`list_residents` (and so the rent register) show **only the current
+client's, an admin's too** - an admin switches client to see another's.
+Editing rights are unchanged.
+
+`shared/home.js` shows the client picker in the header of the staff pages
+(those with Login/Logout) when a login has more than one client, short
+names ("LGD", "Orange Street"); switching calls `set_current_client` and
+reloads. The current client's name fills any `.company[data-client]` (the
+manager page's company line) and is kept in this browser as `lgd-client`,
+which the rent register's heading reads. Still to do: the printed
+documents print `COMPANY_NAME` and list `documents/properties.json`
+(LGD's buildings) whatever the client, and Orange Street has no buildings
+on file. The FastAPI app has no clients - one `manager_id` per login, as
+before. Linking a person to a second client is a SQL insert into
+`person_clients` for now (the user's own link was given to him as a
+snippet, not committed: this repository is public).
 
 ## The Admin Portal
 
