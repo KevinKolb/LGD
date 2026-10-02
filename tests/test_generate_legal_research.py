@@ -167,24 +167,28 @@ def test_generated_file_on_disk_matches_a_fresh_run(real_output):
     assert output_path.read_text(encoding="utf-8") == real_output
 
 
-def test_every_site_page_has_back_in_the_header_and_no_footer():
-    """The user, 2026-10-02: "really just need a back button in upper
-    right. don't need the footer" - the applicant, resident, manager and
-    admin pages, and sign-in; not home, where Back leads."""
+def test_every_site_page_has_home_in_the_header_and_no_footer():
+    """The user, 2026-10-02: no footer, and a Home button ("rename back to
+    home and put it in a better place") - the applicant, resident, manager
+    and admin pages, and sign-in; not the home page itself. Home on the
+    left of a top row in the header, Login/Logout on the right, one size."""
     import re
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
     assert not (root / "shared" / "footer.js").exists()
-    back = (root / "shared" / "back.js").read_text(encoding="utf-8")
-    assert 'document.querySelector("header:not(.site-title)")' in back
-    assert 'top: 16px; right: 16px;' in back  # the upper right
-    assert "window.history.back()" in back
+    assert not (root / "shared" / "back.js").exists()
+    home = (root / "shared" / "home.js").read_text(encoding="utf-8")
+    assert 'home.textContent = "Home";' in home and "home.href = root;" in home
+    assert "history.back" not in home
+    assert "header.prepend(home);" in home
+    assert "#home-button, header.has-home #account-toggle {" in home
+    assert "height: 32px; min-width: 84px;" in home
     for page in ("login", "resident", "applicant", "admin", "manager"):
         html = (root / page / "index.html").read_text(encoding="utf-8")
-        assert '<script src="../shared/back.js"></script>' in html, page
-        assert "footer.js" not in html, page
-    home = (root / "index.html").read_text(encoding="utf-8")
-    assert "back.js" not in home and "footer.js" not in home
+        assert '<script src="../shared/home.js"></script>' in html, page
+        assert "footer.js" not in html and "back.js" not in html, page
+    index = (root / "index.html").read_text(encoding="utf-8")
+    assert "home.js" not in index and "footer.js" not in index
     # The pages opened from the Manager Portal - the legal pages, like the
     # rent register and the documents - have no footer and no Home: they
     # float Back and Print only (the user, 2026-09-30).

@@ -322,19 +322,20 @@ the file name), then puts the title back.
 `app/main.py`'s `/documents/print/` route serves non-HTML files with their
 own type, so the library loads there too.
 
-**No footer; Back in the upper right** (the user, 2026-10-02: "really
-just need a back button in upper right. don't need the footer. talkin bout
-4 main pages, not home"). `shared/back.js` replaced `shared/footer.js` (the
-row of Home/Applicant/Resident/Manager/Admin links that was at the bottom
-of every page, deleted, with its CSS). It is loaded just before `</body>`
-on the applicant, resident, manager and admin pages and on sign-in - not
-the home page, where Back leads. It puts Back in the top-right corner of
-the header bar, rightmost, with the account control (Login/Logout, from
-`shared/account.js`, loaded first) moved beside it, and keeps room on the
-header's right so the title wraps beside them on a phone, never under.
-Back returns to the page that opened this one when it was this site, else
-to home. The sign-in page has no header bar, so there Back floats in the
-corner of the screen. **The pages opened from the Manager Portal - the
+**No footer; Home in the header** (the user, 2026-10-02: "really just
+need a back button in upper right. don't need the footer. talkin bout 4
+main pages, not home", then the same day "logout and back buttons same
+size" and "rename back to home and put it in a better place").
+`shared/home.js` replaced `shared/footer.js` (the row of
+Home/Applicant/Resident/Manager/Admin links at the bottom of every page,
+deleted with its CSS); it was briefly `shared/back.js`. It is loaded just
+before `</body>` on the applicant, resident, manager and admin pages and
+on sign-in - not the home page. It gives the header a top row: **Home** on
+the left, in line with the title, and the account control (Login/Logout,
+from `shared/account.js`, loaded first) on the right, both 84 x 32px, with
+the title beneath, so on a phone neither squeezes the title. Home always
+goes to the home page. The sign-in page has no header bar, so there Home
+floats in the top-left corner. **The pages opened from the Manager Portal - the
 two legal pages and the rent register - have no Back in a header**: they
 float **Back** and **Print** (`.paper-buttons`), like the documents. The documents (self-contained files) load neither, and **the documents have no Home** (the user,
 the same day, after one was added): they float Back and Print only, and
