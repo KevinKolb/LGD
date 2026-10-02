@@ -586,12 +586,19 @@ const ALLOWED_ROLES = ["manager", "admin"];
 // "supabase" on GitHub Pages. The sections below wait for this.
 window.LGD_DASHBOARD = null;
 
-function unlock(greeting, backend) {
+// The buildings of the client being worked in (migration 008): each entry
+// of documents/properties.json names its client. With none known, all.
+function clientProperties(all) {
+  const client = window.LGD_DASHBOARD && window.LGD_DASHBOARD.client;
+  return client ? all.filter((property) => property.manager_id === client) : all;
+}
+
+function unlock(greeting, backend, client) {
   document.getElementById("gate").hidden = true;
   document.querySelector("header").hidden = false;
   document.querySelector("main").hidden = false;
   if (greeting) document.getElementById("whoami").textContent = greeting;
-  window.LGD_DASHBOARD = { backend };
+  window.LGD_DASHBOARD = { backend, client: client || null };
   document.dispatchEvent(new CustomEvent("lgd-dashboard-ready"));
 }
 
@@ -618,7 +625,8 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       const config = await response.json();
       const firstName =
         (config.user.display_name || config.user.username || "").split(" ")[0];
-      unlock(config.user.is_admin ? `Welcome, ${firstName} (admin)` : `Welcome, ${firstName}`, "api");
+      unlock(config.user.is_admin ? `Welcome, ${firstName} (admin)` : `Welcome, ${firstName}`, "api",
+             config.user.manager_id);
       return;
     }
   } catch (error) {
@@ -642,7 +650,8 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       result.profile.roles.includes("admin")
         ? `Welcome, ${firstName} (admin)`
         : `Welcome, ${firstName}`,
-      "supabase"
+      "supabase",
+      result.profile.manager_id
     );
     return;
   }
@@ -854,7 +863,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   async function start() {
     try {
       const response = await fetch("../documents/properties.json", { cache: "no-store" });
-      properties = (await response.json()).properties;
+      properties = clientProperties((await response.json()).properties);
       open = await fetchOpen();
       showSummary();
     } catch (error) {
@@ -1090,7 +1099,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   async function start() {
     try {
       const response = await fetch("../documents/properties.json", { cache: "no-store" });
-      properties = (await response.json()).properties;
+      properties = clientProperties((await response.json()).properties);
     } catch (error) {
       properties = [];
     }
@@ -1183,7 +1192,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   async function loadProperties() {
     try {
       const response = await fetch("../documents/properties.json", { cache: "no-store" });
-      properties = (await response.json()).properties;
+      properties = clientProperties((await response.json()).properties);
     } catch (error) {
       properties = [];
     }

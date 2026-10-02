@@ -550,10 +550,20 @@ Editing rights are unchanged.
 names ("LGD", "Orange Street"); switching calls `set_current_client` and
 reloads. The current client's name fills any `.company[data-client]` (the
 manager page's company line) and is kept in this browser as `lgd-client`,
-which the rent register's heading reads. Still to do: the printed
-documents print `COMPANY_NAME` and list `documents/properties.json`
-(LGD's buildings) whatever the client, and Orange Street has no buildings
-on file. The FastAPI app has no clients - one `manager_id` per login, as
+which the rent register's heading reads.
+
+**Buildings belong to a client** (the user, same day: "put in 123 Canal
+St. for Orange for now"): every entry in `documents/properties.json`
+carries its own `manager_id` (the file-wide one is gone; a build error if
+missing) - LGD's buildings 'lgd', 123 Canal St. (a single house, parking
+not available, walls A, yard B) 'robertson'. Every list shows only the
+current client's: the manager page's three (`clientProperties`, from the
+login's `manager_id`), the rent register, and the documents' popup, which
+reads `lgd-client` (`COMPANY_ID`, 'lgd', when none is remembered). For a
+client other than LGD the documents also put its name in the heading, the
+"Page X of Y" lines (an added `@page` rule) and the Lessor blank; LGD's
+print exactly as before. The lease and deposit **text** is still LGD's -
+rent paid at 1556 Camp Street, for one. The FastAPI app has no clients - one `manager_id` per login, as
 before. Linking a person to a second client is a SQL insert into
 `person_clients` for now (the user's own link was given to him as a
 snippet, not committed: this repository is public).

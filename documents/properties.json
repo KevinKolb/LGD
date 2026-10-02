@@ -1,8 +1,8 @@
 {
-  "manager_id": "lgd",
   "properties": [
     {
       "id": "1364-camp",
+      "manager_id": "lgd",
       "address": "1364 Camp St.",
       "city": "New Orleans",
       "state": "LA",
@@ -16,6 +16,7 @@
     },
     {
       "id": "1534-camp",
+      "manager_id": "lgd",
       "address": "1534 Camp St.",
       "city": "New Orleans",
       "state": "LA",
@@ -29,6 +30,7 @@
     },
     {
       "id": "1536-camp",
+      "manager_id": "lgd",
       "address": "1536 Camp St.",
       "city": "New Orleans",
       "state": "LA",
@@ -42,6 +44,7 @@
     },
     {
       "id": "1558-camp",
+      "manager_id": "lgd",
       "address": "1558 Camp St.",
       "city": "New Orleans",
       "state": "LA",
@@ -55,6 +58,7 @@
     },
     {
       "id": "1428-melpomene",
+      "manager_id": "lgd",
       "address": "1428 Melpomene St.",
       "city": "New Orleans",
       "state": "LA",
@@ -68,6 +72,7 @@
     },
     {
       "id": "1430-melpomene",
+      "manager_id": "lgd",
       "address": "1430 Melpomene St.",
       "city": "New Orleans",
       "state": "LA",
@@ -81,6 +86,7 @@
     },
     {
       "id": "1521-st-andrew",
+      "manager_id": "lgd",
       "address": "1521 St. Andrew St.",
       "city": "New Orleans",
       "state": "LA",
@@ -94,6 +100,7 @@
     },
     {
       "id": "1523-st-andrew",
+      "manager_id": "lgd",
       "address": "1523 St. Andrew St.",
       "city": "New Orleans",
       "state": "LA",
@@ -102,6 +109,20 @@
       "lease_options": {
         "parking": "not-available",
         "walls": "B",
+        "yard": "B"
+      }
+    },
+    {
+      "id": "123-canal",
+      "manager_id": "robertson",
+      "address": "123 Canal St.",
+      "city": "New Orleans",
+      "state": "LA",
+      "zip": "70130",
+      "units": [],
+      "lease_options": {
+        "parking": "not-available",
+        "walls": "A",
         "yard": "B"
       }
     }

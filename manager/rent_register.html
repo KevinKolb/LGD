@@ -196,6 +196,7 @@ try {
                   "August", "September", "October", "November", "December"];
   let via = null;         // "api" or "supabase", once known
   let properties = null;  // documents/properties.json, loaded once
+  let client = null;      // the client being worked in (migration 008)
   let month = null;       // "YYYY-MM" on show
 
   function fail(text) {
@@ -210,7 +211,10 @@ try {
   async function backend() {
     try {
       const response = await fetch("/api/config");
-      if (response.ok) return "api";
+      if (response.ok) {
+        client = (await response.json()).user.manager_id || null;
+        return "api";
+      }
     } catch (error) {
       /* No backend here - the normal case on GitHub Pages. */
     }
@@ -219,6 +223,7 @@ try {
     const result = await auth.requireRole(["manager", "admin"]);
     if (result.reason === "signed-out") return null;  // already heading to the login page
     if (!result.ok) throw new Error("The rent register is for managers.");
+    client = result.profile.manager_id || null;
     return "supabase";
   }
 
@@ -428,7 +433,9 @@ try {
       via = await backend();
       if (!via) return;
       const response = await fetch("../documents/properties.json", { cache: "no-store" });
-      properties = (await response.json()).properties;
+      // Only the client's own buildings: each entry names its client.
+      properties = (await response.json()).properties
+        .filter((property) => !client || property.manager_id === client);
       status.hidden = true;
       askMonth();
     } catch (error) {

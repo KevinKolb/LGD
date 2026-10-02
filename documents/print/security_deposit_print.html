@@ -1008,10 +1008,10 @@
 </div>
 <script type="application/json" id="lease-properties">
 {
- "manager_id": "lgd",
  "properties": [
   {
    "id": "1364-camp",
+   "manager_id": "lgd",
    "address": "1364 Camp St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1033,6 +1033,7 @@
   },
   {
    "id": "1534-camp",
+   "manager_id": "lgd",
    "address": "1534 Camp St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1046,6 +1047,7 @@
   },
   {
    "id": "1536-camp",
+   "manager_id": "lgd",
    "address": "1536 Camp St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1059,6 +1061,7 @@
   },
   {
    "id": "1558-camp",
+   "manager_id": "lgd",
    "address": "1558 Camp St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1076,6 +1079,7 @@
   },
   {
    "id": "1428-melpomene",
+   "manager_id": "lgd",
    "address": "1428 Melpomene St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1089,6 +1093,7 @@
   },
   {
    "id": "1430-melpomene",
+   "manager_id": "lgd",
    "address": "1430 Melpomene St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1102,6 +1107,7 @@
   },
   {
    "id": "1521-st-andrew",
+   "manager_id": "lgd",
    "address": "1521 St. Andrew St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1122,6 +1128,7 @@
   },
   {
    "id": "1523-st-andrew",
+   "manager_id": "lgd",
    "address": "1523 St. Andrew St.",
    "city": "New Orleans",
    "state": "LA",
@@ -1130,6 +1137,20 @@
    "lease_options": {
     "parking": "not-available",
     "walls": "B",
+    "yard": "B"
+   }
+  },
+  {
+   "id": "123-canal",
+   "manager_id": "robertson",
+   "address": "123 Canal St.",
+   "city": "New Orleans",
+   "state": "LA",
+   "zip": "70130",
+   "units": [],
+   "lease_options": {
+    "parking": "not-available",
+    "walls": "A",
     "yard": "B"
    }
   }
@@ -1144,7 +1165,14 @@
   // title - always show, so section numbers are the same on every lease.
   // (There was a "Leave it blank" button for an unfilled form, removed on
   // 2026-09-29 by the user: a document is always for an apartment.)
-  var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties;
+  // The client the manager is working in (2026-10-02: logins linked to
+  // several clients): only its buildings are offered, and its name heads
+  // the document, the "Page X of Y" lines and the Lessor blank.
+  var CLIENT = null;
+  try { CLIENT = JSON.parse(localStorage.getItem("lgd-client") || "null"); } catch (e) {}
+  var CLIENT_ID = (CLIENT && CLIENT.id) || "lgd";
+  var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties
+    .filter(function (property) { return property.manager_id === CLIENT_ID; });
   var baseTitle = document.title;
   var picker = document.getElementById("picker");
   var propertySelect = document.getElementById("picker-property");
@@ -1384,6 +1412,16 @@
 
   // --- What fills the blanks -----------------------------------------
   var COMPANY = "LGD (Lower Garden District Properties), Inc.";
+  if (CLIENT && CLIENT.name && CLIENT.name !== COMPANY) {
+    COMPANY = CLIENT.name;
+    document.querySelectorAll("h1.company").forEach(function (heading) {
+      heading.textContent = COMPANY;
+    });
+    var pageLine = JSON.stringify(COMPANY + " — Page ") + " counter(page) " + JSON.stringify(" of ") + " counter(pages)";
+    var pageRule = document.createElement("style");
+    pageRule.textContent = "@page { @top-center { content: " + pageLine + "; } @bottom-center { content: " + pageLine + "; } }";
+    document.head.appendChild(pageRule);
+  }
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
                 "August", "September", "October", "November", "December"];
 

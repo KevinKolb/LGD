@@ -484,17 +484,19 @@ def test_back_and_print_float_on_screen_and_never_print(real_output):
     assert "window.history.back()" in real_output
 
 @pytest.mark.parametrize("prop, message", [
-    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"parking": "maybe"}},
+    ({"id": "x", "manager_id": "lgd", "address": "1 A St.", "units": [], "lease_options": {"parking": "maybe"}},
      "parking must be one of"),
-    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"garage": "yes"}},
+    ({"id": "x", "manager_id": "lgd", "address": "1 A St.", "units": [], "lease_options": {"garage": "yes"}},
      "unknown lease option"),
-    ({"id": "x", "address": "1 A St.", "units": ["1", "1"], "lease_options": {}},
+    ({"id": "x", "manager_id": "lgd", "address": "1 A St.", "units": ["1", "1"], "lease_options": {}},
      "distinct"),
-    ({"id": "x", "units": [], "lease_options": {}},
+    ({"id": "x", "manager_id": "lgd", "units": [], "lease_options": {}},
      "missing 'address'"),
-    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {"parking": "limited", "walls": "A"}},
+    ({"id": "x", "address": "1 A St.", "units": [], "lease_options": {}},
+     "missing 'manager_id'"),
+    ({"id": "x", "manager_id": "lgd", "address": "1 A St.", "units": [], "lease_options": {"parking": "limited", "walls": "A"}},
      "yard must be one of"),
-    ({"id": "x", "address": "1 A St.", "units": [],
+    ({"id": "x", "manager_id": "lgd", "address": "1 A St.", "units": [],
       "lease_options": {"parking": "none", "walls": "A", "yard": "A"}},
      "parking must be one of"),
 ])
@@ -504,7 +506,7 @@ def test_a_bad_apartment_entry_fails_the_build(gen, prop, message):
 
 
 def test_duplicate_apartment_ids_fail_the_build(gen):
-    prop = {"id": "x", "address": "1 A St.", "units": [],
+    prop = {"id": "x", "manager_id": "lgd", "address": "1 A St.", "units": [],
             "lease_options": {"parking": "limited", "walls": "A", "yard": "A"}}
     with pytest.raises(SystemExit, match="used twice"):
         gen.validate_properties({"properties": [prop, dict(prop)]})
@@ -512,8 +514,11 @@ def test_duplicate_apartment_ids_fail_the_build(gen):
 
 def test_the_real_apartment_table_is_valid(gen):
     data = gen.load_properties()
-    assert data["manager_id"] == "lgd"
     assert data["properties"]
+    # Each building names its client (2026-10-02): LGD's, and Orange
+    # Street's 123 Canal St.
+    assert {prop["manager_id"] for prop in data["properties"]} == {"lgd", "robertson"}
+    assert [prop["address"] for prop in data["properties"] if prop["manager_id"] == "robertson"] == ["123 Canal St."]
 
 
 def test_a_closing_script_tag_in_the_data_cannot_escape_it(gen):

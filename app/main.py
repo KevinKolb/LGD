@@ -273,6 +273,8 @@ async def api_config(user: User = Depends(current_user)) -> dict[str, Any]:
             "role": user.role,
             "roles": sorted(user.roles),
             "is_admin": user.is_admin,
+            # The client this login works in (the pages list its buildings).
+            "manager_id": user.manager_id,
         },
         # Only the managers this user may act for. Emails stay server-side.
         "managers": [

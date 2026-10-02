@@ -79,7 +79,7 @@ def validate_properties(data: dict) -> None:
     seen_ids: set[str] = set()
     for prop in properties:
         where = f"properties.json entry {prop.get('id')!r}"
-        for field in ("id", "address"):
+        for field in ("id", "manager_id", "address"):
             if not prop.get(field):
                 raise SystemExit(f"{where} is missing {field!r}.")
         if prop["id"] in seen_ids:
@@ -169,6 +169,10 @@ BLANK = re.compile(r"_{2,}")
 # LLC became Inc on 2026-09-28, at the user's request, and the user set
 # this exact form - comma and period - for every document the same day.
 COMPANY_NAME = "LGD (Lower Garden District Properties), Inc."
+# Its id in `managers` and in documents/properties.json. A document is for
+# the client the manager is working in (shared/home.js keeps it in the
+# browser as "lgd-client"); with none known, it is this one.
+COMPANY_ID = "lgd"
 
 TITLE = "Residential Lease"
 SUBTITLE = "RESIDENTIAL LEASE"
@@ -698,7 +702,14 @@ __PROPERTIES_JSON__
   // title - always show, so section numbers are the same on every lease.
   // (There was a "Leave it blank" button for an unfilled form, removed on
   // 2026-09-29 by the user: a document is always for an apartment.)
-  var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties;
+  // The client the manager is working in (2026-10-02: logins linked to
+  // several clients): only its buildings are offered, and its name heads
+  // the document, the "Page X of Y" lines and the Lessor blank.
+  var CLIENT = null;
+  try { CLIENT = JSON.parse(localStorage.getItem("lgd-client") || "null"); } catch (e) {}
+  var CLIENT_ID = (CLIENT && CLIENT.id) || __COMPANY_ID_JSON__;
+  var properties = JSON.parse(document.getElementById("lease-properties").textContent).properties
+    .filter(function (property) { return property.manager_id === CLIENT_ID; });
   var baseTitle = document.title;
   var picker = document.getElementById("picker");
   var propertySelect = document.getElementById("picker-property");
@@ -938,6 +949,16 @@ __PROPERTIES_JSON__
 
   // --- What fills the blanks -----------------------------------------
   var COMPANY = __COMPANY_JSON__;
+  if (CLIENT && CLIENT.name && CLIENT.name !== COMPANY) {
+    COMPANY = CLIENT.name;
+    document.querySelectorAll("h1.company").forEach(function (heading) {
+      heading.textContent = COMPANY;
+    });
+    var pageLine = JSON.stringify(COMPANY + " — Page ") + " counter(page) " + JSON.stringify(" of ") + " counter(pages)";
+    var pageRule = document.createElement("style");
+    pageRule.textContent = "@page { @top-center { content: " + pageLine + "; } @bottom-center { content: " + pageLine + "; } }";
+    document.head.appendChild(pageRule);
+  }
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
                 "August", "September", "October", "November", "December"];
 
@@ -1265,6 +1286,7 @@ def render_picker_footer(document_name: str, questions: tuple[str, ...] = (),
             .replace("__DOC_CHOICES__", choices)
             .replace("__EXTRA_FIELDS__", extra)
             .replace("__COMPANY_JSON__", json.dumps(COMPANY_NAME))
+            .replace("__COMPANY_ID_JSON__", json.dumps(COMPANY_ID))
             .replace(PROPERTIES_MARKER, properties_json(load_properties())))
 
 def flatten_paragraph(text: str) -> str:
