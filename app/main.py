@@ -611,21 +611,24 @@ class SiteColorsRequest(BaseModel):
 
 
 @app.get("/api/site-colors")
-async def api_site_colors() -> dict[str, Any]:
-    """Public, like every page that shows them: the two main colors an admin
-    chose (shared/theme.js reads this before trying Supabase)."""
-    return await db.get_site_colors(get_settings().db_path)
+async def api_site_colors(user: User = Depends(current_user)) -> dict[str, Any]:
+    """The two main colors of this login's company (each company has its
+    own since 2026-10-02, the user; shared/theme.js reads this before trying
+    Supabase). Signed out, pages are gray and ask nothing."""
+    return await db.get_site_colors(get_settings().db_path, manager_id=user.manager_id)
 
 
 @app.put("/api/site-colors")
 async def api_set_site_colors(payload: SiteColorsRequest,
                               user: User = Depends(current_user)) -> dict[str, Any]:
-    """Managers only; both empty goes back to each page's own colors."""
+    """Managers only, for their own company; both empty goes back to each
+    page's own colors."""
     if not is_staff(user):
         raise HTTPException(status_code=404, detail="Not found")
     try:
-        return await db.set_site_colors(get_settings().db_path, accent=payload.accent,
-                                        accent2=payload.accent2, person_id=user.person_id)
+        return await db.set_site_colors(get_settings().db_path, manager_id=user.manager_id,
+                                        accent=payload.accent, accent2=payload.accent2,
+                                        person_id=user.person_id)
     except db.SiteColorsError as error:
         raise HTTPException(status_code=422, detail=str(error))
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import TENANT1, ADMIN, STEVE
+from tests.conftest import TENANT1, ADMIN, STEVE, GAY
 
 ROOT = Path(__file__).resolve().parent.parent
 THEME = ROOT / "shared" / "theme.js"
@@ -17,36 +17,63 @@ SITE_PAGES = ["index.html", "applicant/index.html", "resident/index.html", "mana
 
 
 def test_nothing_is_saved_at_first(client) -> None:
-    assert client.get("/api/site-colors", auth=None).json() == {"accent": None, "accent2": None}
+    assert client.get("/api/site-colors", auth=STEVE).json() == {"accent": None, "accent2": None}
 
 
-def test_an_admin_saves_them_and_anyone_reads_them(client) -> None:
-    response = client.put("/api/site-colors", json={"accent": "#AA0000", "accent2": "#ffcc00"}, auth=ADMIN)
+def test_signed_out_there_are_no_colors_to_read(client) -> None:
+    """Every page is gray while signed out, so nothing asks."""
+    assert client.get("/api/site-colors", auth=None).status_code == 401
+
+
+def test_each_company_has_its_own_colors(client) -> None:
+    """The user, 2026-10-02: "separate colors by company, settings only
+    apply to current company" - LGD's manager saves LGD's, Orange Street's
+    keep theirs."""
+    response = client.put("/api/site-colors", json={"accent": "#AA0000", "accent2": "#ffcc00"}, auth=STEVE)
     assert response.status_code == 200
-    assert client.get("/api/site-colors", auth=None).json() == {"accent": "#aa0000", "accent2": "#ffcc00"}
+    assert client.get("/api/site-colors", auth=STEVE).json() == {"accent": "#aa0000", "accent2": "#ffcc00"}
+    assert client.get("/api/site-colors", auth=TENANT1).json() == {"accent": "#aa0000", "accent2": "#ffcc00"}
+    assert client.get("/api/site-colors", auth=GAY).json() == {"accent": None, "accent2": None}
+    client.put("/api/site-colors", json={"accent": "#d2601a", "accent2": "#f4a261"}, auth=GAY)
+    assert client.get("/api/site-colors", auth=GAY).json() == {"accent": "#d2601a", "accent2": "#f4a261"}
+    assert client.get("/api/site-colors", auth=STEVE).json() == {"accent": "#aa0000", "accent2": "#ffcc00"}
 
 
-def test_both_empty_goes_back_to_the_defaults(client) -> None:
-    client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"}, auth=ADMIN)
-    client.put("/api/site-colors", json={"accent": "", "accent2": ""}, auth=ADMIN)
-    assert client.get("/api/site-colors", auth=None).json() == {"accent": None, "accent2": None}
+def test_both_empty_goes_back_to_the_defaults_for_that_company_only(client) -> None:
+    client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"}, auth=STEVE)
+    client.put("/api/site-colors", json={"accent": "#d2601a", "accent2": "#f4a261"}, auth=GAY)
+    client.put("/api/site-colors", json={"accent": "", "accent2": ""}, auth=STEVE)
+    assert client.get("/api/site-colors", auth=STEVE).json() == {"accent": None, "accent2": None}
+    assert client.get("/api/site-colors", auth=GAY).json() == {"accent": "#d2601a", "accent2": "#f4a261"}
 
 
 def test_a_manager_can_change_them_and_a_tenant_cannot(client) -> None:
     """Manager and admin are one credential since 2026-10-02 (the user)."""
     assert client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"},
-                      auth=STEVE).status_code == 200
-    assert client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"},
                       auth=TENANT1).status_code in (403, 404)
-    client.put("/api/site-colors", json={"accent": "", "accent2": ""}, auth=STEVE)
+
+
+def test_a_login_with_no_company_cannot_save_colors(client) -> None:
+    response = client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"}, auth=ADMIN)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Your login is not filed under a company."
 
 
 @pytest.mark.parametrize("colors", [{"accent": "red", "accent2": "#ffcc00"},
                                     {"accent": "#aa0000", "accent2": ""}])
 def test_a_color_that_is_not_rrggbb_is_refused(client, colors) -> None:
-    response = client.put("/api/site-colors", json=colors, auth=ADMIN)
+    response = client.put("/api/site-colors", json=colors, auth=STEVE)
     assert response.status_code == 422
     assert response.json()["detail"] == "Each color needs to look like #1f5d4c."
+
+
+def test_supabase_keeps_them_on_each_company(client) -> None:
+    sql = (ROOT / "supabase" / "migrations" / "010_colors_by_company.sql").read_text(encoding="utf-8")
+    assert "alter table public.managers add column if not exists accent text;" in sql
+    assert "where m.id = caller.manager_id;" in sql
+    theme = THEME.read_text(encoding="utf-8")
+    assert 'const CACHE = "lgd-site-colors:" + clientId();' in theme
+    assert 'Authorization: "Bearer " + token,' in theme
 
 
 @pytest.mark.parametrize("page", SITE_PAGES)
@@ -70,7 +97,7 @@ def test_theme_uses_the_same_supabase_project_as_auth() -> None:
 
 def test_the_admin_page_has_the_section() -> None:
     page = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
-    assert 'return section("Site colors",' in page
+    assert 'return section(company ? `Colors for ${company}` : "Company colors",' in page
     assert 'window.LGD.auth.rpc("set_site_colors", body)' in page
     assert 'colorsSection("api")' in page and 'colorsSection("supabase")' in page
 

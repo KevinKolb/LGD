@@ -654,14 +654,21 @@ header, hovers, the home page's Manager and Admin buttons). A color picker
 and a `#rrggbb` box each, a live preview, **Save colors**, and **Back to
 Tulane green and blue**, which clears them.
 
-They are two rows of `site_settings` (`key` 'accent' / 'accent2'), in
-`app/db.py` and `supabase/migrations/005_site_colors.sql`: locked to the
-browser, read by anyone through `get_site_colors()` (every page shows
-them, signed out too), written only by an admin through
-`set_site_colors(accent, accent2)`. The FastAPI app has `GET` (public) and
-`PUT` (admin) `/api/site-colors`.
+**Each company has its own pair** (the user, 2026-10-02: "separate
+colors by company, settings only apply to current company"). On Supabase
+they are `managers.accent` / `accent2` (`supabase/migrations/010`; 005 kept
+one site-wide pair in `site_settings`, which 010 gave to LGD and cleared):
+`get_site_colors()` answers with the caller's current client's (both null
+signed out), and `set_site_colors(accent, accent2)` - any manager since
+009 - saves only the current client's. The section on the admin page is
+titled "Colors for <company>". The FastAPI app keeps them as
+`site_settings` rows "accent:<company>" / "accent2:<company>", and its
+`GET /api/site-colors` now needs a login (pages are gray signed out
+anyway); `PUT` is a manager's, for their own company.
 
-`shared/theme.js` puts them on the page. It is loaded in the `<head>` of
+`shared/theme.js` puts them on the page, asking as the signed-in person
+(the stored session's token) and remembering them per client
+(`lgd-site-colors:<client>`), so switching company switches colors. It is loaded in the `<head>` of
 the six site pages (home, applicant, resident, manager, admin, login -
 not the printed documents or the rent register, which print in their own
 colors). **Signed out, every page is black, white and gray** (the user,

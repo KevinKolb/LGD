@@ -20,7 +20,19 @@
 (function () {
   const SUPABASE_URL = "https://zglkceocuvioxovbnqrz.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_tqeV6Pt06bu6mNOEYBpHHw_f7GVm8qM";
-  const CACHE = "lgd-site-colors";
+  // Each company has its own colors (the user, 2026-10-02: "separate
+  // colors by company, settings only apply to current company"), so what
+  // this browser remembers is kept per client - the one shared/home.js
+  // remembers as working in ("lgd-client").
+  function clientId() {
+    try {
+      const client = JSON.parse(localStorage.getItem("lgd-client") || "null");
+      return (client && client.id) || "";
+    } catch (error) {
+      return "";
+    }
+  }
+  const CACHE = "lgd-site-colors:" + clientId();
   const COLOR = /^#[0-9a-f]{6}$/i;
   const VARIABLES = ["--accent", "--accent2", "--accent2-soft", "--accent-ink", "--ok"];
   // Signed out: near-black for the main color, light gray for the second
@@ -94,11 +106,20 @@
     } catch (error) {
       /* No FastAPI app here - the normal case on GitHub Pages. */
     }
+    // As the signed-in person, so the answer is their current client's
+    // colors (migration 010). An expired token just fails: what is cached
+    // stays, and the next page, with a refreshed token, asks again.
+    let token = SUPABASE_PUBLISHABLE_KEY;
+    try {
+      token = JSON.parse(localStorage.getItem("lgd-auth") || "null").access_token || token;
+    } catch (error) {
+      /* signed out: no colors to ask for */
+    }
     const response = await fetch(SUPABASE_URL + "/rest/v1/rpc/get_site_colors", {
       method: "POST",
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: "Bearer " + SUPABASE_PUBLISHABLE_KEY,
+        Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
       body: "{}",

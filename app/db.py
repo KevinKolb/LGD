@@ -1004,29 +1004,44 @@ class SiteColorsError(ValueError):
     in supabase/migrations/005."""
 
 
-async def get_site_colors(db_path: str) -> dict[str, str | None]:
-    """The two main colors an admin chose, or None for each page's own."""
-    rows = await _rows(db_path, "SELECT key, value FROM site_settings WHERE key IN ('accent', 'accent2')")
+def _color_keys(manager_id: str) -> tuple[str, str]:
+    """Each company's own pair (the user, 2026-10-02: "separate colors by
+    company"), as site_settings rows "accent:<company>" and
+    "accent2:<company>". On Supabase they are columns of `managers`
+    (supabase/migrations/010)."""
+    return f"accent:{manager_id}", f"accent2:{manager_id}"
+
+
+async def get_site_colors(db_path: str, *, manager_id: str | None) -> dict[str, str | None]:
+    """A company's two main colors, or None for each page's own."""
+    if not manager_id:
+        return {"accent": None, "accent2": None}
+    keys = _color_keys(manager_id)
+    rows = await _rows(db_path, "SELECT key, value FROM site_settings WHERE key IN (?, ?)", *keys)
     values = {row["key"]: row["value"] for row in rows}
-    return {"accent": values.get("accent"), "accent2": values.get("accent2")}
+    return {"accent": values.get(keys[0]), "accent2": values.get(keys[1])}
 
 
-async def set_site_colors(db_path: str, *, accent: str | None, accent2: str | None,
-                          person_id: str | None) -> dict[str, str | None]:
-    """Save both colors, or with both empty go back to each page's own."""
+async def set_site_colors(db_path: str, *, manager_id: str | None, accent: str | None,
+                          accent2: str | None, person_id: str | None) -> dict[str, str | None]:
+    """Save a company's two colors, or with both empty go back to each
+    page's own - for that company only."""
+    if not manager_id:
+        raise SiteColorsError("Your login is not filed under a company.")
     accent = (accent or "").strip().lower()
     accent2 = (accent2 or "").strip().lower()
+    keys = _color_keys(manager_id)
     if not accent and not accent2:
-        await _write(db_path, "DELETE FROM site_settings WHERE key IN ('accent', 'accent2')")
-        return await get_site_colors(db_path)
+        await _write(db_path, "DELETE FROM site_settings WHERE key IN (?, ?)", *keys)
+        return await get_site_colors(db_path, manager_id=manager_id)
     if not (COLOR_PATTERN.match(accent) and COLOR_PATTERN.match(accent2)):
         raise SiteColorsError("Each color needs to look like #1f5d4c.")
-    for key, value in (("accent", accent), ("accent2", accent2)):
+    for key, value in zip(keys, (accent, accent2)):
         await _write(db_path, "DELETE FROM site_settings WHERE key = ?", key)
         await _write(db_path,
                      "INSERT INTO site_settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)",
                      key, value, _now(), person_id)
-    return await get_site_colors(db_path)
+    return await get_site_colors(db_path, manager_id=manager_id)
 
 
 class OpenApartmentsError(ValueError):

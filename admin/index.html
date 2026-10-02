@@ -326,9 +326,16 @@ function colorsSection(backend) {
   show(null);
   call("GET").then(show).catch(() => say("The saved colors could not be loaded.", "error"));
 
-  return section("Site colors",
-    "The site's two main colors, on every page. The main color is the header bars, buttons and links; " +
-      "the second is the line under each header, hovers, and the Manager and Admin buttons on the home page.",
+  // Each company's own (the user, 2026-10-02: "separate colors by
+  // company, settings only apply to current company").
+  const company = (() => {
+    try { return (JSON.parse(localStorage.getItem("lgd-client") || "null") || {}).name || ""; }
+    catch (error) { return ""; }
+  })();
+  return section(company ? `Colors for ${company}` : "Company colors",
+    "This company's two main colors, on every page while you work in it - other companies keep " +
+      "their own. The main color is the header bars, buttons and links; the second is the line " +
+      "under each header, hovers, and the Manager button on the home page.",
     main.row, second.row, previewBox, el("div", { class: "color-actions" }, save, reset), message);
 }
 
