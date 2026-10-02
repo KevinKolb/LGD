@@ -189,8 +189,10 @@ def test_every_site_page_has_home_in_the_header_and_no_footer():
         html = (root / page / "index.html").read_text(encoding="utf-8")
         assert '<script src="../shared/home.js"></script>' in html, page
         assert "footer.js" not in html and "back.js" not in html, page
+    # The home page has the header too, minus Home (data-no-home).
     index = (root / "index.html").read_text(encoding="utf-8")
-    assert "home.js" not in index and "footer.js" not in index
+    assert "<header data-no-home>" in index and "footer.js" not in index
+    assert "if (header.hasAttribute(\"data-no-home\")) header.append(titles, actions);" in home
     # The pages opened from the Manager Portal - the legal pages, like the
     # rent register and the documents - have no footer and no Home: they
     # float Back and Print only (the user, 2026-09-30).

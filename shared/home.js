@@ -81,6 +81,8 @@
     @media (max-width: 600px) {
       header.site-header { padding: 12px 16px 16px; gap: 14px 10px; }
       header.site-header .hdr-titles { order: 4; flex-basis: 100%; }
+      /* No Home on the home page: the title and Login/Logout share a row. */
+      header.site-header[data-no-home] .hdr-titles { order: 1; flex: 1 1 0; }
       header.site-header .hdr-actions { order: 2; }
       header.site-header .hdr-actions { gap: 8px; }
       .hdr-home, header.site-header #account-toggle, .hdr-client { height: 34px; font-size: 12px; }
@@ -119,7 +121,9 @@
   const actions = document.createElement("div");
   actions.className = "hdr-actions";
   header.classList.add("site-header");
-  header.append(home, titles, actions);
+  // The home page's header has no Home (data-no-home): it is home.
+  if (header.hasAttribute("data-no-home")) header.append(titles, actions);
+  else header.append(home, titles, actions);
   // Login/Logout (shared/account.js) belongs with the buttons, wherever
   // and whenever it lands in the header.
   const placeAccount = () => {
@@ -163,7 +167,8 @@
     remember(current);
     showClient(current);
     // The picker is for the staff pages, the ones with Login/Logout.
-    if (list.length < 2 || !document.getElementById("account-bar")) return;
+    if (list.length < 2 || !document.getElementById("account-bar")
+        || header.hasAttribute("data-no-home")) return;
 
     const picker = document.createElement("select");
     picker.className = "hdr-client";

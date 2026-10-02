@@ -31,4 +31,7 @@ def test_the_icon_files_exist() -> None:
 
 
 def test_the_home_page_title_bar() -> None:
-    assert "<title>LGD PORTAL</title>" in (ROOT / "index.html").read_text(encoding="utf-8")
+    # momandpop.com since 2026-10-02 (the user); the home-screen name stays.
+    page = (ROOT / "index.html").read_text(encoding="utf-8")
+    assert "<title>momandpop.com</title>" in page
+    assert '<meta name="apple-mobile-web-app-title" content="LGD PORTAL">' in page

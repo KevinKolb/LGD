@@ -13,7 +13,7 @@
 <link rel="manifest" href="shared/manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="LGD PORTAL">
 <link rel="stylesheet" href="shared/site.css">
-<title>LGD PORTAL</title>
+<title>momandpop.com</title>
 <style>
   :root {
     --bg: #f2f2f2;
@@ -116,17 +116,13 @@
     font-size: 12px;
     color: #b0b0b0;
   }
-  /* Under the card, only while someone is signed in. */
-  #home-logout {
-    margin: 0 0 4px;
-    box-sizing: border-box; height: 36px; min-width: 120px; padding: 0 18px;
-    border: 1px solid var(--accent); border-radius: 999px;
-    background: #fff; color: var(--accent);
-    font: inherit; font-size: 13px; font-weight: 600; letter-spacing: .04em;
-    text-transform: uppercase; cursor: pointer;
+  /* The header bar, as on the other main pages; shared/home.js lays it out. */
+  header {
+    align-self: stretch;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-bottom: 4px solid var(--accent2);
   }
-  #home-logout:hover { background: var(--accent); color: var(--accent-ink); }
-  #home-logout[hidden] { display: none; }
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
     display: flex; align-items: center; justify-content: center;
@@ -169,8 +165,14 @@
 </style>
 </head>
 <body>
+<!-- The same header bar as the other main pages (shared/home.js), minus
+     Home - this is home - with Login/Logout on the right (the user,
+     2026-10-02: "give home page the header minus home button. title on
+     home page will be momandpop.com for now"). -->
+<header data-no-home>
+  <h1>momandpop.com</h1>
+</header>
 <main>
-  <h1>LGD (Lower Garden District Properties), Inc. Portal</h1>
   <p class="hint">Choose your role.</p>
   <div class="links">
     <a href="applicant/">Applicant</a>
@@ -206,35 +208,10 @@
   </div>
 </div>
 
-<!-- Logout, under the card, only while someone is signed in (the user,
-     2026-10-02: "logout button on home screen"). -->
-<button type="button" id="home-logout" hidden>Logout</button>
 <p class="version">Version 1.0</p>
 <script src="shared/auth.js"></script>
-<script>
-"use strict";
-(async function () {
-  const auth = window.LGD && window.LGD.auth;
-  if (!auth || !auth.configured) return;
-  let session = null;
-  try {
-    session = await auth.session();
-  } catch (error) {
-    return;   // the login service did not answer: nothing to log out of
-  }
-  if (!session) return;
-  const button = document.getElementById("home-logout");
-  button.hidden = false;
-  button.addEventListener("click", async () => {
-    button.disabled = true;
-    try {
-      await auth.signOut();
-    } finally {
-      window.location.reload();
-    }
-  });
-})();
-</script>
+<script src="shared/account.js"></script>
+<script src="shared/home.js"></script>
 <script>
 "use strict";
 

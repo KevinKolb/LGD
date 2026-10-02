@@ -805,9 +805,14 @@ five head lines; `tests/test_icons.py` checks each one. The name on a home
 screen is "LGD PORTAL", which is also the home page's title bar (the
 user, 2026-09-29).
 
-**The home page has a Logout button** under its card, only while
-someone is signed in (the user, 2026-10-02: "logout button on home
-screen"); it loads `shared/auth.js` for that alone.
+**The home page has the header bar too, minus Home** (the user,
+2026-10-02: "give home page the header minus home button. title on home
+page will be momandpop.com for now"): `<header data-no-home>`, titled
+"momandpop.com" (the browser tab too; the home-screen name stays "LGD
+PORTAL"), with Login/Logout on the right (`shared/account.js`), on one
+row even on a phone; no client picker there. The card lost its company
+heading and opens on "Choose your role.". (Earlier the same day a Logout
+button sat under the card.)
 
 **The home page tells a phone how to add it to the home screen** (the
 user, 2026-09-30: "the first time the person goes to the page"): a popup

@@ -101,10 +101,10 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     shared footer here: its links would only repeat the card's buttons."""
     response = client.get("/", auth=None)
     assert response.status_code == 200
-    # The company name once, in the card: "... Inc. Portal".
-    body = response.text[response.text.index("</head>"):]
-    assert body.count("LGD (Lower Garden District Properties), Inc.") == 1
-    assert "<h1>LGD (Lower Garden District Properties), Inc. Portal</h1>" in response.text
+    # The header bar, titled momandpop.com, with no Home (the user,
+    # 2026-10-02); the card no longer names a company.
+    assert '<header data-no-home>\n  <h1>momandpop.com</h1>\n</header>' in response.text
+    assert '<script src="shared/home.js"></script>' in response.text
     # A line after Applicant, and one before Manager and Admin, which are
     # in Tulane light blue.
     assert response.text.count('<hr class="links-divider">') == 2
