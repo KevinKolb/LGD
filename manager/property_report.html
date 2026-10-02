@@ -64,6 +64,8 @@
   .address a { color: inherit; text-decoration: underline; text-decoration-color: var(--accent2); text-underline-offset: 3px; }
   .address a:hover { color: var(--accent); }
   @media print { .address a { text-decoration: none; } }
+  .map { margin: 0 0 10px; height: 150px; border: 1px solid #c9c7c1; border-radius: 4px; overflow: hidden; background: #e8e6e1; }
+  .map iframe { display: block; width: 100%; height: 100%; border: 0; }
   .count { margin: 0 0 10px; text-align: center; font-size: 12px; color: var(--muted); }
   .units { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .units.single { grid-template-columns: 1fr; }
@@ -236,7 +238,17 @@ try {
       map.rel = "noopener";
       map.title = "Open in Google Maps";
       heading.append(map);
-      facade.append(heading);
+      // A Google map of the building (the user, 2026-10-02: "show google
+      // map image of each building on report"). The plain embed needs no
+      // API key; loaded lazily, so houses off screen wait.
+      const picture = el("div", "map");
+      const frame = document.createElement("iframe");
+      frame.src = "https://www.google.com/maps?output=embed&z=17&q=" + encodeURIComponent(where || address);
+      frame.loading = "lazy";
+      frame.title = "Map of " + address;
+      frame.referrerPolicy = "no-referrer-when-downgrade";
+      picture.append(frame);
+      facade.append(picture, heading);
       const occupied = units.filter((u) => u.people.length).length;
       facade.append(el("p", "count", single
         ? (occupied ? "Occupied" : "Vacant")

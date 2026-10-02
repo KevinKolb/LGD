@@ -916,7 +916,10 @@ residents and vacancies. **Status lives in `unitStatus()`**: so far
 Vacant (nobody on file) and "Lease ends ..." (a recorded `lease_end`
 within 60 days); add the next one there, with a colour and a legend
 entry. A resident at an address or unit the file lacks gets a house of
-their own rather than being dropped. Back, Save and Print float like the
+their own rather than being dropped. Each house shows a Google map of
+its address (the user, same day) - the keyless embed,
+`google.com/maps?output=embed&z=17&q=...`, in a lazy iframe - and the
+address itself opens Google Maps in a new tab. Back, Save and Print float like the
 rent register's; it prints in colour, three houses across.
 
 **Unit names are as written on paper** (the user, same day: "#2 (102)
