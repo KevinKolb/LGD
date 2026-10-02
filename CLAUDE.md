@@ -994,9 +994,13 @@ the even side of the 1500 block of Camp faces Coliseum Square, so its
 houses are at about 104°. A shared building uses its first address's
 embed. **A building's own photo wins over both** (the user, same day: "use
 this image instead of embed but link to map"): `"photo":
-"shared/photos/<name>.jpg"` in `properties.json` shows that picture, linked
-to Google Maps, where the map would be - 1428-1430 Melpomene has one.
-Unlike a map, it prints. Back, Save and Print float like the
+"shared/photos/<name>.jpg"` in `properties.json` shows that picture instead
+- as **the background of the whole house** (the user, same day: "make the
+images the background for the house not above text"), with the address on
+a light band at the top, a clear strip of photo, and the unit boxes nearly
+opaque over the rest; the address still opens Google Maps. Every LGD
+building has one now (sent by the user); only 123 Canal St. shows a map.
+Unlike a map, a photo prints. Back, Save and Print float like the
 rent register's; it prints in colour, three houses across.
 
 **Unit names are as written on paper** (the user, same day: "#2 (102)
