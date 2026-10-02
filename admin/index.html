@@ -406,7 +406,6 @@ async function explainWithoutBackend(app) {
       return;
     }
     app.replaceChildren(
-      el("p", { class: "notice ok", text: `Signed in as ${result.profile.display_name || result.profile.email} (manager).` }),
       colorsSection("supabase"),
       el("p", { class: "empty", text:
         "The managers, users and storage backends come from the app's own API, which is " +

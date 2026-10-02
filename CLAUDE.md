@@ -557,8 +557,12 @@ and a two-site admin:
   signing in starts from a role's button.
 - **A welcome under every page's title** (the user, same day: "generic
   welcome message under page title, personalized if login"): "Welcome."
-  signed out, "Welcome back, Kevin." signed in (the first word of the
-  name on file; just "Welcome back." while that is still an email).
+  signed out, "Welcome back, Kevin (manager, resident)." signed in (the
+  first word of the name on file, then the roles held, an admin reading
+  as manager; just "Welcome back (manager)." while the name is still an
+  email). The role is said only there (the user, same day: "Signed in as
+  Kevin Kolb (manager). is duplicative") - the admin page no longer opens
+  on a "Signed in as" line.
   `shared/home.js` writes it - into the manager page's `#whoami`, which no
   longer greets on its own.
 - **The site picker** shows only in headers marked `data-client-picker`
@@ -692,8 +696,8 @@ GitHub's own "page not found", and read every 404 as a refusal. Only the
 app answers in JSON, so now only a JSON 404 means "not an admin"; anything
 else falls back to Supabase, which lets an admin in to Site colors. And
 since the user still saw a blank page (2026-09-30), every way the page can
-end now says so in words: signed in as an admin, "Signed in as ... (admin)"
-and Site colors; as anyone else, who is signed in, their email and roles,
+end now says so in words: signed in as a manager, Site colors (the
+"Signed in as" line it opened on is gone; the welcome says the role); as anyone else, who is signed in, their email and roles,
 and that the record needs `is_admin`, with a Sign out button; a login with
 no `people` row, that it has no record on file yet; any error, the error;
 and still "Loading…" after 20 seconds, that the login service did not

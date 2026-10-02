@@ -235,7 +235,9 @@
 
   // A welcome under the title on every page (the user, 2026-10-02: "put a
   // generic welcome message under page title, personalized if login"):
-  // "Welcome." signed out, "Welcome back, Kevin." signed in. The manager
+  // "Welcome." signed out, "Welcome back, Kevin (manager)." signed in, with
+  // the roles held (the user, same day: "just put role in welcome
+  // messages"; an admin reads as manager, one credential). The manager
   // page's own line (#whoami) is used where there is one.
   let welcome = titles.querySelector("#whoami");
   if (!welcome) {
@@ -256,7 +258,13 @@
     const first = who ? String(who.display_name || "").trim().split(/[ ]+/)[0] : "";
     // A name that is still an email (an applicant who has not signed up
     // yet has their email there) is no name to greet.
-    welcome.textContent = first && first.indexOf("@") < 0 ? "Welcome back, " + first + "." : "Welcome back.";
+    const held = who && Array.isArray(who.roles) ? who.roles : [];
+    const roles = ["manager", "resident", "applicant"].filter((role) =>
+      held.indexOf(role) >= 0 || (role === "manager" && held.indexOf("admin") >= 0));
+    const label = roles.length ? " (" + roles.join(", ") + ")" : "";
+    welcome.textContent = first && first.indexOf("@") < 0
+      ? "Welcome back, " + first + label + "."
+      : "Welcome back" + label + ".";
   }
 
   async function clients() {

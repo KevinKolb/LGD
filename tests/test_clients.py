@@ -82,7 +82,12 @@ def test_a_welcome_under_every_title_and_no_login_on_home():
     if login"."""
     home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
     assert 'welcome.textContent = signedInHere() ? "" : "Welcome.";' in home
-    assert '"Welcome back, " + first + "."' in home
+    assert '"Welcome back, " + first + label + "."' in home
+    # The role is in the welcome, not repeated on the admin page (the
+    # user, same day: "Signed in as Kevin Kolb (manager). is duplicative").
+    assert '(role === "manager" && held.indexOf("admin") >= 0)' in home
+    admin = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
+    assert "(manager).`" not in admin
     assert 'if (bar && header.hasAttribute("data-no-home")) bar.hidden = !signedInHere();' in home
     manager = (ROOT / "manager" / "index.html").read_text(encoding="utf-8")
     assert 'document.getElementById("whoami").textContent = greeting' not in manager
