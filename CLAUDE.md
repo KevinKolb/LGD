@@ -631,9 +631,27 @@ client other than LGD the documents also put its name in the heading, the
 "Page X of Y" lines (an added `@page` rule) and the Lessor blank; LGD's
 print exactly as before. The lease and deposit **text** is still LGD's -
 rent paid at 1556 Camp Street, for one. The FastAPI app has no clients - one `manager_id` per login, as
-before. Linking a person to a second client is a SQL insert into
-`person_clients` for now (the user's own link was given to him as a
+before. Linking a person to a second client is a SQL update of
+`people.clients` for now (`update people set clients = clients ||
+'robertson' where ...`; the user's own link was given to him as a
 snippet, not committed: this repository is public).
+
+**Everyone is in one table, `people`** (the user, same day: "combine all
+supabase people related tables into one table. logins. applicants.
+residents. managers. previous admins ... designate their role or roles in
+the table"). It already held everyone with the login as columns and the
+four `is_*` role columns; `supabase/migrations/012_one_people_table.sql`
+folds 008's `person_clients` into `people.clients` (a `text[]` of
+company ids; a before-trigger adds `manager_id` to it) and drops that
+table, and adds `roles`, a generated column spelling the four out
+("admin, manager, resident") for reading the table in the dashboard - it
+is worked out by the database, never written. `managers` stays: it is the
+companies, not people - the user took it for a list of manager people
+that was missing him. The other tables (`properties`, `open_apartments`,
+`rent_payments`, `news`, `site_settings`, `applications` - the shelved
+online form's submissions) are not people. 008 still creates
+`person_clients` when the whole set is re-run; 012, after it, folds it
+back in.
 
 ## The Admin Portal
 

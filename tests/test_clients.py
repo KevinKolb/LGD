@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SQL = (ROOT / "supabase" / "migrations" / "008_clients.sql").read_text(encoding="utf-8")
+ONE = (ROOT / "supabase" / "migrations" / "012_one_people_table.sql").read_text(encoding="utf-8")
 
 
 def test_the_link_table_is_locked_to_the_browser():
@@ -12,10 +13,21 @@ def test_the_link_table_is_locked_to_the_browser():
     assert "revoke all on public.person_clients from anon, authenticated;" in SQL
 
 
+def test_everyone_is_in_one_table():
+    """The user, 2026-10-02: "combine all supabase people related tables
+    into one table ... designate their role or roles in the table". 012
+    folds 008's person_clients into people.clients, drops it, and adds a
+    roles column in words."""
+    assert "alter table public.people add column if not exists clients text[]" in ONE
+    assert "drop table if exists public.person_clients;" in ONE
+    assert "add column roles text generated always as (" in ONE
+    assert "person_clients pc" not in ONE[ONE.index("create or replace function public.list_my_clients"):]
+
+
 def test_a_login_switches_only_to_a_client_it_is_linked_to():
-    switch = SQL[SQL.index("create or replace function public.set_current_client"):]
+    switch = ONE[ONE.index("create or replace function public.set_current_client"):]
     switch = switch[:switch.index("$fn$;")]
-    assert "where pc.person_id = caller.id and pc.manager_id = client" in switch
+    assert "if not (client = any (caller.clients)) then" in switch
     assert "update public.people p set manager_id = client where p.id = caller.id;" in switch
     for function in ("list_my_clients()", "set_current_client(text)"):
         assert f"revoke all on function public.{function} from public, anon;" in SQL
