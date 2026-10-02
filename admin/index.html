@@ -406,10 +406,7 @@ async function explainWithoutBackend(app) {
       return;
     }
     app.replaceChildren(
-      colorsSection("supabase"),
-      el("p", { class: "empty", text:
-        "The managers, users and storage backends come from the app's own API, which is " +
-        "not running here - start it locally to see them." }));
+      colorsSection("supabase"));
   } catch (error) {
     say("The admin page could not load: " + (error && error.message ? error.message : error) +
         ". Check your connection and reload.");
