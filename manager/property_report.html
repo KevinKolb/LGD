@@ -65,6 +65,8 @@
   .address a:hover { color: var(--accent); }
   @media print { .address a { text-decoration: none; } }
   .map { margin: 0 0 10px; height: 150px; border: 1px solid #c9c7c1; border-radius: 4px; overflow: hidden; background: #e8e6e1; }
+  .map a.photo, .map img { display: block; width: 100%; height: 100%; }
+  .map img { object-fit: cover; }
   .map iframe { display: block; width: 100%; height: 100%; border: 0; }
   .count { margin: 0 0 10px; text-align: center; font-size: 12px; color: var(--muted); }
   .units { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -228,7 +230,7 @@ try {
     const placed = new Set();
     street.replaceChildren();
 
-    function house(address, units, single, where, embed) {
+    function house(address, units, single, where, embed, photo) {
       const box = el("article", "house");
       houses += 1;
       box.append(el("div", "roof"));
@@ -245,6 +247,23 @@ try {
       // map image of each building on report"). The plain embed needs no
       // API key; loaded lazily, so houses off screen wait.
       const picture = el("div", "map");
+      // A photo of the building, where properties.json has one ("photo",
+      // under shared/photos/; the user, 2026-10-02: "use this image
+      // instead of embed but link to map"), linking to Google Maps.
+      if (/^shared[/]photos[/][a-z0-9-]+[.](jpe?g|png|webp)$/.test(photo || "")) {
+        const go = el("a", "photo");
+        go.href = map.href;
+        go.target = "_blank";
+        go.rel = "noopener";
+        go.title = "Open in Google Maps";
+        const image = document.createElement("img");
+        image.src = "../" + photo;
+        image.alt = "Photo of " + address;
+        image.loading = "lazy";
+        go.append(image);
+        picture.append(go);
+        facade.append(picture, heading);
+      }
       const frame = document.createElement("iframe");
       // A building may name its own Google embed in properties.json
       // ("map_embed": a Street View the user picked, 2026-10-02); only
@@ -256,8 +275,10 @@ try {
       frame.loading = "lazy";
       frame.title = "Map of " + address;
       frame.referrerPolicy = "no-referrer-when-downgrade";
-      picture.append(frame);
-      facade.append(picture, heading);
+      if (!picture.firstChild) {
+        picture.append(frame);
+        facade.append(picture, heading);
+      }
       const occupied = units.filter((u) => u.people.length).length;
       facade.append(el("p", "count", single
         ? (occupied ? "Occupied" : "Vacant")
@@ -306,7 +327,8 @@ try {
       }
       const first = building.parts[0];
       house(building.name, units, !shared && !first.units.length, full(first),
-            building.parts.map((p) => p.map_embed).find(Boolean));
+            building.parts.map((p) => p.map_embed).find(Boolean),
+            building.parts.map((p) => p.photo).find(Boolean));
     }
     // Anyone at an address or unit the table of apartments does not have
     // still shows, in a house of their own, rather than being left off.

@@ -992,7 +992,11 @@ position and heading without a panorama id
 the user's 1534 one (within a meter, 104° against his 101°) and by eye;
 the even side of the 1500 block of Camp faces Coliseum Square, so its
 houses are at about 104°. A shared building uses its first address's
-embed. Back, Save and Print float like the
+embed. **A building's own photo wins over both** (the user, same day: "use
+this image instead of embed but link to map"): `"photo":
+"shared/photos/<name>.jpg"` in `properties.json` shows that picture, linked
+to Google Maps, where the map would be - 1428-1430 Melpomene has one.
+Unlike a map, it prints. Back, Save and Print float like the
 rent register's; it prints in colour, three houses across.
 
 **Unit names are as written on paper** (the user, same day: "#2 (102)

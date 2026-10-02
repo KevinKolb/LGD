@@ -118,6 +118,15 @@ def test_the_manager_page_has_reports() -> None:
     # addresses sharing a building are one house.
     assert "/^https:[/][/]www[.]google[.]com[/]maps[/]embed[?]/.test(embed" in report
     assert "const name = property.building || property.address;" in report
+    # A building's own photo (shared/photos/) stands in for the map and
+    # opens Google Maps (the user, 2026-10-02).
+    assert "/^shared[/]photos[/][a-z0-9-]+[.](jpe?g|png|webp)$/.test(photo" in report
+    assert "go.href = map.href;" in report
+    import json
+    root = MANAGER_PAGE.parent.parent
+    for prop in json.loads((root / "documents" / "properties.json").read_text(encoding="utf-8"))["properties"]:
+        if "photo" in prop:
+            assert (root / prop["photo"]).is_file(), prop["photo"]
 
 
 def test_units_are_named_as_on_paper() -> None:
