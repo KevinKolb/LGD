@@ -334,8 +334,12 @@ the home page) on the left, then the titles (the company line, small
 capitals, above the page title), then the client picker and Login/Logout
 (`shared/account.js`, moved in whenever it lands) on the right - all
 pills of one height. On a phone the buttons take the top row, one line
-even on an iPhone SE, and the titles go beneath. The sign-in page has no
-header bar, so Home floats in its top-left corner. Page titles are
+even on an iPhone SE, and the titles go beneath. Every site page has it
+(the user, 2026-10-02: "give the login page the header too. giva all web
+pages the header"): the sign-in page's is titled "Sign In" (it had the
+company name centered above its card, and Home floating in a corner);
+the home page's has no Home. The paper pages - documents, rent register,
+legal pages - keep Back / Save / Print only, as the user set them. Page titles are
 "Applicant Portal", "Resident Portal", "Manager Portal", "Admin Portal".
 **The pages opened from the Manager Portal - the
 two legal pages and the rent register - have no Back in a header**: they

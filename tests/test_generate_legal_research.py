@@ -189,6 +189,7 @@ def test_every_site_page_has_home_in_the_header_and_no_footer():
         html = (root / page / "index.html").read_text(encoding="utf-8")
         assert '<script src="../shared/home.js"></script>' in html, page
         assert "footer.js" not in html and "back.js" not in html, page
+        assert "<header" in html and 'class="site-title"' not in html, page
     # The home page has the header too, minus Home (data-no-home).
     index = (root / "index.html").read_text(encoding="utf-8")
     assert "<header data-no-home>" in index and "footer.js" not in index
