@@ -979,9 +979,20 @@ address itself opens Google Maps in a new tab. A building may name its
 own embed in `properties.json`, `"map_embed"` (a Street View the user
 picked; only a `https://www.google.com/maps/embed?` address is used), and
 addresses in one building share a `"building"` name ("1534-1536 Camp
-St.", "1428-1430 Melpomene St.", the user, same day) - the report draws
+St.", "1428-1430 Melpomene St.", "1521-1523 St. Andrew St.", the user,
+same day) - the report draws
 them as one house, each address a box named by its number ("1534"). The
-documents ignore both keys. Back, Save and Print float like the
+documents ignore both keys. The user sent Street Views for 1534, 1536,
+1428 and 1430; the rest (1364 and 1558 Camp, 1521 St. Andrew) were worked
+out the same day ("infer the missing street view embed codes"): the
+house's point and its street's line from OpenStreetMap (Nominatim), the
+camera on the street nearest the house, aimed at it - the embed takes a
+position and heading without a panorama id
+(`pb=!6m7!1m6!2m2!1d<lat>!2d<lng>!3f<heading>!4f0!5f...`). Checked against
+the user's 1534 one (within a meter, 104° against his 101°) and by eye;
+the even side of the 1500 block of Camp faces Coliseum Square, so its
+houses are at about 104°. A shared building uses its first address's
+embed. Back, Save and Print float like the
 rent register's; it prints in colour, three houses across.
 
 **Unit names are as written on paper** (the user, same day: "#2 (102)
