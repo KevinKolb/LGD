@@ -45,12 +45,19 @@ def test_lists_show_only_the_current_client_even_to_an_admin():
     assert "caller.is_admin or p.manager_id" not in lists
 
 
-def test_the_picker_is_only_on_staff_pages_and_only_for_several_clients():
+def test_the_picker_is_on_every_page_for_several_clients():
+    """The user, 2026-10-02: "managers with multiple companies should be
+    able to change companies from any page" - every header page (home.js)
+    and every paper page with floating buttons (client-picker.js)."""
     home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
-    assert 'if (list.length < 2 || !header.hasAttribute("data-client-picker")) return;' in home
-    for page, picker in (("manager", True), ("admin", True), ("applicant", False), ("resident", False)):
-        html = (ROOT / page / "index.html").read_text(encoding="utf-8")
-        assert ("<header data-client-picker" in html) is picker, page
+    assert "    if (list.length < 2) return;" in home
+    assert 'hasAttribute("data-client-picker")' not in home
+    paper = (ROOT / "shared" / "client-picker.js").read_text(encoding="utf-8")
+    assert "if (!Array.isArray(list) || list.length < 2) return;" in paper
+    assert 'auth.rpc("set_current_client", { client: picker.value })' in paper
+    for page in ("property_report", "rent_register", "rent_ledger", "legal_review", "legal_research"):
+        html = (ROOT / "manager" / f"{page}.html").read_text(encoding="utf-8")
+        assert '<script src="../shared/client-picker.js"></script>' in html, page
 
 
 def test_the_name_is_momandpop_until_a_client_is_known():

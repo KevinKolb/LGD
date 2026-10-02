@@ -95,6 +95,8 @@
       header.site-header .hdr-titles { order: 4; flex-basis: 100%; }
       /* No Home on the home page: the title and Login/Logout share a row. */
       header.site-header[data-no-home] .hdr-titles { order: 1; flex: 1 1 0; }
+      /* With the client picker as well, the title goes beneath, full width. */
+      header.site-header[data-no-home].with-picker .hdr-titles { order: 4; flex: 0 0 100%; }
       header.site-header .hdr-actions { order: 2; }
       header.site-header .hdr-actions { gap: 8px; }
       header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client { height: 34px; font-size: 12px; }
@@ -305,10 +307,12 @@
     const current = list.find((client) => client.current) || list[0];
     remember(current);
     showClient(current);
-    // The picker is for the staff pages, the ones with Login/Logout.
-    // The picker is for the staff pages (header data-client-picker), and
-    // only for a login linked to more than one client.
-    if (list.length < 2 || !header.hasAttribute("data-client-picker")) return;
+    // The picker shows on every page with the header, for a login linked
+    // to more than one client (the user, 2026-10-02: "managers with
+    // multiple companies should be able to change companies from any
+    // page"; until then only the manager and admin pages had it). The
+    // paper pages get theirs from shared/client-picker.js.
+    if (list.length < 2) return;
 
     const picker = document.createElement("select");
     picker.className = "hdr-client";
@@ -337,6 +341,7 @@
       }
     });
     actions.prepend(picker);
+    header.classList.add("with-picker");
     if (actions.querySelector(".hdr-gear")) header.classList.add("crowded");
   }
   clients();

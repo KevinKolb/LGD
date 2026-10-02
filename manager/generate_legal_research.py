@@ -290,6 +290,8 @@ PAGE = """<!doctype html>
 </div>
 <!-- Save PDF beside Print (the user, 2026-09-30). -->
 <script src="../shared/save-pdf.js"></script>
+<!-- The company picker, for a login with more than one (the user, 2026-10-02). -->
+<script src="../shared/client-picker.js"></script>
 </body>
 </html>
 """

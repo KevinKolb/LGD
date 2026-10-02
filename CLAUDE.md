@@ -573,8 +573,17 @@ and a two-site admin:
   as the right word from the stored session. Measured: the header no
   longer changes height after the first paint, except the very first
   visit signed in, before the client and welcome are known.
-- **The site picker** shows only in headers marked `data-client-picker`
-  (manager, admin) and only for a login linked to more than one client.
+- **The site picker** shows on every page for a login linked to more
+  than one client (the user, 2026-10-02: "managers with multiple
+  companies should be able to change companies from any page"; until
+  then only the manager and admin headers, marked `data-client-picker`,
+  which is now unused). Header pages get it from `shared/home.js` (on a
+  phone the home page's title then goes beneath the buttons); the paper
+  pages - Properties report, rent register, rent ledger, both legal
+  pages - from `shared/client-picker.js`, first among the floating
+  buttons, hidden in print. A ledger of one apartment switches to the
+  ledger list (`<body data-after-switch>`). The printed documents have
+  none: their popup reads the company remembered in `lgd-client`.
 - **Home always shows Applicant, Resident and Manager** (the user,
   2026-10-02: "available on home page always regardless of logged in or
   not"; for a few hours that day, signed in, it showed only the roles
