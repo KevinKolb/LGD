@@ -81,7 +81,14 @@ def test_a_welcome_under_every_title_and_no_login_on_home():
     necessary. put a generic welcome message under page title, personalized
     if login"."""
     home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
-    assert 'welcome.textContent = signedInHere() ? "" : "Welcome.";' in home
+    assert 'welcome.textContent = "Welcome.";' in home
+    # No pop on load (the user, same day): the last welcome is kept and
+    # shown at once, and the line holds its height while it is empty.
+    assert 'localStorage.getItem(WELCOME_KEY) || "Welcome back."' in home
+    assert "localStorage.removeItem(WELCOME_KEY);" in home
+    assert "min-height: 1.4em" in home
+    account = (ROOT / "shared" / "account.js").read_text(encoding="utf-8")
+    assert 'text: stored ? "Logout" : "Login"' in account
     assert '"Welcome back, " + first + label + "."' in home
     # The role is in the welcome, not repeated on the admin page (the
     # user, same day: "Signed in as Kevin Kolb (manager). is duplicative").

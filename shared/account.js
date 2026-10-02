@@ -154,7 +154,15 @@
     document.head.append(style);
 
     const widget = el("div", { id: "account-widget" });
-    const toggle = el("button", { type: "button", id: "account-toggle", text: "Account" });
+    // Login or Logout from the start, by whether a session is stored, so
+    // the button never changes size once the login service answers.
+    let stored = false;
+    try {
+      stored = !!localStorage.getItem("lgd-auth");
+    } catch (error) {
+      /* nothing kept */
+    }
+    const toggle = el("button", { type: "button", id: "account-toggle", text: stored ? "Logout" : "Login" });
     widget.append(toggle);
     const bar = el("div", { id: "account-bar" }, widget);
 

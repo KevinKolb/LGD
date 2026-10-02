@@ -566,7 +566,13 @@ and a two-site admin:
   Kevin Kolb (manager). is duplicative") - the admin page no longer opens
   on a "Signed in as" line.
   `shared/home.js` writes it - into the manager page's `#whoami`, which no
-  longer greets on its own.
+  longer greets on its own. **No pop on load** (the user, same day: "set
+  border height to hold space for incoming text"): the line always holds
+  its height, the last welcome is kept as `lgd-welcome` (forgotten with
+  `lgd-client` when signed out) and shown at once, and Login/Logout starts
+  as the right word from the stored session. Measured: the header no
+  longer changes height after the first paint, except the very first
+  visit signed in, before the client and welcome are known.
 - **The site picker** shows only in headers marked `data-client-picker`
   (manager, admin) and only for a login linked to more than one client.
 - **Home always shows Applicant, Resident and Manager** (the user,

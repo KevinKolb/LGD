@@ -29,6 +29,10 @@
   const src = document.currentScript ? document.currentScript.src : window.location.href;
   const root = src.replace(/shared\/home\.js(?:\?.*)?$/, "");
   const CLIENT_KEY = "lgd-client";
+  // The last welcome, so a page opens on it rather than growing a line
+  // once the login service answers (the user, 2026-10-02: "set border
+  // height to hold space for incoming text. no pop on load").
+  const WELCOME_KEY = "lgd-welcome";
 
   const style = document.createElement("style");
   style.textContent = `
@@ -47,6 +51,8 @@
       letter-spacing: .01em; text-transform: none;
     }
     header.site-header .hdr-titles p:not(.company) { margin: 2px 0 0; font-size: 13px; opacity: .8; }
+    /* The welcome always holds its line, even before its text arrives. */
+    header.site-header .hdr-titles .hdr-welcome, header.site-header .hdr-titles #whoami { min-height: 1.4em; line-height: 1.4; }
     header.site-header .hdr-actions {
       order: 3; margin-left: auto; flex-wrap: nowrap; display: flex; align-items: center; gap: 10px;
     }
@@ -208,6 +214,7 @@
   function forget() {
     try {
       localStorage.removeItem(CLIENT_KEY);
+      localStorage.removeItem(WELCOME_KEY);
     } catch (error) {
       /* nothing kept */
     }
@@ -243,7 +250,15 @@
     if (title) title.after(welcome);
     else titles.append(welcome);
   }
-  welcome.textContent = signedInHere() ? "" : "Welcome.";
+  welcome.textContent = "Welcome.";
+  if (signedInHere()) {
+    welcome.textContent = "Welcome back.";
+    try {
+      welcome.textContent = localStorage.getItem(WELCOME_KEY) || "Welcome back.";
+    } catch (error) {
+      /* nothing kept */
+    }
+  }
   async function greet(auth) {
     let who = null;
     try {
@@ -261,6 +276,11 @@
     welcome.textContent = first && first.indexOf("@") < 0
       ? "Welcome back, " + first + label + "."
       : "Welcome back" + label + ".";
+    try {
+      localStorage.setItem(WELCOME_KEY, welcome.textContent);
+    } catch (error) {
+      /* not kept: the next page greets late, that is all */
+    }
   }
 
   async function clients() {
