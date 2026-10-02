@@ -563,10 +563,11 @@ and a two-site admin:
   longer greets on its own.
 - **The site picker** shows only in headers marked `data-client-picker`
   (manager, admin) and only for a login linked to more than one client.
-- **Home, signed in, shows only the roles held** (Manager for an admin
-  too), Applicant and Resident straight to their pages; signed out, all
-  three (Applicant, Resident, Manager), Applicant and Resident through
-  sign-in. One button left: "Welcome back.".
+- **Home always shows Applicant, Resident and Manager** (the user,
+  2026-10-02: "available on home page always regardless of logged in or
+  not"; for a few hours that day, signed in, it showed only the roles
+  held). Applicant and Resident go through sign-in, which sends someone
+  already signed in straight on.
 - **Manager page**: its header (Home, Logout) shows from the start; a
   login without the role gets the refusal under it, never a bare page.
 - **Applicant page**: Apply (which makes an account) only while signed out.

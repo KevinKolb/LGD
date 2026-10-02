@@ -324,3 +324,13 @@ def test_blank_lease_404s_clearly_if_never_generated(client, monkeypatch) -> Non
     response = client.get("/api/blank-lease", auth=ADMIN)
     assert response.status_code == 404
     assert "generate_print_lease.py" in response.json()["detail"]
+
+
+def test_the_home_page_always_offers_all_three_roles() -> None:
+    """The user, 2026-10-02: Applicant, Resident and Manager on the home
+    page always, signed in or not - nothing hides them."""
+    from pathlib import Path
+    page = (Path(__file__).resolve().parent.parent / "index.html").read_text(encoding="utf-8")
+    for role in ("applicant", "resident", "manager"):
+        assert f'data-role="{role}"' in page
+    assert "link.remove()" not in page and "roles.includes" not in page
