@@ -893,6 +893,11 @@ year. The register's date box (`set_rent_payment`) now ticks Paid with a
 date and takes the tick off when cleared, keeping the month's amount,
 deposit and comment. The FastAPI app has `GET /api/rent-history` and
 `PUT /api/rent-entries`. Not on the card yet: its Alarm and Pets lines.
+The manager page's step 5 links both (the user, same day: "link to both
+rent registers on manager's page"): **Rent register** and **Rent
+ledgers**, which opens the ledger with no apartment - a list of the
+company's apartments, each opening its ledger for this year, whose Back
+returns to the list.
 
 ### Resident Entry
 

@@ -236,6 +236,11 @@ def test_the_ledger_records_every_column_of_a_month(client) -> None:
 def test_the_register_opens_each_apartments_ledger() -> None:
     register = REGISTER.read_text(encoding="utf-8")
     assert "link.href = `rent_ledger.html?${query}`;" in register
+    # The manager page links both (the user, 2026-10-02); the ledger opened
+    # with no apartment lists the company's apartments to choose from.
+    manager = (ROOT / "manager" / "index.html").read_text(encoding="utf-8")
+    assert 'href="rent_register.html">Rent register</a>' in manager
+    assert 'href="rent_ledger.html">Rent ledgers</a>' in manager
     page = LEDGER.read_text(encoding="utf-8")
     assert 'auth.requireRole(["manager", "admin"])' in page
     assert 'window.LGD.auth.rpc("save_rent_entry", body)' in page

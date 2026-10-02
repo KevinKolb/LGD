@@ -50,6 +50,7 @@
 
   .facts { display: grid; grid-template-columns: 1fr auto; gap: 12px 24px; margin: 0 0 16px;
            padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fafaf8; }
+  .facts[hidden] { display: none; }
   .facts h2 { margin: 0 0 6px; font-size: 8pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .tenants { margin: 0; padding: 0; list-style: none; }
   .tenants li { display: flex; flex-wrap: wrap; gap: 2px 14px; padding: 2px 0; }
@@ -84,6 +85,13 @@
   tfoot td.money::before { content: none; }
   tfoot td.money { text-align: right; padding-right: 11px; }
   .status { color: var(--muted); text-align: center; }
+  .choose .hint { margin: 0 0 12px; color: var(--muted); }
+  .choose-building { padding: 10px 0; border-top: 1px solid var(--line); }
+  .choose-building h2 { margin: 0 0 8px; font-size: 12pt; }
+  .choose-units { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choose-units a { padding: 6px 14px; border: 1px solid var(--accent); border-radius: 999px;
+                    color: var(--accent); text-decoration: none; font-weight: 600; }
+  .choose-units a:hover { background: #eef3f1; }
   .status.error { color: #a4262c; }
 
   .paper-buttons { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; gap: 10px; }
@@ -170,6 +178,8 @@ try {
   // Back to the register, on the month it was opened from.
   const back = document.getElementById("back");
   if (/^[0-9]{4}-[0-9]{2}$/.test(params.get("month") || "")) back.href = `rent_register.html?month=${params.get("month")}`;
+  // Chosen from the list of ledgers: back to that list.
+  if (params.get("from") === "list") back.href = "rent_ledger.html";
 
   function fail(text) {
     status.textContent = text;
@@ -184,10 +194,14 @@ try {
     return node;
   }
 
+  let client = null;  // the company being worked in
   async function backend() {
     try {
       const response = await fetch("/api/config");
-      if (response.ok) return "api";
+      if (response.ok) {
+        client = (await response.json()).user.manager_id || null;
+        return "api";
+      }
     } catch (error) {
       /* No backend here - the normal case on GitHub Pages. */
     }
@@ -196,6 +210,7 @@ try {
     const result = await auth.requireRole(["manager", "admin"]);
     if (result.reason === "signed-out") return null;  // already heading to the login page
     if (!result.ok) throw new Error("The rent ledger is for managers.");
+    client = result.profile.manager_id || null;
     return "supabase";
   }
 
@@ -384,6 +399,35 @@ try {
     return tr;
   }
 
+  // Opened with no apartment (the manager page's link, the user,
+  // 2026-10-02: "link to both rent registers on manager's page"): every
+  // apartment of the company, each opening its ledger for this year.
+  async function choose() {
+    const response = await fetch("../documents/properties.json", { cache: "no-store" });
+    const properties = (await response.json()).properties
+      .filter((property) => !client || property.manager_id === client);
+    document.getElementById("place").textContent = "Rent Ledgers";
+    document.title = "Rent Ledgers";
+    document.getElementById("years").hidden = true;
+    const list = el("div", "choose");
+    list.append(el("p", "hint", "Choose an apartment."));
+    for (const property of properties) {
+      const group = el("div", "choose-building");
+      group.append(el("h2", "", property.address));
+      const links = el("div", "choose-units");
+      for (const name of property.units.length ? property.units : [""]) {
+        const a = el("a", "", name ? `Unit ${name}` : "Whole house");
+        a.href = `?${new URLSearchParams({ address: property.address, unit: name, year, from: "list" })}`;
+        links.append(a);
+      }
+      group.append(links);
+      list.append(group);
+    }
+    status.hidden = true;
+    status.after(list);
+    back.href = "index.html";
+  }
+
   function fitSheet() {
     const sheet = document.querySelector(".ledger");
     sheet.style.zoom = "";
@@ -401,9 +445,9 @@ try {
 
   (async function () {
     try {
-      if (!address) throw new Error("Open the ledger from an apartment on the rent register.");
       via = await backend();
       if (!via) return;
+      if (!address) return choose();
       years();
       const [people, entries] = await Promise.all([residents(), history()]);
       heading(people || []);
