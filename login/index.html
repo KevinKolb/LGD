@@ -245,7 +245,8 @@
     const next = new URLSearchParams(window.location.search).get("next");
     if (!next) return auth.root;
     try {
-      const target = new URL(next, window.location.href);
+      // Relative to the site root: "applicant/" is the applicant page.
+      const target = new URL(next, auth.root);
       if (target.origin !== window.location.origin) return auth.root;
       if (!target.pathname.startsWith(new URL(auth.root).pathname)) return auth.root;
       return target.href;
@@ -375,8 +376,10 @@
       return;
     }
 
-    if (linkType) {
-      // A confirmation link that also signed them in - straight through.
+    // A confirmation link that also signed them in, or a page that sent
+    // them here to sign in first (?next=, e.g. Applicant and Resident on
+    // the home page) - already signed in, so straight through.
+    if (linkType || new URLSearchParams(window.location.search).has("next")) {
       window.location.href = destination();
       return;
     }

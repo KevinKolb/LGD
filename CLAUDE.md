@@ -338,7 +338,12 @@ even on an iPhone SE, and the titles go beneath. Every site page has it
 (the user, 2026-10-02: "give the login page the header too. giva all web
 pages the header"): the sign-in page's is titled "Sign In" (it had the
 company name centered above its card, and Home floating in a corner);
-the home page's has no Home. The paper pages - documents, rent register,
+the home page's has no Home. **Applicant and Resident on the home page
+sign in first** (the user, same day: "applicant and resident go straight
+to login for now"): they link to `login/?next=applicant/` and
+`?next=resident/`; the sign-in page reads `next` relative to the site
+root and, already signed in, goes straight there. (The Resident link was
+`data-soon`, "Coming soon.", until then.) The paper pages - documents, rent register,
 legal pages - keep Back / Save / Print only, as the user set them. Page titles are
 "Applicant Portal", "Resident Portal", "Manager Portal", "Admin Portal".
 **The pages opened from the Manager Portal - the

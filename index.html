@@ -175,9 +175,13 @@
 <main>
   <p class="hint">Choose your role.</p>
   <div class="links">
-    <a href="applicant/">Applicant</a>
+    <!-- Applicant and Resident sign in first, for now (the user,
+         2026-10-02: "applicant and resident go straight to login"); the
+         sign-in page sends them on, and straight through if they already
+         are. -->
+    <a href="login/?next=applicant/">Applicant</a>
     <hr class="links-divider">
-    <a href="resident/" data-soon>Resident</a>
+    <a href="login/?next=resident/">Resident</a>
     <hr class="links-divider">
     <a class="staff" href="manager/">Manager</a>
     <a class="staff" href="admin/">Admin</a>

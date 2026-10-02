@@ -109,16 +109,16 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     # in Tulane light blue.
     assert response.text.count('<hr class="links-divider">') == 2
     links = response.text[response.text.index('<div class="links">'):]
-    assert links.index('href="applicant/"') < links.index("<hr") < links.index('href="resident/"')
+    assert links.index('href="login/?next=applicant/"') < links.index("<hr") < links.index('href="login/?next=resident/"')
     assert '<a class="staff" href="manager/">Manager</a>' in response.text
     assert '<a class="staff" href="admin/">Admin</a>' in response.text
-    assert 'href="applicant/"' in response.text
-    assert 'href="resident/"' in response.text
+    assert 'href="login/?next=applicant/"' in response.text
+    assert 'href="login/?next=resident/"' in response.text
     # The role links, in the same order as every other page's footer.
     links = response.text[response.text.index('<div class="links">'):]
     links = links[:links.index("</div>")]
-    assert [links.index(f'href="{p}/"') for p in ("applicant", "resident", "manager", "admin")] == sorted(
-        links.index(f'href="{p}/"') for p in ("applicant", "resident", "manager", "admin"))
+    order = ['href="login/?next=applicant/"', 'href="login/?next=resident/"', 'href="manager/"', 'href="admin/"']
+    assert [links.index(href) for href in order] == sorted(links.index(href) for href in order)
     assert "shared/footer.js" not in response.text
 
 
@@ -131,15 +131,18 @@ def test_applicant_page_is_public_with_no_login(client) -> None:
     assert "application-form" not in response.text
 
 
-def test_the_home_page_lets_the_applicant_link_through() -> None:
-    """Enabled on 2026-09-29 (the user: "enable the applicant page"): the
-    home page's Coming soon box is for the resident link only now."""
+def test_applicant_and_resident_sign_in_first() -> None:
+    """The user, 2026-10-02: "applicant and resident go straight to login
+    for now" - the sign-in page sends them on afterwards, and straight
+    through when they already are signed in."""
     from pathlib import Path
-    page = (Path(__file__).resolve().parent.parent / "index.html").read_text(encoding="utf-8")
-    assert '<a href="applicant/">Applicant</a>' in page
-    assert '<a href="resident/" data-soon>Resident</a>' in page
-    assert page.count("data-soon>") == 1
-    assert 'event.target.closest("a[data-soon]")' in page
+    root = Path(__file__).resolve().parent.parent
+    page = (root / "index.html").read_text(encoding="utf-8")
+    assert '<a href="login/?next=applicant/">Applicant</a>' in page
+    assert '<a href="login/?next=resident/">Resident</a>' in page
+    assert "data-soon>" not in page
+    login = (root / "login" / "index.html").read_text(encoding="utf-8")
+    assert 'if (linkType || new URLSearchParams(window.location.search).has("next")) {' in login
 
 
 def test_the_applicant_form_is_saved_for_later() -> None:
