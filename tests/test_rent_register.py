@@ -187,16 +187,6 @@ def test_the_migration_filters_by_lease_and_locks_the_payments() -> None:
         assert f"grant execute on function public.{function} to authenticated;" in sql
 
 
-def test_the_footer_never_runs_wider_than_the_page() -> None:
-    """A page without its own border-box rule (this one) had a footer 48px
-    wider than a phone, which zoomed the page out and hid its floating
-    buttons below the screen."""
-    css = (ROOT / "shared" / "site.css").read_text(encoding="utf-8")
-    footer = css[css.index("footer {"):]
-    footer = footer[:footer.index("}")]
-    assert "box-sizing: border-box;" in footer and "width: 100%;" in footer
-
-
 def test_the_register_is_a_sheet_of_paper_with_back_and_print_only() -> None:
     """The user, 2026-09-30: "look like a piece of paper", then "no home
     button", "no change month button", "show day of the week when

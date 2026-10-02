@@ -59,15 +59,14 @@ def test_favicon_is_served_with_no_login(client) -> None:
 
 def test_shared_assets_are_served_with_no_login(client) -> None:
     """The public pages (hub, applicant, tenant) load these, so putting
-    them behind Basic auth would leave those pages unstyled and
-    footerless."""
+    them behind Basic auth would leave those pages unstyled and with no
+    way back."""
     css = client.get("/shared/site.css", auth=None)
     assert css.status_code == 200
-    assert "footer" in css.text
 
-    script = client.get("/shared/footer.js", auth=None)
+    script = client.get("/shared/back.js", auth=None)
     assert script.status_code == 200
-    assert "applicant/" in script.text
+    assert 'back.textContent = "Back";' in script.text
 
 
 def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None:

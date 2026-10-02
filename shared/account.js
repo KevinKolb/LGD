@@ -7,7 +7,7 @@
  *     <script src="../shared/account.js"></script>
  *
  * Every page shares this one file so the login state looks and behaves the
- * same everywhere, the same reason shared/footer.js exists.
+ * same everywhere.
  *
  * This replaced manager/account.js, which drove HTTP Basic auth against the
  * FastAPI app - a scheme with no real logout at all (the browser cached the

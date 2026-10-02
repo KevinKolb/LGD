@@ -167,20 +167,24 @@ def test_generated_file_on_disk_matches_a_fresh_run(real_output):
     assert output_path.read_text(encoding="utf-8") == real_output
 
 
-def test_every_site_page_gets_a_home_button():
-    """Home is a plain footer link, first, on every site page but home
-    itself (the user, 2026-09-29)."""
+def test_every_site_page_has_back_in_the_header_and_no_footer():
+    """The user, 2026-10-02: "really just need a back button in upper
+    right. don't need the footer" - the applicant, resident, manager and
+    admin pages, and sign-in; not home, where Back leads."""
     import re
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
-    footer = (root / "shared" / "footer.js").read_text(encoding="utf-8")
-    assert '[{ path: "", text: "Home" }].concat(LINKS)' in footer
-    assert "const links = onHome ? LINKS :" in footer
-    assert "if (onHome || !group) return;" in footer
+    assert not (root / "shared" / "footer.js").exists()
+    back = (root / "shared" / "back.js").read_text(encoding="utf-8")
+    assert 'document.querySelector("header:not(.site-title)")' in back
+    assert 'top: 16px; right: 16px;' in back  # the upper right
+    assert "window.history.back()" in back
     for page in ("login", "resident", "applicant", "admin", "manager"):
         html = (root / page / "index.html").read_text(encoding="utf-8")
-        assert "shared/footer.js" in html, page
-        assert 'class="site-float"' not in html, page
+        assert '<script src="../shared/back.js"></script>' in html, page
+        assert "footer.js" not in html, page
+    home = (root / "index.html").read_text(encoding="utf-8")
+    assert "back.js" not in home and "footer.js" not in home
     # The pages opened from the Manager Portal - the legal pages, like the
     # rent register and the documents - have no footer and no Home: they
     # float Back and Print only (the user, 2026-09-30).
@@ -191,11 +195,3 @@ def test_every_site_page_gets_a_home_button():
         buttons = buttons[:buttons.index("</div>")]
         assert re.findall(r">([A-Za-z ]+)</a>", buttons) == ["Back", "Save", "Print"], page
 
-def test_the_footer_lists_applicant_first_and_no_sign_in():
-    """Applicant, Resident, Manager, Admin; no Sign in link - pages that
-    need a login send you to sign in themselves."""
-    import re
-    from pathlib import Path
-    footer = (Path(__file__).resolve().parent.parent / "shared" / "footer.js").read_text(encoding="utf-8")
-    links = footer[footer.index("const LINKS = ["):footer.index("];")]
-    assert re.findall(r'text: "([^"]+)"', links) == ["Applicant", "Resident", "Manager", "Admin"]

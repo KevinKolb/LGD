@@ -39,7 +39,7 @@
 
   // This file's own URL locates the site root, so redirects work both at
   // https://kevinkolb.github.io/LGD/ and at http://localhost:8000/ without
-  // anything being hardcoded. Same trick as shared/footer.js.
+  // anything being hardcoded. Same trick as shared/back.js.
   const scriptSrc = document.currentScript
     ? document.currentScript.src
     : window.location.href;
