@@ -170,8 +170,8 @@ def test_generated_file_on_disk_matches_a_fresh_run(real_output):
 def test_every_site_page_has_home_in_the_header_and_no_footer():
     """The user, 2026-10-02: no footer, and a Home button ("rename back to
     home and put it in a better place") - the applicant, resident, manager
-    and admin pages, and sign-in; not the home page itself. Home on the
-    left of the header bar, the client picker and Login/Logout on the right."""
+    and admin pages, and sign-in; not the home page itself. Home far
+    right of the header bar, after the client picker and Login/Logout."""
     import re
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
@@ -182,7 +182,10 @@ def test_every_site_page_has_home_in_the_header_and_no_footer():
     assert "history.back" not in home
     # One bar: Home, the titles, then the client picker and Login/Logout,
     # all one height (the user, 2026-10-02: "make the header better").
-    assert "header.append(home, titles, actions);" in home
+    # Home last, far right, with no house icon (the user, same day).
+    assert "if (!header.hasAttribute(\"data-no-home\")) actions.append(home);" in home
+    assert "header.append(titles, actions);" in home
+    assert "house.svg" not in home
     assert "header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client {" in home
     assert 'auth.rpc("list_my_clients")' in home and 'auth.rpc("set_current_client"' in home
     for page in ("login", "resident", "applicant", "admin", "manager"):
@@ -193,7 +196,7 @@ def test_every_site_page_has_home_in_the_header_and_no_footer():
     # The home page has the header too, minus Home (data-no-home).
     index = (root / "index.html").read_text(encoding="utf-8")
     assert "<header data-no-home>" in index and "footer.js" not in index
-    assert "if (header.hasAttribute(\"data-no-home\")) header.append(titles, actions);" in home
+    assert "if (!header.hasAttribute(\"data-no-home\")) actions.append(home);" in home
     # The pages opened from the Manager Portal - the legal pages, like the
     # rent register and the documents - have no footer and no Home: they
     # float Back and Print only (the user, 2026-09-30).

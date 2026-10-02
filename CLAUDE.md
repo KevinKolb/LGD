@@ -329,11 +329,13 @@ and "make the header better man, cmon"). `shared/home.js` replaced
 `shared/footer.js` (deleted, with its CSS; it was briefly `back.js`). It
 is loaded just before `</body>` on the applicant, resident, manager and
 admin pages and on sign-in - not the home page - and lays the page's own
-`<header>` out as one bar: **Home** (a pill with the house icon, always to
-the home page) on the left, then the titles (the company line, small
-capitals, above the page title), then the client picker and Login/Logout
-(`shared/account.js`, moved in whenever it lands) on the right - all
-pills of one height. On a phone the buttons take the top row, one line
+`<header>` out as one bar: the titles (the company line, small
+capitals, above the page title) on the left, then on the right the
+client picker, Login/Logout (`shared/account.js`, moved in whenever it
+lands) and, last and far right, **Home** (always to the home page) - all
+pills of one height. Home is a plain word, no house (the user,
+2026-10-02: "lose the icon because its colors are static ... move home
+button far right"; it was on the left with the house until then). On a phone the buttons take the top row, one line
 even on an iPhone SE, and the titles go beneath. Every site page has it
 (the user, 2026-10-02: "give the login page the header too. giva all web
 pages the header"): the sign-in page's is titled "Sign In" (it had the
@@ -639,8 +641,8 @@ manager page"). The admin page lets in a manager (or an admin) and is
 reached from the **gear** in the manager page's header (`data-gear`,
 beside Logout); its own header has **Back** to the Manager Portal in place
 of Home (`data-up`). The home page has no Admin button. On a phone, when
-the header carries the site picker, the gear and Logout, Home keeps its
-house and drops the word so they all fit one row (`crowded`).
+the header carries the site picker, the gear, Logout and Back, the
+picker narrows and the gaps shrink so they all fit one row (`crowded`).
 `supabase/migrations/009_managers_are_admins.sql` makes every admin a
 manager and lets any manager set the site colors; the FastAPI app's admin
 endpoints use `is_staff` (manager or admin). The `is_admin` column stays,

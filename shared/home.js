@@ -10,10 +10,12 @@
  *
  * The page's own <header> keeps its text; this lays it out as one bar:
  *
- *   [ (house) HOME ]  CLIENT NAME                [ Client v ] [ LOGOUT ]
- *                     Page title
+ *   CLIENT NAME                       [ Client v ] [ LOGOUT ] [ HOME ]
+ *   Page title
  *
- * Home always goes to the home page. On a phone the buttons take the top
+ * Home always goes to the home page, and sits far right, a plain pill with
+ * no house (the user, 2026-10-02: "lose the icon because its colors are
+ * static ... move home button far right"). On a phone the buttons take the top
  * row and the titles the full width beneath. Signed in, the client picker
  * (supabase/migrations/008) lists the clients the login is linked to - only
  * when there is more than one - and switching reloads the page in that
@@ -46,7 +48,7 @@
     }
     header.site-header .hdr-titles p:not(.company) { margin: 2px 0 0; font-size: 13px; opacity: .8; }
     header.site-header .hdr-actions {
-      order: 3; margin-left: auto; display: flex; align-items: center; gap: 10px;
+      order: 3; margin-left: auto; flex-wrap: nowrap; display: flex; align-items: center; gap: 10px;
     }
     header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client {
       box-sizing: border-box; height: 36px; border-radius: 999px;
@@ -55,10 +57,10 @@
       letter-spacing: .04em; cursor: pointer;
     }
     .hdr-home {
-      order: 1; flex: none; display: inline-flex; align-items: center; gap: 8px;
-      padding: 0 16px 0 5px; text-decoration: none; text-transform: uppercase;
+      flex: none; display: inline-flex; align-items: center; gap: 6px;
+      padding: 0 16px; text-decoration: none; text-transform: uppercase;
     }
-    .hdr-home .hdr-arrow { font-size: 20px; line-height: 1; padding-left: 9px; margin-top: -2px; }
+    .hdr-home .hdr-arrow { font-size: 20px; line-height: 1; margin-top: -2px; }
     .hdr-gear {
       box-sizing: border-box; width: 36px; height: 36px; flex: none;
       display: inline-flex; align-items: center; justify-content: center;
@@ -66,10 +68,6 @@
       background: rgba(255, 255, 255, .1); color: inherit;
     }
     .hdr-gear:hover { background: rgba(255, 255, 255, .22); }
-    .hdr-home img {
-      width: 26px; height: 26px; padding: 3px; box-sizing: border-box;
-      border-radius: 50%; background: #fff;
-    }
     header.site-header #account-toggle {
       min-width: 92px; padding: 0 16px; text-transform: uppercase;
     }
@@ -85,7 +83,7 @@
       background-size: 5px 5px; background-repeat: no-repeat;
     }
     header.site-header .hdr-client option { color: #1c1c1a; background: #fff; }
-    /* A phone: Home and the buttons on top, the titles beneath, full width. */
+    /* A phone: the buttons on top, right-aligned, the titles beneath. */
     @media (max-width: 600px) {
       header.site-header { padding: 12px 16px 16px; gap: 14px 10px; }
       header.site-header .hdr-titles { order: 4; flex-basis: 100%; }
@@ -94,19 +92,19 @@
       header.site-header .hdr-actions { order: 2; }
       header.site-header .hdr-actions { gap: 8px; }
       header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client { height: 34px; font-size: 12px; }
-      .hdr-home { gap: 6px; padding: 0 12px 0 4px; }
-      .hdr-home img { width: 24px; height: 24px; }
+      .hdr-home { padding: 0 12px; }
       header.site-header #account-toggle { min-width: 0; padding: 0 12px; }
       header.site-header .hdr-client { max-width: 96px; padding: 0 24px 0 10px; background-position: right 14px center, right 9px center; }
-      /* Picker, gear and Logout as well (a two-site manager): Home keeps
-         its house and drops the word, so they all still fit one row. */
-      header.site-header.crowded .hdr-home .hdr-label { display: none; }
-      header.site-header.crowded .hdr-home { padding: 0 4px; }
+      /* Picker, gear, Logout and Home (a two-site manager): a narrower
+         picker, so they all still fit one row. */
+      header.site-header.crowded .hdr-actions { gap: 6px; }
+      header.site-header.crowded .hdr-client { max-width: 84px; }
+      header.site-header.crowded #account-toggle, header.site-header.crowded .hdr-home { padding: 0 10px; }
       header.site-header .hdr-gear { width: 34px; height: 34px; }
     }
     /* A page with no header bar (sign-in): Home floats in the corner. */
     .hdr-home.floating {
-      position: fixed; top: 16px; left: 16px; z-index: 20;
+      position: fixed; top: 16px; right: 16px; z-index: 20;
       border-color: var(--accent, #1f5d4c); color: var(--accent, #1f5d4c); background: #fff;
     }
     header.site-header #account-bar[hidden] { display: none !important; }
@@ -117,13 +115,10 @@
   home.className = "hdr-home";
   home.id = "home-button";
   home.href = root;
-  const icon = document.createElement("img");
-  icon.src = root + "shared/icons/house.svg";
-  icon.alt = "";
   const label = document.createElement("span");
   label.className = "hdr-label";
   label.textContent = "Home";
-  home.append(icon, label);
+  home.append(label);
 
   const header = document.querySelector("header:not(.site-title)");
   if (!header) {
@@ -143,7 +138,6 @@
   if (up) {
     home.href = root + up;
     label.textContent = "Back";
-    icon.remove();
     home.prepend(Object.assign(document.createElement("span"), { className: "hdr-arrow", textContent: "‹" }));
   }
   // A gear for the settings page, beside Logout (data-gear="<path>"; the
@@ -170,8 +164,8 @@
 
   header.classList.add("site-header");
   // The home page's header has no Home (data-no-home): it is home.
-  if (header.hasAttribute("data-no-home")) header.append(titles, actions);
-  else header.append(home, titles, actions);
+  if (!header.hasAttribute("data-no-home")) actions.append(home);
+  header.append(titles, actions);
   // Login/Logout (shared/account.js) belongs with the buttons, wherever
   // and whenever it lands in the header.
   const placeAccount = () => {
@@ -184,6 +178,8 @@
     // The gear sits just left of Login/Logout.
     const gear = actions.querySelector(".hdr-gear");
     if (gear && bar && gear.nextElementSibling !== bar) actions.insertBefore(gear, bar);
+    // Home (or Back) is always last, far right.
+    if (home.parentNode === actions && actions.lastElementChild !== home) actions.append(home);
   };
   placeAccount();
   new MutationObserver(placeAccount).observe(header, { childList: true, subtree: true });
