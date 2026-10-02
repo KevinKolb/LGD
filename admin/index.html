@@ -138,7 +138,7 @@
 </style>
 </head>
 <body>
-<header data-client-picker>
+<header data-client-picker data-up="manager/">
   <p class="company" data-client>momandpop.com</p>
   <h1>Admin Portal</h1>
 </header>
@@ -343,7 +343,7 @@ async function boot() {
     // admin" told the live site's admins "Admins only." until 2026-09-30.)
     const fromApp = (response.headers.get("content-type") || "").includes("json");
     if (response.status === 404 && fromApp) {
-      app.replaceChildren(el("p", { class: "empty", text: "Admins only." }));
+      app.replaceChildren(el("p", { class: "empty", text: "Managers only." }));
       return;
     }
     if (!response.ok || !fromApp) throw new Error(`HTTP ${response.status}`);
@@ -377,7 +377,8 @@ async function explainWithoutBackend(app) {
       say("This site is not connected to its login service yet.");
       return;
     }
-    const result = await auth.requireRole(["admin"]);
+    // Manager and admin are one credential (the user, 2026-10-02).
+    const result = await auth.requireRole(["manager", "admin"]);
     if (result.reason === "signed-out") {
       say("You are not signed in. Taking you to the sign-in page…");
       return;  // already heading to the login page
@@ -392,13 +393,13 @@ async function explainWithoutBackend(app) {
       const who = result.profile;
       say(`Signed in as ${who.display_name || who.email}${who.email ? " (" + who.email + ")" : ""}, ` +
           `with the role${who.roles.length > 1 ? "s" : ""}: ${who.role_label}. ` +
-          "This page is for admins. If this login should be an admin, its record in the " +
-          "people table needs is_admin set - or sign out and sign in with your admin login.",
+          "This page is for managers. If this login should be a manager, its record in the " +
+          "people table needs is_manager set - or sign out and sign in with your manager login.",
           signOutButton(auth));
       return;
     }
     app.replaceChildren(
-      el("p", { class: "notice ok", text: `Signed in as ${result.profile.display_name || result.profile.email} (admin).` }),
+      el("p", { class: "notice ok", text: `Signed in as ${result.profile.display_name || result.profile.email} (manager).` }),
       colorsSection("supabase"),
       el("p", { class: "empty", text:
         "The managers, users and storage backends come from the app's own API, which is " +

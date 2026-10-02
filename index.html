@@ -184,7 +184,6 @@
     <a href="login/?next=resident/" data-role="resident">Resident</a>
     <hr class="links-divider">
     <a class="staff" href="manager/" data-role="manager">Manager</a>
-    <a class="staff" href="admin/" data-role="admin">Admin</a>
   </div>
 </main>
 
@@ -236,8 +235,9 @@
   const show = {
     applicant: roles.includes("applicant"),
     resident: roles.includes("resident"),
+    // Manager and admin are one credential (the user, 2026-10-02); the
+    // admin page is the gear on the manager page.
     manager: roles.includes("manager") || roles.includes("admin"),
-    admin: roles.includes("admin"),
   };
   const links = document.querySelector(".links");
   for (const [role, on] of Object.entries(show)) {

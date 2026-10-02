@@ -66,7 +66,7 @@ def test_shared_assets_are_served_with_no_login(client) -> None:
 
     script = client.get("/shared/home.js", auth=None)
     assert script.status_code == 200
-    assert 'home.append(icon, "Home");' in script.text
+    assert 'label.textContent = "Home";' in script.text
 
 
 def test_shared_route_will_not_serve_files_outside_its_directory(client) -> None:
@@ -111,13 +111,15 @@ def test_root_serves_a_public_hub_page_with_no_login(client) -> None:
     links = response.text[response.text.index('<div class="links">'):]
     assert links.index('href="login/?next=applicant/"') < links.index("<hr") < links.index('href="login/?next=resident/"')
     assert '<a class="staff" href="manager/" data-role="manager">Manager</a>' in response.text
-    assert '<a class="staff" href="admin/" data-role="admin">Admin</a>' in response.text
+    # No Admin button since 2026-10-02: one credential, the gear on the
+    # manager page.
+    assert 'href="admin/"' not in response.text
     assert 'href="login/?next=applicant/"' in response.text
     assert 'href="login/?next=resident/"' in response.text
     # The role links, in the same order as every other page's footer.
     links = response.text[response.text.index('<div class="links">'):]
     links = links[:links.index("</div>")]
-    order = ['href="login/?next=applicant/"', 'href="login/?next=resident/"', 'href="manager/"', 'href="admin/"']
+    order = ['href="login/?next=applicant/"', 'href="login/?next=resident/"', 'href="manager/"']
     assert [links.index(href) for href in order] == sorted(links.index(href) for href in order)
     assert "shared/footer.js" not in response.text
 
@@ -201,9 +203,14 @@ def test_config_never_leaks_email_addresses(client) -> None:
 # Admin Portal page
 # ---------------------------------------------------------------------------
 
-def test_admin_info_is_refused_to_a_manager_user(client) -> None:
+def test_admin_info_is_open_to_a_manager(client) -> None:
+    """Manager and admin are one credential since 2026-10-02 (the user)."""
     for credentials in (STEVE, GAY):
-        assert client.get("/api/admin/info", auth=credentials).status_code == 404
+        assert client.get("/api/admin/info", auth=credentials).status_code == 200
+
+
+def test_admin_info_is_refused_to_a_tenant(client) -> None:
+    assert client.get("/api/admin/info", auth=TENANT1).status_code == 404
 
 
 def test_admin_page_itself_still_loads_for_a_manager(client) -> None:

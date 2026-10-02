@@ -48,7 +48,7 @@
     header.site-header .hdr-actions {
       order: 3; margin-left: auto; display: flex; align-items: center; gap: 10px;
     }
-    .hdr-home, header.site-header #account-toggle, .hdr-client {
+    header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client {
       box-sizing: border-box; height: 36px; border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .1);
       color: inherit; font: inherit; font-size: 13px; font-weight: 600; line-height: 1;
@@ -58,6 +58,14 @@
       order: 1; flex: none; display: inline-flex; align-items: center; gap: 8px;
       padding: 0 16px 0 5px; text-decoration: none; text-transform: uppercase;
     }
+    .hdr-home .hdr-arrow { font-size: 20px; line-height: 1; padding-left: 9px; margin-top: -2px; }
+    .hdr-gear {
+      box-sizing: border-box; width: 36px; height: 36px; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%; border: 1px solid rgba(255, 255, 255, .45);
+      background: rgba(255, 255, 255, .1); color: inherit;
+    }
+    .hdr-gear:hover { background: rgba(255, 255, 255, .22); }
     .hdr-home img {
       width: 26px; height: 26px; padding: 3px; box-sizing: border-box;
       border-radius: 50%; background: #fff;
@@ -65,10 +73,10 @@
     header.site-header #account-toggle {
       min-width: 92px; padding: 0 16px; text-transform: uppercase;
     }
-    .hdr-home:hover, header.site-header #account-toggle:hover, .hdr-client:hover {
-      background: rgba(255, 255, 255, .22);
+    header.site-header .hdr-home:hover, header.site-header #account-toggle:hover, header.site-header .hdr-client:hover {
+      background-color: rgba(255, 255, 255, .22);
     }
-    .hdr-client {
+    header.site-header .hdr-client {
       margin: 0; width: auto; max-width: 230px; padding: 0 30px 0 14px; text-overflow: ellipsis;
       -webkit-appearance: none; appearance: none;
       background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
@@ -76,7 +84,7 @@
       background-position: right 16px center, right 11px center;
       background-size: 5px 5px; background-repeat: no-repeat;
     }
-    .hdr-client option { color: #1c1c1a; background: #fff; }
+    header.site-header .hdr-client option { color: #1c1c1a; background: #fff; }
     /* A phone: Home and the buttons on top, the titles beneath, full width. */
     @media (max-width: 600px) {
       header.site-header { padding: 12px 16px 16px; gap: 14px 10px; }
@@ -85,11 +93,16 @@
       header.site-header[data-no-home] .hdr-titles { order: 1; flex: 1 1 0; }
       header.site-header .hdr-actions { order: 2; }
       header.site-header .hdr-actions { gap: 8px; }
-      .hdr-home, header.site-header #account-toggle, .hdr-client { height: 34px; font-size: 12px; }
+      header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client { height: 34px; font-size: 12px; }
       .hdr-home { gap: 6px; padding: 0 12px 0 4px; }
       .hdr-home img { width: 24px; height: 24px; }
       header.site-header #account-toggle { min-width: 0; padding: 0 12px; }
-      .hdr-client { max-width: 96px; padding: 0 24px 0 10px; background-position: right 14px center, right 9px center; }
+      header.site-header .hdr-client { max-width: 96px; padding: 0 24px 0 10px; background-position: right 14px center, right 9px center; }
+      /* Picker, gear and Logout as well (a two-site manager): Home keeps
+         its house and drops the word, so they all still fit one row. */
+      header.site-header.crowded .hdr-home .hdr-label { display: none; }
+      header.site-header.crowded .hdr-home { padding: 0 4px; }
+      header.site-header .hdr-gear { width: 34px; height: 34px; }
     }
     /* A page with no header bar (sign-in): Home floats in the corner. */
     .hdr-home.floating {
@@ -106,7 +119,10 @@
   const icon = document.createElement("img");
   icon.src = root + "shared/icons/house.svg";
   icon.alt = "";
-  home.append(icon, "Home");
+  const label = document.createElement("span");
+  label.className = "hdr-label";
+  label.textContent = "Home";
+  home.append(icon, label);
 
   const header = document.querySelector("header:not(.site-title)");
   if (!header) {
@@ -120,6 +136,37 @@
   titles.append(...header.childNodes);
   const actions = document.createElement("div");
   actions.className = "hdr-actions";
+  // The admin page is reached from the manager page's gear, so its way out
+  // is Back to the Manager Portal rather than Home (data-up="<path>").
+  const up = header.getAttribute("data-up");
+  if (up) {
+    home.href = root + up;
+    label.textContent = "Back";
+    icon.remove();
+    home.prepend(Object.assign(document.createElement("span"), { className: "hdr-arrow", textContent: "‹" }));
+  }
+  // A gear for the settings page, beside Logout (data-gear="<path>"; the
+  // user, 2026-10-02: the admin page "is accessible through a gear button
+  // on manager page").
+  const gearPath = header.getAttribute("data-gear");
+  if (gearPath) {
+    const gear = document.createElement("a");
+    gear.className = "hdr-gear";
+    gear.href = root + gearPath;
+    gear.title = "Settings";
+    gear.setAttribute("aria-label", "Settings");
+    gear.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" ' +
+      'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 ' +
+      '2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 ' +
+      '19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 ' +
+      '0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-' +
+      '2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 ' +
+      '1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 ' +
+      '1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+    actions.append(gear);
+  }
+
   header.classList.add("site-header");
   // The home page's header has no Home (data-no-home): it is home.
   if (header.hasAttribute("data-no-home")) header.append(titles, actions);
@@ -129,6 +176,9 @@
   const placeAccount = () => {
     const bar = document.getElementById("account-bar");
     if (bar && bar.parentNode !== actions) actions.append(bar);
+    // The gear sits just left of Login/Logout.
+    const gear = actions.querySelector(".hdr-gear");
+    if (gear && bar && gear.nextElementSibling !== bar) actions.insertBefore(gear, bar);
   };
   placeAccount();
   new MutationObserver(placeAccount).observe(header, { childList: true, subtree: true });
@@ -228,6 +278,7 @@
       }
     });
     actions.prepend(picker);
+    if (actions.querySelector(".hdr-gear")) header.classList.add("crowded");
   }
   clients();
 })();

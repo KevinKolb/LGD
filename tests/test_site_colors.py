@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import ADMIN, STEVE
+from tests.conftest import TENANT1, ADMIN, STEVE
 
 ROOT = Path(__file__).resolve().parent.parent
 THEME = ROOT / "shared" / "theme.js"
@@ -32,9 +32,13 @@ def test_both_empty_goes_back_to_the_defaults(client) -> None:
     assert client.get("/api/site-colors", auth=None).json() == {"accent": None, "accent2": None}
 
 
-def test_a_manager_cannot_change_them(client) -> None:
+def test_a_manager_can_change_them_and_a_tenant_cannot(client) -> None:
+    """Manager and admin are one credential since 2026-10-02 (the user)."""
     assert client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"},
-                      auth=STEVE).status_code == 404
+                      auth=STEVE).status_code == 200
+    assert client.put("/api/site-colors", json={"accent": "#aa0000", "accent2": "#ffcc00"},
+                      auth=TENANT1).status_code in (403, 404)
+    client.put("/api/site-colors", json={"accent": "", "accent2": ""}, auth=STEVE)
 
 
 @pytest.mark.parametrize("colors", [{"accent": "red", "accent2": "#ffcc00"},

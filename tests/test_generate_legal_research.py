@@ -178,12 +178,12 @@ def test_every_site_page_has_home_in_the_header_and_no_footer():
     assert not (root / "shared" / "footer.js").exists()
     assert not (root / "shared" / "back.js").exists()
     home = (root / "shared" / "home.js").read_text(encoding="utf-8")
-    assert 'home.append(icon, "Home");' in home and "home.href = root;" in home
+    assert 'label.textContent = "Home";' in home and "home.href = root;" in home
     assert "history.back" not in home
     # One bar: Home, the titles, then the client picker and Login/Logout,
     # all one height (the user, 2026-10-02: "make the header better").
     assert "header.append(home, titles, actions);" in home
-    assert ".hdr-home, header.site-header #account-toggle, .hdr-client {" in home
+    assert "header.site-header .hdr-home, header.site-header #account-toggle, header.site-header .hdr-client {" in home
     assert 'auth.rpc("list_my_clients")' in home and 'auth.rpc("set_current_client"' in home
     for page in ("login", "resident", "applicant", "admin", "manager"):
         html = (root / page / "index.html").read_text(encoding="utf-8")

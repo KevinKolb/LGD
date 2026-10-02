@@ -38,7 +38,7 @@ def test_the_picker_is_only_on_staff_pages_and_only_for_several_clients():
     assert 'if (list.length < 2 || !header.hasAttribute("data-client-picker")) return;' in home
     for page, picker in (("manager", True), ("admin", True), ("applicant", False), ("resident", False)):
         html = (ROOT / page / "index.html").read_text(encoding="utf-8")
-        assert ("<header data-client-picker>" in html) is picker, page
+        assert ("<header data-client-picker" in html) is picker, page
 
 
 def test_the_name_is_momandpop_until_a_client_is_known():
@@ -58,3 +58,19 @@ def test_the_legal_pages_are_for_managers():
         assert head.index('<script src="../shared/auth.js">') < head.index('<script src="../shared/staff-gate.js">'), page
     gate = (ROOT / "shared" / "staff-gate.js").read_text(encoding="utf-8")
     assert 'auth.requireRole(["manager", "admin"])' in gate
+
+
+def test_manager_and_admin_are_one_credential():
+    """The user, 2026-10-02: "combine manager and admin into one credential
+    ... current admin page is accessible through a gear button on manager
+    page"."""
+    manager = (ROOT / "manager" / "index.html").read_text(encoding="utf-8")
+    admin = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
+    home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
+    assert '<header data-client-picker data-gear="admin/">' in manager
+    assert '<header data-client-picker data-up="manager/">' in admin
+    assert 'auth.requireRole(["manager", "admin"])' in admin
+    assert 'gear.title = "Settings";' in home
+    sql = (ROOT / "supabase" / "migrations" / "009_managers_are_admins.sql").read_text(encoding="utf-8")
+    assert "update public.people set is_manager = true where is_admin and not is_manager;" in sql
+    assert "not (caller.is_manager or caller.is_admin)" in sql

@@ -556,7 +556,8 @@ and a two-site admin:
   (manager, admin) and only for a login linked to more than one client.
 - **Home, signed in, shows only the roles held** (Manager for an admin
   too), Applicant and Resident straight to their pages; signed out, all
-  four, each through sign-in. One button left: "Welcome back.".
+  three (Applicant, Resident, Manager), Applicant and Resident through
+  sign-in. One button left: "Welcome back.".
 - **Manager page**: its header (Home, Logout) shows from the start; a
   login without the role gets the refusal under it, never a bare page.
 - **Applicant page**: Apply (which makes an account) only while signed out.
@@ -616,6 +617,22 @@ snippet, not committed: this repository is public).
 
 `admin/index.html`, titled and headed "Admin Portal" (the user,
 2026-09-30; it was "Admin reference"), like the Manager Portal.
+
+**Manager and admin are one credential** (the user, 2026-10-02: "let's
+combine manager and admin into one credential. pam and kevin are
+managers. current admin page is accessible through a gear button on
+manager page"). The admin page lets in a manager (or an admin) and is
+reached from the **gear** in the manager page's header (`data-gear`,
+beside Logout); its own header has **Back** to the Manager Portal in place
+of Home (`data-up`). The home page has no Admin button. On a phone, when
+the header carries the site picker, the gear and Logout, Home keeps its
+house and drops the word so they all fit one row (`crowded`).
+`supabase/migrations/009_managers_are_admins.sql` makes every admin a
+manager and lets any manager set the site colors; the FastAPI app's admin
+endpoints use `is_staff` (manager or admin). The `is_admin` column stays,
+unused by the pages - an admin keeps 002/007's power to edit another
+company's records. Site colors are site-wide, so a manager of any client
+changes them for every client.
 
 ## Site colors
 

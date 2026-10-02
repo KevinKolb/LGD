@@ -23,6 +23,7 @@ from app import accounts, db
 from app.accounts import MIN_PASSWORD_LENGTH
 from app.auth import check_credentials, hash_password, verify_password
 from app.config import (
+    ROLE_MANAGER,
     ConfigError,
     Manager,
     User,
@@ -320,13 +321,20 @@ async def api_change_password(
     return {"detail": "Password updated."}
 
 
+def is_staff(user: User) -> bool:
+    """Manager and admin are one credential (the user, 2026-10-02: "let's
+    combine manager and admin into one credential"): either opens the admin
+    page and sets the site's colors."""
+    return user.is_admin or ROLE_MANAGER in user.roles
+
+
 @app.get("/api/admin/info")
 async def api_admin_info(user: User = Depends(current_user)) -> dict[str, Any]:
     """Reference info for the admin page: who exists and which backend each
     piece of storage is using. Deliberately no secrets - not the DSN (a
     Postgres one embeds a password), not any API key, not password hashes.
     """
-    if not user.is_admin:
+    if not is_staff(user):
         raise HTTPException(status_code=404, detail="No such page.")
     settings = get_settings()
 
@@ -612,8 +620,8 @@ async def api_site_colors() -> dict[str, Any]:
 @app.put("/api/site-colors")
 async def api_set_site_colors(payload: SiteColorsRequest,
                               user: User = Depends(current_user)) -> dict[str, Any]:
-    """Admins only; both empty goes back to each page's own colors."""
-    if not user.is_admin:
+    """Managers only; both empty goes back to each page's own colors."""
+    if not is_staff(user):
         raise HTTPException(status_code=404, detail="Not found")
     try:
         return await db.set_site_colors(get_settings().db_path, accent=payload.accent,

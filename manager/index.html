@@ -309,7 +309,7 @@
      out for someone this page turns away (the user, 2026-10-02: "fix all
      access problems"); only <main> waits for the login check. The client
      picker belongs to the staff pages (data-client-picker). -->
-<header data-client-picker>
+<header data-client-picker data-gear="admin/">
   <div>
     <p class="company" data-client>momandpop.com</p>
     <h1>Manager Portal</h1>
@@ -629,7 +629,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
       const config = await response.json();
       const firstName =
         (config.user.display_name || config.user.username || "").split(" ")[0];
-      unlock(config.user.is_admin ? `Welcome, ${firstName} (admin)` : `Welcome, ${firstName}`, "api",
+      unlock(`Welcome, ${firstName}`, "api",
              config.user.manager_id);
       return;
     }
@@ -651,9 +651,7 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   if (result.ok) {
     const firstName = (result.profile.display_name || "").split(" ")[0];
     unlock(
-      result.profile.roles.includes("admin")
-        ? `Welcome, ${firstName} (admin)`
-        : `Welcome, ${firstName}`,
+      `Welcome, ${firstName}`,
       "supabase",
       result.profile.manager_id
     );
