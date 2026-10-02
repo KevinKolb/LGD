@@ -591,11 +591,15 @@ them, signed out too), written only by an admin through
 `PUT` (admin) `/api/site-colors`.
 
 `shared/theme.js` puts them on the page. It is loaded in the `<head>` of
-five site pages (applicant, resident, manager, admin, login - not the
-printed documents or the rent register, which print in their own colors,
-and **not the home page, which is always Tulane green and blue**: the
-user, 2026-10-02, "lock colors on home page with no login as tulane
-colors"; its `?org=o` orange scheme went too), sets the variables on `<html>` itself so they outrank each page's
+the six site pages (home, applicant, resident, manager, admin, login -
+not the printed documents or the rent register, which print in their own
+colors). **Signed out, every page is black, white and gray** (the user,
+2026-10-02: "black white and gray on home page no login. enable colors
+site wide when user logs in"): with no session stored (`lgd-auth`),
+theme.js sets `GRAYS` - near-black main, light gray second - and asks for
+nothing more; signed in, the colors are the admin's, or each page's own
+Tulane green and blue. (Earlier the same day the home page was locked to
+Tulane colors, and its `?org=o` orange scheme removed.) It sets the variables on `<html>` itself so they outrank each page's
 stylesheet and the `?org=o` orange scheme, and keeps the last colors in
 localStorage so a page never flashes the old ones before it has asked
 again. With none saved it sets nothing and every page keeps its own.

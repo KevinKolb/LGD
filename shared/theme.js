@@ -23,6 +23,9 @@
   const CACHE = "lgd-site-colors";
   const COLOR = /^#[0-9a-f]{6}$/i;
   const VARIABLES = ["--accent", "--accent2", "--accent2-soft", "--accent-ink", "--ok"];
+  // Signed out: near-black for the main color, light gray for the second
+  // (it carries dark ink, so it stays light).
+  const GRAYS = { accent: "#222222", accent2: "#cfcfcf" };
 
   const src = document.currentScript ? document.currentScript.src : window.location.href;
   const root = src.replace(/shared\/theme\.js(?:\?.*)?$/, "");
@@ -102,6 +105,29 @@
     });
     if (!response.ok) throw new Error("HTTP " + response.status);
     return response.json();
+  }
+
+  // Signed out, every page is black, white and gray; the colors are for
+  // people who have signed in (the user, 2026-10-02: "black white and gray
+  // on home page no login. enable colors site wide when user logs in").
+  // A session stored by shared/auth.js counts as signed in.
+  function signedIn() {
+    try {
+      return !!JSON.parse(localStorage.getItem("lgd-auth") || "null");
+    } catch (error) {
+      return false;
+    }
+  }
+  if (!signedIn()) {
+    const style = document.documentElement.style;
+    style.setProperty("--accent", GRAYS.accent);
+    style.setProperty("--accent2", GRAYS.accent2);
+    style.setProperty("--accent2-soft", "rgba(200, 200, 200, .35)");
+    style.setProperty("--accent-ink", "#ffffff");
+    style.setProperty("--ok", GRAYS.accent);
+    window.LGD = window.LGD || {};
+    window.LGD.theme = { apply() {}, save() {}, inkOn, luminance, GRAYS, signedOut: true };
+    return;
   }
 
   apply(cached());

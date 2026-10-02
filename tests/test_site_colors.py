@@ -12,7 +12,7 @@ from tests.conftest import ADMIN, STEVE
 ROOT = Path(__file__).resolve().parent.parent
 THEME = ROOT / "shared" / "theme.js"
 MIGRATION = ROOT / "supabase" / "migrations" / "005_site_colors.sql"
-SITE_PAGES = ["applicant/index.html", "resident/index.html", "manager/index.html",
+SITE_PAGES = ["index.html", "applicant/index.html", "resident/index.html", "manager/index.html",
               "admin/index.html", "login/index.html"]
 
 
@@ -100,10 +100,15 @@ def test_the_admin_page_always_says_what_happened() -> None:
     assert 'if (app.textContent.trim() === "Loading…") {' in page
 
 
-def test_the_home_page_is_always_tulane_green_and_blue():
-    """The user, 2026-10-02: the home page, which nobody signs in to, keeps
-    its own colors - no admin colors, no orange scheme."""
+def test_signed_out_pages_are_black_white_and_gray():
+    """The user, 2026-10-02: "black white and gray on home page no login.
+    enable colors site wide when user logs in" - theme.js, on the home page
+    again, grays every page while no session is stored."""
+    theme = (ROOT / "shared" / "theme.js").read_text(encoding="utf-8")
+    assert 'const GRAYS = { accent: "#222222", accent2: "#cfcfcf" };' in theme
+    signed_out = theme[theme.index("if (!signedIn()) {"):theme.index("apply(cached());")]
+    assert 'style.setProperty("--accent", GRAYS.accent);' in signed_out
+    assert "return;" in signed_out  # no fetching, no admin colors
     page = (ROOT / "index.html").read_text(encoding="utf-8")
-    assert "theme.js" not in page.split("<!--")[0] + page.split("-->", 1)[1]
+    assert '<script src="shared/theme.js"></script>' in page
     assert "theme-orange" not in page and "lgd-org" not in page
-    assert "--accent: #285c4d;" in page and "--accent2: #71c5e8;" in page
