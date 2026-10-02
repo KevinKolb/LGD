@@ -61,6 +61,9 @@
     padding: 10px 10px 12px; display: flex; flex-direction: column; flex: 1;
   }
   .address { margin: 0 0 2px; text-align: center; font-size: 17px; font-weight: 700; }
+  .address a { color: inherit; text-decoration: underline; text-decoration-color: var(--accent2); text-underline-offset: 3px; }
+  .address a:hover { color: var(--accent); }
+  @media print { .address a { text-decoration: none; } }
   .count { margin: 0 0 10px; text-align: center; font-size: 12px; color: var(--muted); }
   .units { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .units.single { grid-template-columns: 1fr; }
@@ -221,11 +224,19 @@ try {
     const placed = new Set();
     street.replaceChildren();
 
-    function house(address, units, single) {
+    function house(address, units, single, where) {
       const box = el("article", "house");
       box.append(el("div", "roof"));
       const facade = el("div", "facade");
-      facade.append(el("h2", "address", address));
+      // The address opens Google Maps (the user, 2026-10-02).
+      const heading = el("h2", "address");
+      const map = el("a", "", address);
+      map.href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(where || address);
+      map.target = "_blank";
+      map.rel = "noopener";
+      map.title = "Open in Google Maps";
+      heading.append(map);
+      facade.append(heading);
       const occupied = units.filter((u) => u.people.length).length;
       facade.append(el("p", "count", single
         ? (occupied ? "Occupied" : "Vacant")
@@ -252,7 +263,9 @@ try {
       house(property.address, names.map((name) => {
         placed.add(key(property.address, name));
         return { name, people: byUnit.get(key(property.address, name)) || [] };
-      }), !property.units.length);
+      }), !property.units.length,
+      [property.address, property.city || "New Orleans", [property.state, property.zip].filter(Boolean).join(" ")]
+        .filter(Boolean).join(", "));
     }
     // Anyone at an address or unit the table of apartments does not have
     // still shows, in a house of their own, rather than being left off.
