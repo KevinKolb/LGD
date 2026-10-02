@@ -101,6 +101,8 @@
   col.apartment { width: 1.8in; } col.tenant { width: 1.45in; }
   col.phone { width: 1.1in; } col.received { width: 1.2in; }
   td.apartment { white-space: nowrap; font-weight: 600; }
+  td.apartment a { display: block; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  @media print { td.apartment a { color: inherit; text-decoration: none; } }
   td .line + .line { margin-top: 2px; }
   td.email { word-break: break-all; }
   tr { break-inside: avoid; page-break-inside: avoid; }
@@ -282,6 +284,21 @@ try {
     return td;
   }
 
+  // The apartment's name opens its rent ledger - the year, month by month
+  // (the user, 2026-10-02: "Secondary view of rent register should show
+  // history").
+  function ledgerCell(address, unit) {
+    const td = cell("apartment", []);
+    const link = document.createElement("a");
+    link.className = "line ledger-link";
+    link.textContent = unit ? `${address}, Unit ${unit}` : address;
+    const query = new URLSearchParams({ address, unit: unit || "", year: month.slice(0, 4), month });
+    link.href = `rent_ledger.html?${query}`;
+    link.title = "Open this apartment's rent ledger";
+    td.append(link);
+    return td;
+  }
+
   // The date box for one apartment, saved the moment it changes; clearing
   // it takes the date back off.
   function receivedCell(address, unit, receivedOn) {
@@ -336,7 +353,7 @@ try {
         placed.add(k);
         const row = document.createElement("tr");
         row.append(
-          cell("apartment", [unit ? `${property.address}, Unit ${unit}` : property.address]),
+          ledgerCell(property.address, unit),
           cell("", tenants.map((t) => t.full_name)),
           cell("email", tenants.map((t) => t.email)),
           cell("", tenants.map((t) => t.phone)),
@@ -355,7 +372,7 @@ try {
       for (const person of stray) {
         const row = document.createElement("tr");
         row.append(
-          cell("apartment", [person.unit ? `${person.address}, Unit ${person.unit}` : person.address]),
+          ledgerCell(person.address, person.unit),
           cell("", [person.full_name]), cell("email", [person.email]),
           cell("", [person.phone]),
           receivedCell(person.address, person.unit, dates.get(key(person.address, person.unit)))

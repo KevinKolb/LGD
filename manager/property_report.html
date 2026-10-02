@@ -222,12 +222,13 @@ try {
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    let unitCount = 0, vacant = 0, residentCount = 0;
+    let unitCount = 0, vacant = 0, residentCount = 0, houses = 0;
     const placed = new Set();
     street.replaceChildren();
 
-    function house(address, units, single, where) {
+    function house(address, units, single, where, embed) {
       const box = el("article", "house");
+      houses += 1;
       box.append(el("div", "roof"));
       const facade = el("div", "facade");
       // The address opens Google Maps (the user, 2026-10-02).
@@ -243,7 +244,13 @@ try {
       // API key; loaded lazily, so houses off screen wait.
       const picture = el("div", "map");
       const frame = document.createElement("iframe");
-      frame.src = "https://www.google.com/maps?output=embed&z=17&q=" + encodeURIComponent(where || address);
+      // A building may name its own Google embed in properties.json
+      // ("map_embed": a Street View the user picked, 2026-10-02); only
+      // Google's own embed address is taken.
+      frame.src = /^https:[/][/]www[.]google[.]com[/]maps[/]embed[?]/.test(embed || "")
+        ? embed
+        : "https://www.google.com/maps?output=embed&z=17&q=" + encodeURIComponent(where || address);
+      frame.allowFullscreen = true;
       frame.loading = "lazy";
       frame.title = "Map of " + address;
       frame.referrerPolicy = "no-referrer-when-downgrade";
@@ -270,14 +277,34 @@ try {
       street.append(box);
     }
 
+    // Addresses that share a building (properties.json's "building", the
+    // user, 2026-10-02: "1534 and 1536 are in the same building") are one
+    // house, each address a box in it, named by its number - "1534".
+    const full = (property) => [property.address, property.city || "New Orleans",
+      [property.state, property.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    const buildings = [];
     for (const property of properties) {
-      const names = property.units.length ? property.units : [""];
-      house(property.address, names.map((name) => {
-        placed.add(key(property.address, name));
-        return { name, people: byUnit.get(key(property.address, name)) || [] };
-      }), !property.units.length,
-      [property.address, property.city || "New Orleans", [property.state, property.zip].filter(Boolean).join(" ")]
-        .filter(Boolean).join(", "));
+      const name = property.building || property.address;
+      let building = buildings.find((b) => b.name === name);
+      if (!building) buildings.push(building = { name, parts: [] });
+      building.parts.push(property);
+    }
+    for (const building of buildings) {
+      const shared = building.parts.length > 1;
+      const units = [];
+      for (const property of building.parts) {
+        const number = property.address.split(" ")[0];
+        for (const name of property.units.length ? property.units : [""]) {
+          placed.add(key(property.address, name));
+          units.push({
+            name: shared ? (name ? `${number} ${name}` : number) : name,
+            people: byUnit.get(key(property.address, name)) || [],
+          });
+        }
+      }
+      const first = building.parts[0];
+      house(building.name, units, !shared && !first.units.length, full(first),
+            building.parts.map((p) => p.map_embed).find(Boolean));
     }
     // Anyone at an address or unit the table of apartments does not have
     // still shows, in a house of their own, rather than being left off.
@@ -295,7 +322,7 @@ try {
 
     const summary = document.getElementById("summary");
     summary.replaceChildren(
-      el("b", "", String(properties.length)), document.createTextNode(properties.length === 1 ? " building, " : " buildings, "),
+      el("b", "", String(houses)), document.createTextNode(houses === 1 ? " building, " : " buildings, "),
       el("b", "", String(unitCount)), document.createTextNode(unitCount === 1 ? " unit, " : " units, "),
       el("b", "", String(residentCount)), document.createTextNode(residentCount === 1 ? " resident, " : " residents, "),
       el("b", "", String(vacant)), document.createTextNode(" vacant"));

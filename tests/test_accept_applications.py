@@ -113,7 +113,11 @@ def test_the_manager_page_has_reports() -> None:
     assert "property.manager_id === client" in report
     assert 'return { kind: "vacant", text: "Vacant" };' in report
     assert "https://www.google.com/maps/search/?api=1&query=" in report
-    assert 'frame.src = "https://www.google.com/maps?output=embed&z=17&q="' in report
+    assert ': "https://www.google.com/maps?output=embed&z=17&q=" + encodeURIComponent(where || address);' in report
+    # A building's own embed (a Street View the user picked) wins, and
+    # addresses sharing a building are one house.
+    assert "/^https:[/][/]www[.]google[.]com[/]maps[/]embed[?]/.test(embed" in report
+    assert "const name = property.building || property.address;" in report
 
 
 def test_units_are_named_as_on_paper() -> None:

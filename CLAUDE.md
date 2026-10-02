@@ -867,6 +867,33 @@ day of the week ("Thu, Sep 3, 2026", the user, same day), or the cell
 stays blank for the pen - still one letter-size sheet. Text in every cell
 is left-aligned and vertically centered.
 
+### The rent ledger
+
+The register's second view (the user, 2026-10-02, with a photo of the
+paper rent card in the binder - one page per apartment per year: "Secondary
+view of rent register should show history. Make a modern version of
+attached. Should be a paid checkbox too."). Each apartment on the
+register is a link to `manager/rent_ledger.html?address=&unit=&year=&month=`
+(month is where Back returns the register to): a Letter sheet like the
+register, with the address and unit, a year switcher (‹ 2025 **2026**
+2027 ›) for the history, the tenants with their phones and the lease
+dates, and a row a month - date received, rent, deposit, **Paid** and
+comments - totalled at the foot ("10 of 12 paid", the rent paid, any
+deposits). Every change saves as it is made. Ticking Paid fills an empty
+date with today and an empty rent with the nearest month's amount, both
+still editable.
+
+`supabase/migrations/013_rent_ledger.sql` gives `rent_payments` `amount`,
+`deposit`, `paid` and `note` (dates already recorded were ticked Paid
+once, when the column was added); a month may now have no date
+(`received_on` is then `''`, the column stays NOT NULL like the FastAPI
+app's). `save_rent_entry(...)` writes a whole month and takes off a month
+with nothing in it; `list_rent_history(address, unit, year)` reads a
+year. The register's date box (`set_rent_payment`) now ticks Paid with a
+date and takes the tick off when cleared, keeping the month's amount,
+deposit and comment. The FastAPI app has `GET /api/rent-history` and
+`PUT /api/rent-entries`. Not on the card yet: its Alarm and Pets lines.
+
 ### Resident Entry
 
 Step 4 on the manager page, **temporary** (the user, 2026-09-30: "to get
@@ -919,7 +946,13 @@ entry. A resident at an address or unit the file lacks gets a house of
 their own rather than being dropped. Each house shows a Google map of
 its address (the user, same day) - the keyless embed,
 `google.com/maps?output=embed&z=17&q=...`, in a lazy iframe - and the
-address itself opens Google Maps in a new tab. Back, Save and Print float like the
+address itself opens Google Maps in a new tab. A building may name its
+own embed in `properties.json`, `"map_embed"` (a Street View the user
+picked; only a `https://www.google.com/maps/embed?` address is used), and
+addresses in one building share a `"building"` name ("1534-1536 Camp
+St.", "1428-1430 Melpomene St.", the user, same day) - the report draws
+them as one house, each address a box named by its number ("1534"). The
+documents ignore both keys. Back, Save and Print float like the
 rent register's; it prints in colour, three houses across.
 
 **Unit names are as written on paper** (the user, same day: "#2 (102)

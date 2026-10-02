@@ -200,3 +200,48 @@ def test_the_register_is_a_sheet_of_paper_with_back_and_print_only() -> None:
     assert "change-month" not in page
     assert 'const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];' in page
     assert "return `${day}, ${MONTHS[m - 1].slice(0, 3)} ${d}, ${y}`;" in page
+
+
+LEDGER = ROOT / "manager" / "rent_ledger.html"
+
+
+def test_the_ledger_records_every_column_of_a_month(client) -> None:
+    """The user, 2026-10-02: "Secondary view of rent register should show
+    history. Make a modern version of attached. Should be a paid checkbox
+    too." One month of the rent card: date, rent, deposit, Paid, comment."""
+    def entry(month, **values):
+        return client.put("/api/rent-entries", json={"month": month, "address": "1521 St. Andrew St.",
+                                                      "unit": "#5", **values}, auth=STEVE)
+    saved = entry("2026-01", received_on="2026-01-01", amount="$995", paid=True).json()["entry"]
+    assert (saved["amount"], saved["paid"], saved["received_on"]) == ("995", True, "2026-01-01")
+    entry("2026-02", amount="995.00", note="late")
+    assert entry("2026-03", amount="9x").json()["detail"] == "That amount does not look right."
+    year = client.get("/api/rent-history?address=1521 St. Andrew St.&unit=%235&year=2026", auth=STEVE).json()["entries"]
+    assert [(e["month"], e["received_on"], e["paid"], e["note"]) for e in year] == [
+        ("2026-01", "2026-01-01", True, ""), ("2026-02", None, False, "late")]
+    # The register's date box ticks Paid and keeps the rest of the month.
+    put = client.put("/api/rent-payments", json={"month": "2026-02", "address": "1521 St. Andrew St.",
+                                                  "unit": "#5", "received_on": "2026-02-03"}, auth=STEVE)
+    assert put.json()["payment"]["paid"] is True and put.json()["payment"]["note"] == "late"
+    # A month with nothing left in it is taken off; another year is its own.
+    entry("2026-01")
+    year = client.get("/api/rent-history?address=1521 St. Andrew St.&unit=%235&year=2026", auth=STEVE).json()["entries"]
+    assert [e["month"] for e in year] == ["2026-02"]
+    assert client.get("/api/rent-history?address=1521 St. Andrew St.&unit=%235&year=2025", auth=STEVE).json()["entries"] == []
+    # Another company sees none of it; a resident gets nothing.
+    assert client.get("/api/rent-history?address=1521 St. Andrew St.&unit=%235&year=2026", auth=GAY).json()["entries"] == []
+    assert client.get("/api/rent-history?address=x&year=2026", auth=TENANT1).status_code == 404
+
+
+def test_the_register_opens_each_apartments_ledger() -> None:
+    register = REGISTER.read_text(encoding="utf-8")
+    assert "link.href = `rent_ledger.html?${query}`;" in register
+    page = LEDGER.read_text(encoding="utf-8")
+    assert 'auth.requireRole(["manager", "admin"])' in page
+    assert 'window.LGD.auth.rpc("save_rent_entry", body)' in page
+    # Ticking Paid fills an empty date with today and an empty rent with the usual.
+    assert "if (!date.value) date.value = todayText;" in page
+    assert "if (!amount.value.trim()) amount.value = usualRent(index);" in page
+    migration = (ROOT / "supabase" / "migrations" / "013_rent_ledger.sql").read_text(encoding="utf-8")
+    assert "update public.rent_payments set paid = true where received_on <> '';" in migration
+    assert "grant execute on function public.save_rent_entry(text, text, text, text, text, text, boolean, text) to authenticated;" in migration

@@ -252,6 +252,11 @@ ADDED_COLUMNS = [
     ("applications", "property_interest", "TEXT"),
     ("applications", "consent_to_text", "INTEGER NOT NULL DEFAULT 0"),
     ("applications", "roommates_json", "TEXT NOT NULL DEFAULT '[]'"),
+    # The rent ledger's columns (2026-10-02), as supabase/migrations/013.
+    ("rent_payments", "amount", "TEXT"),
+    ("rent_payments", "deposit", "TEXT"),
+    ("rent_payments", "paid", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("rent_payments", "note", "TEXT"),
 ]
 
 # The single people.role, read into the four role columns and dropped - on
@@ -953,47 +958,139 @@ async def remove_resident(db_path: str, *, manager_id: str | None, is_admin: boo
     return {"id": person_id, "full_name": person["full_name"]}
 
 
+RENT_COLUMNS = "address, unit, month, received_on, amount, deposit, paid, note"
+AMOUNT_PATTERN = re.compile(r"^[0-9]{1,7}([.][0-9]{1,2})?$")
+
+
+def _rent_json(row: dict[str, Any]) -> dict[str, Any]:
+    """One month as the pages see it - lgd_rent_json in migration 013."""
+    return {"address": row["address"], "unit": row["unit"], "month": row["month"],
+            "received_on": row["received_on"] or None, "amount": row["amount"] or "",
+            "deposit": row["deposit"] or "", "paid": bool(row["paid"]), "note": row["note"] or ""}
+
+
+def _check_date(value: str | None) -> str:
+    value = (value or "").strip()
+    if value:
+        try:
+            if not DATE_PATTERN.match(value):
+                raise ValueError
+            date.fromisoformat(value)
+        except ValueError:
+            raise RentRegisterError("That date does not look right.")
+    return value
+
+
+def _check_amount(value: str | None) -> str | None:
+    value = (value or "").strip().replace("$", "").replace(",", "")
+    if not value:
+        return None
+    if not AMOUNT_PATTERN.match(value):
+        raise RentRegisterError("That amount does not look right.")
+    return value
+
+
+def _check_apartment(manager_id: str | None, address: str, unit: str) -> tuple[str, str]:
+    if manager_id is None:
+        raise RentRegisterError("Your login is not filed under a company.")
+    address, unit = (address or "").strip(), (unit or "").strip()
+    if not address or len(address) > 200 or len(unit) > 20:
+        raise RentRegisterError("That apartment does not look right.")
+    return address, unit
+
+
+async def _rent_row(db_path: str, manager_id: str, address: str, unit: str,
+                    month: str) -> dict[str, Any] | None:
+    rows = await _rows(db_path, f"SELECT {RENT_COLUMNS} FROM rent_payments "
+                       "WHERE manager_id = ? AND address = ? AND unit = ? AND month = ?",
+                       manager_id, address, unit, month)
+    return rows[0] if rows else None
+
+
+async def _put_rent_row(db_path: str, manager_id: str, row: dict[str, Any],
+                        person_id: str | None) -> None:
+    await _write(db_path,
+                 "DELETE FROM rent_payments WHERE manager_id = ? AND address = ? AND unit = ? AND month = ?",
+                 manager_id, row["address"], row["unit"], row["month"])
+    await _write(db_path,
+                 "INSERT INTO rent_payments (manager_id, address, unit, month, received_on, amount, "
+                 "deposit, paid, note, recorded_at, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 manager_id, row["address"], row["unit"], row["month"], row["received_on"] or "",
+                 row["amount"], row["deposit"], bool(row["paid"]), row["note"], _now(), person_id)
+
+
 async def list_rent_payments(db_path: str, *, manager_id: str | None,
                              month: str) -> list[dict[str, Any]]:
-    """The company's recorded dates for one month."""
+    """The company's recorded rent for one month."""
     month_bounds(month)
     if manager_id is None:
         return []
-    return await _rows(
+    rows = await _rows(
         db_path,
-        "SELECT address, unit, month, received_on FROM rent_payments "
+        f"SELECT {RENT_COLUMNS} FROM rent_payments "
         "WHERE manager_id = ? AND month = ? ORDER BY address, unit",
         manager_id, month)
+    return [_rent_json(row) for row in rows]
+
+
+async def list_rent_history(db_path: str, *, manager_id: str | None, address: str,
+                            unit: str, year: str) -> list[dict[str, Any]]:
+    """One apartment's year, month by month - list_rent_history in 013."""
+    if not re.match(r"^[0-9]{4}$", year or ""):
+        raise RentRegisterError("Choose a year.")
+    if manager_id is None:
+        return []
+    rows = await _rows(
+        db_path,
+        f"SELECT {RENT_COLUMNS} FROM rent_payments WHERE manager_id = ? AND address = ? "
+        "AND unit = ? AND month LIKE ? ORDER BY month",
+        manager_id, (address or "").strip(), (unit or "").strip(), f"{year}-%")
+    return [_rent_json(row) for row in rows]
+
+
+async def save_rent_entry(db_path: str, *, manager_id: str | None, month: str, address: str,
+                          unit: str, received_on: str = "", amount: str = "", deposit: str = "",
+                          paid: bool = False, note: str = "",
+                          person_id: str | None) -> dict[str, Any]:
+    """One month of the ledger, every column; a month with nothing in it
+    is taken off. The rules of save_rent_entry in 013."""
+    month_bounds(month)
+    address, unit = _check_apartment(manager_id, address, unit)
+    row = {"address": address, "unit": unit, "month": month,
+           "received_on": _check_date(received_on), "amount": _check_amount(amount),
+           "deposit": _check_amount(deposit), "paid": bool(paid),
+           "note": (note or "").strip() or None}
+    if row["note"] and len(row["note"]) > 500:
+        raise RentRegisterError("That comment is too long.")
+    if not (row["received_on"] or row["amount"] or row["deposit"] or row["note"] or row["paid"]):
+        await _write(db_path,
+                     "DELETE FROM rent_payments WHERE manager_id = ? AND address = ? AND unit = ? AND month = ?",
+                     manager_id, address, unit, month)
+        return _rent_json({**row, "amount": None, "deposit": None, "note": None})
+    await _put_rent_row(db_path, manager_id, row, person_id)
+    return _rent_json(row)
 
 
 async def set_rent_payment(db_path: str, *, manager_id: str | None, month: str,
                            address: str, unit: str, received_on: str,
                            person_id: str | None) -> dict[str, Any]:
-    """Record the date an apartment's rent for a month was received; an
-    empty date takes it back off. The rules of set_rent_payment in 006."""
+    """The register's date box: a date is rent received, so it ticks Paid;
+    clearing it takes the tick off and keeps the month's amount, deposit
+    and comment. The rules of set_rent_payment in 013."""
     month_bounds(month)
-    if manager_id is None:
-        raise RentRegisterError("Your login is not filed under a company.")
-    address, unit, received_on = address.strip(), unit.strip(), (received_on or "").strip()
-    if not address or len(address) > 200 or len(unit) > 20:
-        raise RentRegisterError("That apartment does not look right.")
-    if received_on:
-        try:
-            if not DATE_PATTERN.match(received_on):
-                raise ValueError
-            date.fromisoformat(received_on)
-        except ValueError:
-            raise RentRegisterError("That date does not look right.")
-    await _write(db_path,
-                 "DELETE FROM rent_payments WHERE manager_id = ? AND address = ? AND unit = ? AND month = ?",
-                 manager_id, address, unit, month)
-    if not received_on:
-        return {"address": address, "unit": unit, "month": month, "received_on": None}
-    await _write(db_path,
-                 "INSERT INTO rent_payments (manager_id, address, unit, month, received_on, "
-                 "recorded_at, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                 manager_id, address, unit, month, received_on, _now(), person_id)
-    return {"address": address, "unit": unit, "month": month, "received_on": received_on}
+    address, unit = _check_apartment(manager_id, address, unit)
+    received_on = _check_date(received_on)
+    row = await _rent_row(db_path, manager_id, address, unit, month) or {
+        "address": address, "unit": unit, "month": month,
+        "amount": None, "deposit": None, "note": None}
+    row = {**row, "received_on": received_on, "paid": bool(received_on)}
+    if received_on or row["amount"] or row["deposit"] or row["note"]:
+        await _put_rent_row(db_path, manager_id, row, person_id)
+    else:
+        await _write(db_path,
+                     "DELETE FROM rent_payments WHERE manager_id = ? AND address = ? AND unit = ? AND month = ?",
+                     manager_id, address, unit, month)
+    return _rent_json(row)
 
 
 COLOR_PATTERN = re.compile(r"^#[0-9a-f]{6}$")

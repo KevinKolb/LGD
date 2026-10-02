@@ -605,6 +605,46 @@ async def api_set_rent_payment(payload: RentPaymentRequest,
     return {"payment": payment}
 
 
+class RentEntryRequest(BaseModel):
+    month: str = Field(max_length=7)
+    address: str = Field(max_length=200)
+    unit: str = Field(default="", max_length=20)
+    received_on: str = Field(default="", max_length=10)
+    amount: str = Field(default="", max_length=20)
+    deposit: str = Field(default="", max_length=20)
+    paid: bool = False
+    note: str = Field(default="", max_length=500)
+
+
+@app.get("/api/rent-history")
+async def api_rent_history(address: str, year: str, unit: str = "",
+                           user: User = Depends(current_user)) -> dict[str, Any]:
+    """One apartment's rent for a year - the rent ledger."""
+    require_dashboard_role(user)
+    try:
+        entries = await db.list_rent_history(get_settings().db_path, manager_id=user.manager_id,
+                                             address=address, unit=unit, year=year)
+    except db.RentRegisterError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"entries": entries}
+
+
+@app.put("/api/rent-entries")
+async def api_save_rent_entry(payload: RentEntryRequest,
+                              user: User = Depends(current_user)) -> dict[str, Any]:
+    """One month of an apartment's rent ledger, every column."""
+    require_dashboard_role(user)
+    try:
+        entry = await db.save_rent_entry(
+            get_settings().db_path, manager_id=user.manager_id, month=payload.month,
+            address=payload.address, unit=payload.unit, received_on=payload.received_on,
+            amount=payload.amount, deposit=payload.deposit, paid=payload.paid, note=payload.note,
+            person_id=user.person_id)
+    except db.RentRegisterError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {"entry": entry}
+
+
 class SiteColorsRequest(BaseModel):
     accent: str = Field(default="", max_length=7)
     accent2: str = Field(default="", max_length=7)
