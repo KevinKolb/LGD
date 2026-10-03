@@ -23,8 +23,7 @@ applicant page's company map, and
 text itself. Since 2026-09-28, also the company name in every printed
 document's header (one `COMPANY_NAME`), and LGD's own buildings in
 `documents/properties.json` (each file carries a `manager_id`, so 2.0 is one
-file per company, or a move into the database). Since 2026-09-29, also "LGD PORTAL" (the home page's
-title bar and the home-screen name in `shared/manifest.webmanifest`), the
+file per company, or a move into the database). Since 2026-09-29, the
 company name at the top of the rent register, and the applicant email's
 subject and signature on the manager page.
 
@@ -1026,15 +1025,16 @@ match: Tulane green roof and door `#006747`, blue walls `#418fde`, outline
 black), with 192/512 PNGs and `shared/manifest.webmanifest`. Every page,
 the generated documents and legal research included, carries the same
 five head lines; `tests/test_icons.py` checks each one. The name on a home
-screen is "LGD PORTAL", which is also the home page's title bar (the
-user, 2026-09-29).
+screen is "Residential Guide" (`apple-mobile-web-app-title` on every page
+and the manifest's `name`; the user, 2026-10-03 - it was "LGD PORTAL" from
+2026-09-29). A phone may cut it short under the icon.
 
 **The home page has the header bar too, minus Home** (the user,
 2026-10-02: "give home page the header minus home button. title on home
 page will be momandpop.com for now"): `<header data-no-home>`, titled
 "Residential Guide" (the browser tab too; "momandpop.com" until the user,
-2026-10-03: "change momandpop.com to Residential Guide"; the home-screen name stays "LGD
-PORTAL"), with Login/Logout on the right (`shared/account.js`), on one
+2026-10-03: "change momandpop.com to Residential Guide"; the home-screen
+name followed the same day), with Login/Logout on the right (`shared/account.js`), on one
 row even on a phone; no client picker there. The card lost its company
 heading and opens on "Choose your role.". (Earlier the same day a Logout
 button sat under the card.)

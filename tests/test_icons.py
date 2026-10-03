@@ -1,5 +1,5 @@
 """The little house is the icon everywhere, iPhone home screen included
-(the user, 2026-09-29), and the home page's title bar reads LGD PORTAL."""
+(the user, 2026-09-29), and the home page's title bar reads Residential Guide."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,7 +21,7 @@ def test_every_page_uses_the_house(page) -> None:
     assert f'<link rel="icon" href="{prefix}favicon.ico?v=2" sizes="any">' in text
     assert f'<link rel="icon" href="{prefix}shared/icons/house.svg" type="image/svg+xml">' in text
     assert f'<link rel="apple-touch-icon" href="{prefix}shared/icons/apple-touch-icon.png">' in text
-    assert '<meta name="apple-mobile-web-app-title" content="LGD PORTAL">' in text
+    assert '<meta name="apple-mobile-web-app-title" content="Residential Guide">' in text
 
 
 def test_the_icon_files_exist() -> None:
@@ -34,4 +34,4 @@ def test_the_home_page_title_bar() -> None:
     # Residential Guide since 2026-10-03 (the user; momandpop.com before); the home-screen name stays.
     page = (ROOT / "index.html").read_text(encoding="utf-8")
     assert "<title>Residential Guide</title>" in page
-    assert '<meta name="apple-mobile-web-app-title" content="LGD PORTAL">' in page
+    assert '<meta name="apple-mobile-web-app-title" content="Residential Guide">' in page
