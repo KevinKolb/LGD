@@ -60,14 +60,14 @@ def test_the_picker_is_on_every_page_for_several_clients():
         assert '<script src="../shared/client-picker.js"></script>' in html, page
 
 
-def test_the_name_is_momandpop_until_a_client_is_known():
+def test_the_name_is_residential_guide_until_a_client_is_known():
     home = (ROOT / "shared" / "home.js").read_text(encoding="utf-8")
-    assert 'const BRAND = "momandpop.com";' in home
+    assert 'const BRAND = "Residential Guide";' in home
     assert "const name = (client && client.name) || BRAND;" in home
     for page in ("applicant", "resident", "manager", "admin", "login"):
         html = (ROOT / page / "index.html").read_text(encoding="utf-8")
-        assert '<p class="company" data-client>momandpop.com</p>' in html, page
-    assert "<h1 data-client>momandpop.com</h1>" in (ROOT / "index.html").read_text(encoding="utf-8")
+        assert '<p class="company" data-client>Residential Guide</p>' in html, page
+    assert "<h1 data-client>Residential Guide</h1>" in (ROOT / "index.html").read_text(encoding="utf-8")
 
 
 def test_the_legal_pages_are_for_managers():

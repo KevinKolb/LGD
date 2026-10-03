@@ -548,8 +548,8 @@ and a two-site admin:
 
 - **The name**: every site page's header carries a `data-client` line -
   the home page's title, the company line above the others' titles - and
-  `shared/home.js` puts "momandpop.com" there and in the browser tab
-  ("Manager Portal - momandpop.com") until a signed-in login's client is
+  `shared/home.js` puts "Residential Guide" there and in the browser tab
+  ("Manager Portal - Residential Guide") until a signed-in login's client is
   known (`list_my_clients`, remembered as `lgd-client` only while signed
   in, forgotten when signed out), then that client's name.
 - **Login/Logout** is in the header of the applicant, resident, manager
@@ -1032,7 +1032,8 @@ user, 2026-09-29).
 **The home page has the header bar too, minus Home** (the user,
 2026-10-02: "give home page the header minus home button. title on home
 page will be momandpop.com for now"): `<header data-no-home>`, titled
-"momandpop.com" (the browser tab too; the home-screen name stays "LGD
+"Residential Guide" (the browser tab too; "momandpop.com" until the user,
+2026-10-03: "change momandpop.com to Residential Guide"; the home-screen name stays "LGD
 PORTAL"), with Login/Logout on the right (`shared/account.js`), on one
 row even on a phone; no client picker there. The card lost its company
 heading and opens on "Choose your role.". (Earlier the same day a Logout
@@ -1046,6 +1047,24 @@ phone or tablet, never when opened from the home screen already, and once
 per browser (`lgd-home-screen-tip` in localStorage, set when shown; if
 storage is unavailable it is not shown at all). Tests:
 `tests/test_home_screen_tip.py`.
+
+## The address: residentialguide.app
+
+Since 2026-10-03 the site is **https://residentialguide.app** (the user
+bought it at Cloudflare). The repository was renamed from `LGD` to
+`residentialguide` the same day, which would have moved the Pages address
+to kevinkolb.github.io/residentialguide/ - so the domain was connected at
+the same time: Cloudflare DNS holds four A records for GitHub Pages
+(185.199.108-111.153) and `www` CNAME `kevinkolb.github.io`, all **DNS
+only, never proxied** (GitHub issues the certificate and a .app address
+needs HTTPS), `CNAME` in the repository root holds the domain, and Enforce
+HTTPS is on. kevinkolb.github.io/LGD/ is gone (GitHub does not redirect
+Pages after a rename). Supabase's Site URL and redirect URLs list the new
+address, so confirmation and password-reset emails land on it. Every page
+works out its own root from its script's address, so nothing in the code
+named the old path. Staying on GitHub Pages was the user's choice;
+Cloudflare Pages was considered (free, and its Functions could send email
+and Supabase invites server-side) and may be revisited.
 
 ## Saved for later: `_saved/`
 

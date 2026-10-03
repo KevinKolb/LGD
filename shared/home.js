@@ -193,10 +193,10 @@
   new MutationObserver(placeAccount).observe(header, { childList: true, subtree: true });
 
   // The name at the top of every page, and in the browser tab:
-  // "momandpop.com" until a signed-in login's client is known, then that
+  // "Residential Guide" until a signed-in login's client is known, then that
   // client's name (the user, 2026-10-02). Each page marks it data-client -
   // the home page's title, the company line above the others' titles.
-  const BRAND = "momandpop.com";
+  const BRAND = "Residential Guide";
   const pageTitle = document.title;
   function showClient(client) {
     const name = (client && client.name) || BRAND;
