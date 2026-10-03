@@ -672,8 +672,9 @@ LGD@neworleans.properties, https://neworleans.properties, the office at
 1556 Camp St. (where the lease has rent paid), and Steve A. Hartnett as
 signer (his name heads the deposit form). Orange Street's are empty.
 `get_my_company()` (any signed-in person, their current company) feeds the
-resident page's Contact block, which was LGD's written into the page;
-signed out it says to sign in. The FastAPI app does not have these
+resident page's **Your Property Manager** block (headed "Contact" until the
+user, 2026-10-03), which was LGD's written into the page; signed out it
+says to sign in. The FastAPI app does not have these
 columns or the function.
 
 ## The Admin Portal

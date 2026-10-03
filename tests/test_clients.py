@@ -131,5 +131,6 @@ def test_the_resident_page_shows_its_own_companys_contact():
     assert "grant execute on function public.get_my_company() to authenticated;" in sql
     page = (ROOT / "resident" / "index.html").read_text(encoding="utf-8")
     assert 'auth.rpc("get_my_company", {})' in page
+    assert "<h2>Your Property Manager</h2>" in page
     # No company's details are written into the page any more.
     assert "913.1556" not in page and "Pam and Steve" not in page

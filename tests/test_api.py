@@ -159,7 +159,7 @@ def test_tenant_page_no_longer_has_the_application_form(client) -> None:
     response = client.get("/resident/", auth=None)
     assert response.status_code == 200
     assert "Rental application" not in response.text
-    assert "Contact" in response.text
+    assert "Your Property Manager" in response.text
 
 
 @pytest.mark.parametrize("asset", ["..%2f.env", "..%2fapp%2fconfig.py", "nope.html"])
