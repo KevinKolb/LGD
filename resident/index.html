@@ -98,6 +98,7 @@
   }
   button:disabled { opacity: .55; cursor: progress; }
   .empty { color: var(--muted); font-style: italic; }
+  #contact a { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -149,16 +150,34 @@
       if (external) { a.target = "_blank"; a.rel = "noopener"; }
       return a;
     };
-    line(company.name);
-    if (company.contact_name) line(company.contact_name);
+    const telLink = (phone) => {
+      const digits = phone.replace(/[^0-9]/g, "");
+      return link("tel:+" + (digits.length === 10 ? "1" + digits : digits), phone);
+    };
+    const strong = (text) => Object.assign(document.createElement("strong"), { textContent: text });
+    line(strong(company.name));
     if (company.address) line(company.address);
-    if (company.phone) {
-      const digits = company.phone.replace(/[^0-9]/g, "");
-      line(link("tel:+" + (digits.length === 10 ? "1" + digits : digits), company.phone),
-           company.phone_note ? ` (${company.phone_note})` : "");
+    // The company's managers, from people (supabase/migrations/016; the
+    // user, 2026-10-03: "pull the property manager information from the
+    // table of their property manager. may be multiple"): each with their
+    // own phone and email. With none on file, the company's own contact.
+    const team = Array.isArray(company.managers) ? company.managers : [];
+    if (team.length) {
+      for (const person of team) {
+        box.append(document.createElement("br"));
+        line(strong(person.name));
+        if (person.phone) line(telLink(person.phone));
+        if (person.email) line(link("mailto:" + person.email, person.email));
+      }
+    } else {
+      if (company.contact_name) line(company.contact_name);
+      if (company.phone) line(telLink(company.phone), company.phone_note ? ` (${company.phone_note})` : "");
+      if (company.email) line(link("mailto:" + company.email, company.email));
     }
-    if (company.email) line(link("mailto:" + company.email, company.email));
-    if (/^https?:[/][/]/.test(company.website || "")) line(link(company.website, company.website, true));
+    if (/^https?:[/][/]/.test(company.website || "")) {
+      box.append(document.createElement("br"));
+      line(link(company.website, company.website.replace(/^https?:[/][/]/, "").replace(/[/]$/, ""), true));
+    }
   } catch (error) {
     say("The contact information could not be loaded.");
   }

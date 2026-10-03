@@ -675,7 +675,14 @@ signer (his name heads the deposit form). Orange Street's are empty.
 `get_my_company()` (any signed-in person, their current company) feeds the
 resident page's **Your Property Manager** block (headed "Contact" until the
 user, 2026-10-03), which was LGD's written into the page; signed out it
-says to sign in. The FastAPI app does not have these
+says to sign in. **It lists the company's managers themselves** (the user,
+same day: "pull the property manager information from the table of their
+property manager. may be multiple"): `supabase/migrations/016` makes
+`get_my_company()` also return `managers` - every unarchived person with
+`is_manager` whose `clients` include the company - each shown by name with
+their own phone and email, under the company's name and office address,
+the website last. A company with no managers on file shows its own
+contact name, phone and email instead. The FastAPI app does not have these
 columns or the function.
 
 ## The Admin Portal

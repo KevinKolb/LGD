@@ -132,5 +132,10 @@ def test_the_resident_page_shows_its_own_companys_contact():
     page = (ROOT / "resident" / "index.html").read_text(encoding="utf-8")
     assert 'auth.rpc("get_my_company", {})' in page
     assert "<h2>Your Property Manager</h2>" in page
+    # Each of the company's managers, from people (016; the user, 2026-10-03).
+    assert "const team = Array.isArray(company.managers) ? company.managers : [];" in page
+    sql16 = (ROOT / "supabase" / "migrations" / "016_property_managers.sql").read_text(encoding="utf-8")
+    assert "where p.is_manager" in sql16 and "company.id = any (p.clients);" in sql16
+    assert "grant execute on function public.get_my_company() to authenticated;" in sql16
     # No company's details are written into the page any more.
     assert "913.1556" not in page and "Pam and Steve" not in page
