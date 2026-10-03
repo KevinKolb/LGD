@@ -668,7 +668,8 @@ lgd info, all fields"). `supabase/migrations/014_company_contact.sql`
 gives `managers` `contact_name`, `phone`, `phone_note`, `website` and
 `address` beside `name`, `signer_name` and `email`, and fills in LGD's:
 Pam and Steve Hartnett, 504.913.1556 (call or text),
-LGD@neworleans.properties, https://neworleans.properties, the office at
+LGD@neworleans.properties, https://neworleans.properties (since 015, the
+user, 2026-10-03: https://residentialguide.app), the office at
 1556 Camp St. (where the lease has rent paid), and Steve A. Hartnett as
 signer (his name heads the deposit form). Orange Street's are empty.
 `get_my_company()` (any signed-in person, their current company) feeds the
