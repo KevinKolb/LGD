@@ -129,6 +129,9 @@
   .steps { margin: 10px 0 12px; padding-left: 22px; }
   .steps li { margin: 0 0 8px; line-height: 1.45; overflow-wrap: anywhere; }
   details summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+  .stem-field { display: flex; align-items: center; gap: 4px; flex: 1 1 260px; min-width: 0; }
+  .stem-field input { flex: 1 1 auto !important; width: auto; min-width: 0; text-align: right; }
+  .stem-domain { font-weight: 600; color: var(--muted); white-space: nowrap; }
   .mail-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .mail-row input { flex: 1 1 220px; font: inherit; font-size: 16px; padding: 8px 10px;
                     border: 1px solid var(--line); border-radius: 6px; }
@@ -348,45 +351,85 @@ function colorsSection(backend) {
     main.row, second.row, previewBox, el("div", { class: "color-actions" }, save, reset), message);
 }
 
-// --- Email forwarding (the user, 2026-10-03) --------------------------------
+// --- Web address and mail (the user, 2026-10-03) ---------------------------
 //
-// "setup manager@residentialguide.app and a catch all on cloudflare to
-// forward to an email address specified on the admin tab." Mail to any
-// address at residentialguide.app goes, through Cloudflare's Email Worker
-// (cloudflare/email-worker.js), to the address saved here - one for the
-// whole site (set_mail_forward, supabase/migrations/018).
-function mailSection() {
-  const input = el("input", { type: "email", id: "mail-forward", autocomplete: "email",
-                              placeholder: "you@example.com", "aria-label": "Forward mail to" });
-  const save = el("button", { type: "button", text: "Save" });
+// "on admin page we need to pick a unique url stem.
+// https://lgd.residentialguide.app will be for LGD, on admin page is where
+// you can pick a url subdomain." Each company has its own stem
+// (managers.subdomain, supabase/migrations/019); the site answers there
+// through cloudflare/subdomain-worker.js. Mail to any address at it goes,
+// through cloudflare/email-worker.js, to the company's forwarding address.
+const DOMAIN = "residentialguide.app";
+let currentStem = "";
+function stemListeners() { return document.querySelectorAll("[data-stem]"); }
+function showStem(stem) {
+  currentStem = stem;
+  for (const node of stemListeners()) node.textContent = stem ? stem + "." + DOMAIN : "your-company." + DOMAIN;
+}
+function webSection() {
   const message = el("p", { class: "color-msg", role: "status", "aria-live": "polite" });
   const say = (text, kind) => { message.textContent = text; message.className = "color-msg" + (kind ? " " + kind : ""); };
-  save.addEventListener("click", async () => {
-    save.disabled = true;
+
+  const stem = el("input", { type: "text", id: "subdomain", autocomplete: "off", autocapitalize: "none",
+                             spellcheck: "false", maxlength: "30", placeholder: "lgd", "aria-label": "Web address" });
+  const stemSave = el("button", { type: "button", text: "Save address" });
+  const preview = el("p", { class: "hint" });
+  const link = el("a", { target: "_blank", rel: "noopener" });
+  function showPreview() {
+    const value = stem.value.trim().toLowerCase();
+    link.textContent = "https://" + (value || "your-company") + "." + DOMAIN;
+    link.href = value ? "https://" + value + "." + DOMAIN : "#";
+    preview.replaceChildren("Your residents and managers go to ", link, ".");
+  }
+  stem.addEventListener("input", showPreview);
+
+  const forward = el("input", { type: "email", id: "mail-forward", autocomplete: "email",
+                                placeholder: "you@example.com", "aria-label": "Forward mail to" });
+  const forwardSave = el("button", { type: "button", text: "Save" });
+
+  function fill(settings) {
+    stem.value = settings.subdomain || "";
+    forward.value = settings.mail_forward || "";
+    showPreview();
+    showStem(settings.subdomain || "");
+  }
+  async function store(button, fn, args, done) {
+    button.disabled = true;
     say("Saving…");
     try {
-      const result = await window.LGD.auth.rpc("set_mail_forward", { address: input.value });
-      input.value = result.address || "";
-      say(result.address
-        ? "Saved. Mail to residentialguide.app now goes to " + result.address +
-          ". If it is new, add it once in Cloudflare under Email Routing, Destination addresses, and click the link Cloudflare emails."
-        : "Cleared. Mail goes to the fallback address set in Cloudflare.");
+      const settings = await window.LGD.auth.rpc(fn, args);
+      fill(settings);
+      say(done(settings));
     } catch (error) {
       say(error.message, "error");
     } finally {
-      save.disabled = false;
+      button.disabled = false;
     }
-  });
-  window.LGD.auth.rpc("get_mail_forward", {})
-    .then((result) => { input.value = result.address || ""; })
-    .catch(() => say("The saved address could not be loaded. Has migration 018 been run?", "error"));
-  return section("Email for residentialguide.app",
-    "Mail sent to manager@residentialguide.app, or to any other address at residentialguide.app, " +
-      "is forwarded to this address. It is one address for the whole site.",
-    el("div", { class: "mail-row" }, input, save), message);
+  }
+  stemSave.addEventListener("click", () => store(stemSave, "set_subdomain", { subdomain: stem.value },
+    (settings) => "Saved. This company is now at https://" + settings.subdomain + "." + DOMAIN + "."));
+  forwardSave.addEventListener("click", () => store(forwardSave, "set_mail_forward", { address: forward.value },
+    (settings) => settings.mail_forward
+      ? "Saved. Mail to " + (settings.subdomain || "your-company") + "." + DOMAIN + " now goes to " + settings.mail_forward +
+        ". If it is new, add it once in Cloudflare under Email Routing, Destination addresses, and click the link Cloudflare emails."
+      : "Cleared. Mail goes to the fallback address set in Cloudflare."));
+
+  showPreview();
+  window.LGD.auth.rpc("get_my_web_settings", {})
+    .then(fill)
+    .catch(() => say("These settings could not be loaded. Has migration 019 been run?", "error"));
+
+  const mailHint = el("p", { class: "hint" });
+  mailHint.append("Mail to manager@", el("span", { "data-stem": "" }), ", or to any other address there, is forwarded to:");
+  return section("Web address and email",
+    "This company's own address. Each company has a different one, so residents see only their own.",
+    el("div", { class: "mail-row stem-row" },
+      el("span", { class: "stem-field" }, stem, el("span", { class: "stem-domain", text: "." + DOMAIN })), stemSave),
+    preview, mailHint,
+    el("div", { class: "mail-row" }, forward, forwardSave), message);
 }
 
-// --- Sending as manager@residentialguide.app (the user, 2026-10-03) --------
+// --- Sending as manager@<stem>.residentialguide.app (the user, 2026-10-03) --
 //
 // "add instructions on setting email receiver as a send as of
 // manager@residentialguide.app". Cloudflare only forwards mail in; sending
@@ -400,22 +443,24 @@ function sendAsSection() {
     ["Make an app password at ", ["https://myaccount.google.com/apppasswords", "myaccount.google.com/apppasswords"],
       ". Name it Residential Guide and copy the 16-letter code."],
     ["In Gmail, open the gear, See all settings, Accounts and Import. Beside Send mail as, choose Add another email address."],
-    ["Name: how it should read to residents, for example LGD Properties. Email address: manager@residentialguide.app. " +
+    ["Name: how it should read to residents, for example LGD Properties. Email address: manager@", ["stem"], ". " +
       "Leave Treat as an alias ticked. Next Step."],
     ["SMTP Server: smtp.gmail.com, Port: 587, Username: your full Gmail address, Password: the app password. " +
       "Keep Secured connection using TLS. Add Account."],
-    ["Gmail sends a confirmation to manager@residentialguide.app. It is forwarded to this inbox: click the link in it, " +
+    ["Gmail sends a confirmation to manager@", ["stem"], ". It is forwarded to this inbox: click the link in it, " +
       "or type its code."],
     ["Still in Accounts and Import, under When replying to a message, choose Reply from the same address the message was sent to."],
-    ["So the mail is not marked as spam: in Cloudflare, residentialguide.app, DNS, Records, edit the TXT record that starts " +
-      "v=spf1 to read  v=spf1 include:_spf.mx.cloudflare.net include:_spf.google.com ~all"],
-    ["Test it: write a new email in Gmail, choose manager@residentialguide.app in the From line, and send it to another address of yours."],
+    ["So the mail is not marked as spam: in Cloudflare, residentialguide.app, DNS, Records, edit the TXT record named ",
+      ["stem"], " that starts v=spf1 to read  v=spf1 include:_spf.mx.cloudflare.net include:_spf.google.com ~all"],
+    ["Test it: write a new email in Gmail, choose manager@", ["stem"], " in the From line, and send it to another address of yours."],
   ];
   const list = el("ol", { class: "steps" });
   for (const parts of steps) {
     const item = el("li");
     for (const part of parts) {
-      if (Array.isArray(part)) {
+      if (Array.isArray(part) && part[0] === "stem") {
+        item.append(el("span", { "data-stem": "" }));
+      } else if (Array.isArray(part)) {
         item.append(el("a", { href: part[0], target: "_blank", rel: "noopener", text: part[1] }));
       } else {
         item.append(part);
@@ -426,9 +471,13 @@ function sendAsSection() {
   const more = el("details", {}, el("summary", { text: "Show the steps for Gmail" }), list,
     el("p", { class: "hint", text: "Another mail service: look for its \u201csend mail as\u201d or \u201calias\u201d setting, " +
       "with that service's own outgoing (SMTP) server, and add its SPF include in the same Cloudflare record." }));
-  return section("Send as manager@residentialguide.app",
-    "Forwarding only brings mail in. To reply from manager@residentialguide.app, so residents see that address, " +
-      "set it up once in the mailbox the mail is forwarded to.", more);
+  const intro = el("p", { class: "hint" });
+  intro.append("Forwarding only brings mail in. To reply from manager@", el("span", { "data-stem": "" }),
+    ", so residents see that address, set it up once in the mailbox the mail is forwarded to.");
+  const box = section("Send as manager@ your address", "", intro, more);
+  box.querySelector("p.hint").remove();
+  showStem(currentStem);
+  return box;
 }
 
 async function boot() {
@@ -499,7 +548,7 @@ async function explainWithoutBackend(app) {
     }
     app.replaceChildren(
       colorsSection("supabase"),
-      mailSection(),
+      webSection(),
       sendAsSection());
   } catch (error) {
     say("The admin page could not load: " + (error && error.message ? error.message : error) +

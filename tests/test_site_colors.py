@@ -145,23 +145,31 @@ def test_signed_out_pages_are_black_white_and_gray():
     assert "theme-orange" not in page and "lgd-org" not in page
 
 
-def test_mail_to_the_domain_is_forwarded_to_the_admin_pages_address() -> None:
-    """The user, 2026-10-03: "setup manager@residentialguide.app and a catch
-    all on cloudflare to forward to an email address specified on the admin
-    tab." Migration 018, the admin page's section and the Email Worker."""
+def test_each_company_has_its_own_address_and_mail() -> None:
+    """The user, 2026-10-03: mail to the domain forwarded to an address set
+    on the admin page (018), then "on admin page we need to pick a unique
+    url stem. https://lgd.residentialguide.app will be for LGD" (019)."""
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
-    sql = (root / "supabase" / "migrations" / "018_mail_forward.sql").read_text(encoding="utf-8")
-    assert "grant execute on function public.set_mail_forward(text) to authenticated;" in sql
-    # Only the Worker, with the secret key, reads where mail goes.
-    assert "revoke all on function public.mail_forward_target() from public, anon, authenticated;" in sql
-    assert "grant execute on function public.mail_forward_target() to service_role;" in sql
-    assert "clean like '%@residentialguide.app'" in sql
+    sql = (root / "supabase" / "migrations" / "019_subdomains.sql").read_text(encoding="utf-8")
+    assert "create unique index if not exists managers_subdomain on public.managers (subdomain);" in sql
+    assert "update public.managers set subdomain = 'lgd' where id = 'lgd' and subdomain is null;" in sql
+    assert "grant execute on function public.client_by_subdomain(text) to anon, authenticated;" in sql
+    # Only the Email Worker, with the secret key, reads where mail goes.
+    assert "revoke all on function public.mail_forward_target(text) from public, anon, authenticated;" in sql
+    assert "grant execute on function public.mail_forward_target(text) to service_role;" in sql
+    assert "clean like '%residentialguide.app'" in sql
     admin = (root / "admin" / "index.html").read_text(encoding="utf-8")
-    assert 'window.LGD.auth.rpc("set_mail_forward", { address: input.value })' in admin
-    # And how to send as manager@ from the inbox it lands in (the user, same day).
-    assert 'return section("Send as manager@residentialguide.app",' in admin
+    assert 'store(stemSave, "set_subdomain", { subdomain: stem.value },' in admin
+    assert 'store(forwardSave, "set_mail_forward", { address: forward.value },' in admin
     assert "smtp.gmail.com, Port: 587" in admin and "include:_spf.google.com" in admin
-    worker = (root / "cloudflare" / "email-worker.js").read_text(encoding="utf-8")
-    assert '"/rest/v1/rpc/mail_forward_target"' in worker and "await message.forward(to);" in worker
-    assert "sb_secret_" not in worker.replace("sb_secret_...", "")
+    email = (root / "cloudflare" / "email-worker.js").read_text(encoding="utf-8")
+    assert "await savedAddress(env, message.to);" in email and "await message.forward(to);" in email
+    assert "sb_secret_" not in email.replace("sb_secret_...", "")
+    web = (root / "cloudflare" / "subdomain-worker.js").read_text(encoding="utf-8")
+    assert 'const ORIGIN = "https://residentialguide.app";' in web
+    # A page on a company's address names that company, and switches a
+    # manager of several companies to it.
+    home = (root / "shared" / "home.js").read_text(encoding="utf-8")
+    assert "const found = await auth.addressClient();" in home
+    assert 'await auth.rpc("set_current_client", { client: addressClient.id });' in home

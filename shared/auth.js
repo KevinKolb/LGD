@@ -205,6 +205,30 @@
   }
 
   /**
+   * Which company a web address belongs to - lgd.residentialguide.app is
+   * LGD's (supabase/migrations/019's client_by_subdomain, asked signed out,
+   * answering only the id and the name). Null on the main address, or for
+   * a stem no company has.
+   */
+  function addressStem() {
+    const host = window.location.hostname.toLowerCase();
+    const suffix = ".residentialguide.app";
+    if (!host.endsWith(suffix)) return "";
+    const stem = host.slice(0, -suffix.length);
+    return /^[a-z0-9-]+$/.test(stem) && stem !== "www" ? stem : "";
+  }
+  async function addressClient() {
+    const stem = addressStem();
+    if (!stem) return null;
+    try {
+      const client = await request("/rest/v1/rpc/client_by_subdomain", { body: { subdomain: stem } });
+      return client && client.id ? client : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
    * Create a login - only for an address already on file; anyone else is
    * stopped here with NOT_ON_FILE, before Supabase sends any email. (001's
    * trigger holds the same line for a signup sent any other way.)
@@ -453,6 +477,8 @@
     profile,
     emailOnFile,
     acceptingApplications,
+    addressStem,
+    addressClient,
     NOT_ON_FILE,
     rpc,
     consumeLinkFromUrl,

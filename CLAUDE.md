@@ -1077,32 +1077,45 @@ named the old path. Staying on GitHub Pages was the user's choice;
 Cloudflare Pages was considered (free, and its Functions could send email
 and Supabase invites server-side) and may be revisited.
 
-### Email at residentialguide.app
+### Each company at its own address, with its own mail
 
-The user, 2026-10-03: "setup manager@residentialguide.app and a catch all
-on cloudflare to forward to an email address specified on the admin tab."
-Cloudflare Email Routing (free; it adds its own MX and SPF records to the
-domain's DNS) sends `manager@` and the catch-all to an **Email Worker**,
-`cloudflare/email-worker.js`, pasted into Cloudflare by hand - this
-repository does not deploy it. For each message the Worker asks
-`mail_forward_target()` (`supabase/migrations/018`, granted to
-`service_role` only) for the address saved on the Admin Portal's **Email
-for residentialguide.app** section (`get_mail_forward` /
-`set_mail_forward`, managers; `site_settings` key `mail_forward`, one for
-the whole site), and forwards there, else to its `FALLBACK`. Its
-`SUPABASE_KEY` is the project's secret key, a Worker secret - never in this
-repository or a page. Cloudflare forwards only to **verified destination
-addresses**, so a new address typed on the admin page must also be added
-once under Email Routing -> Destination addresses and its link clicked;
-until then the Worker falls back. An address at residentialguide.app
-itself is refused (it would loop). The page cannot verify addresses in
-Cloudflare itself: that would need a Cloudflare API token on a server. Below it, **Send as manager@residentialguide.app** (the user, same day:
-"add instructions on setting email receiver as a send as of
-manager@residentialguide.app") holds the steps, folded under "Show the
-steps for Gmail": an app password, Gmail's Send mail as through
-smtp.gmail.com:587, confirming through the forwarded mail, replying from
-the address mail came to, and adding `include:_spf.google.com` to the
-domain's SPF record in Cloudflare.
+The user, 2026-10-03, after a single manager@residentialguide.app was
+built: "that's a ridiculous email address because there will be multiple
+clients. on admin page we need to pick a unique url stem.
+https://lgd.residentialguide.app will be for LGD, on admin page is where
+you can pick a url subdomain." `supabase/migrations/019_subdomains.sql`:
+`managers.subdomain` (unique; 2-30 of a-z, 0-9 and inner hyphens; a few
+like www, api, mail, admin kept back; LGD's is `lgd`) and
+`managers.mail_forward`, set by a manager for the company they are working
+in on the Admin Portal's **Web address and email** section
+(`get_my_web_settings`, `set_subdomain`, `set_mail_forward`).
+
+- **The web.** GitHub Pages serves one exact address, so
+  `cloudflare/subdomain-worker.js` - pasted into Cloudflare by hand, on the
+  route `*.residentialguide.app/*`, with a proxied wildcard DNS record -
+  answers every `<stem>.residentialguide.app` with the same page from
+  residentialguide.app (www redirects there). Pages work out their own root
+  from their script's address, so they run unchanged at any address.
+  `LGD.auth.addressStem()` / `addressClient()` (`client_by_subdomain`,
+  callable signed out, id and name only) let `shared/home.js` show the
+  company's name there signed out (colors stay gray, as everywhere signed
+  out), and switch a signed-in login linked to that company into it
+  (`set_current_client`, then reload). A login's session is kept per
+  address by the browser, so each address signs in on its own. Supabase's
+  redirect URLs need `https://*.residentialguide.app/**`.
+- **Mail.** Cloudflare Email Routing on each company's subdomain sends its
+  catch-all to the Email Worker, `cloudflare/email-worker.js`, which asks
+  `mail_forward_target(recipient)` (service_role only, with the secret key
+  as a Worker secret) for that company's address and forwards there, else
+  to its `FALLBACK`. Cloudflare forwards only to verified destination
+  addresses, so a new one must be added once under Email Routing ->
+  Destination addresses. An address at residentialguide.app is refused (a
+  loop). 018 first kept one address for the whole site in `site_settings`;
+  019 gave it to LGD and dropped it.
+- **Sending as** manager@<stem>.residentialguide.app: the section below it
+  holds the Gmail steps (an app password, Send mail as through
+  smtp.gmail.com:587, `include:_spf.google.com` in the subdomain's SPF
+  record), with the company's own address filled in.
 
 ## Saved for later: `_saved/`
 

@@ -285,12 +285,36 @@
     }
   }
 
+  // A company's own address (lgd.residentialguide.app; the user,
+  // 2026-10-03) names it from the start, signed in or out - kept per
+  // address, so its name shows at once on the next visit.
+  const STEM_KEY = "lgd-address-client";
+  let addressClient = null;
+  try {
+    const kept = JSON.parse(localStorage.getItem(STEM_KEY) || "null");
+    const stem = window.LGD && window.LGD.auth && window.LGD.auth.addressStem ? window.LGD.auth.addressStem() : "";
+    if (kept && stem && kept.stem === stem) addressClient = kept.client;
+  } catch (error) {
+    /* nothing kept */
+  }
+  if (addressClient && !remembered) showClient(addressClient);
+
   async function clients() {
     const auth = window.LGD && window.LGD.auth;
     if (!auth) return;
+    if (auth.addressClient) {
+      const found = await auth.addressClient();
+      addressClient = found;
+      try {
+        if (found) localStorage.setItem(STEM_KEY, JSON.stringify({ stem: auth.addressStem(), client: found }));
+        else localStorage.removeItem(STEM_KEY);
+      } catch (error) {
+        /* not kept */
+      }
+    }
     if (!(await auth.session())) {
       forget();
-      showClient(null);
+      showClient(addressClient);
       welcome.textContent = "Welcome.";
       const bar = document.getElementById("account-bar");
       if (bar && header.hasAttribute("data-no-home")) bar.hidden = true;
@@ -305,6 +329,19 @@
     }
     if (!Array.isArray(list) || !list.length) return;
     const current = list.find((client) => client.current) || list[0];
+    // On a company's own address, a login linked to that company works in
+    // it: switch once, then reload (every list follows the current one).
+    if (addressClient && addressClient.id !== current.id && list.some((c) => c.id === addressClient.id)) {
+      try {
+        const updated = await auth.rpc("set_current_client", { client: addressClient.id });
+        const now = (updated || []).find((client) => client.current);
+        if (now) remember(now);
+        window.location.reload();
+        return;
+      } catch (error) {
+        /* Stay in the current company. */
+      }
+    }
     remember(current);
     showClient(current);
     // The picker shows on every page with the header, for a login linked
