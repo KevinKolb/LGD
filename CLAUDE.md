@@ -605,8 +605,10 @@ and a two-site admin:
 The user, 2026-10-02: "make site available to different clients. logins
 will be linked to clients ... logins can be linked to more than client."
 A **client** is a row of `managers` (the companies): 'lgd', "LGD (Lower
-Garden District Properties), Inc." (renamed from "Lower Garden District
-Properties, Inc." the same day, everywhere, `COMPANY_NAME` included), and
+Garden District) Properties, Inc." (renamed from "Lower Garden District
+Properties, Inc." the same day to "LGD (Lower Garden District Properties),
+Inc.", then on 2026-10-03 to this - everywhere, `COMPANY_NAME` included, and
+in the database by `supabase/migrations/017`), and
 'robertson', "Orange Street, Inc." (that id is the starter accounts', kept
 as data). `supabase/migrations/008_clients.sql` adds `person_clients`
 (`person_id`, `manager_id`; locked to the browser), linking a person to

@@ -258,3 +258,10 @@ change above has been reviewed and applied.
   "Page X of Y" lines and, on the lease, the Lessor blank. No wording in
   the master changed. Every printed document regenerated; page counts at
   every address unchanged.
+
+- **2026-10-03 - Company name: "LGD (Lower Garden District) Properties,
+  Inc."** (the user, "everywhere"; it was "LGD (Lower Garden District
+  Properties), Inc."). Changed in `generate_print_lease.py`'s
+  `COMPANY_NAME`, which every printed document shares. No wording in the
+  master changed. Every printed document regenerated; page counts at every
+  address unchanged.

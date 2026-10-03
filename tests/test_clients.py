@@ -35,7 +35,7 @@ def test_a_login_switches_only_to_a_client_it_is_linked_to():
 
 
 def test_the_clients_names():
-    assert "('lgd', 'LGD (Lower Garden District Properties), Inc.', '', '')" in SQL
+    assert "('lgd', 'LGD (Lower Garden District) Properties, Inc.', '', '')" in SQL
     assert "('robertson', 'Orange Street, Inc.', '', '')" in SQL
 
 

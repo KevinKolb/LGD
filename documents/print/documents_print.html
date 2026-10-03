@@ -25,7 +25,7 @@
     size: letter;
     margin: 0.85in;
     @top-center {
-      content: "LGD (Lower Garden District Properties), Inc. — Page " counter(page)
+      content: "LGD (Lower Garden District) Properties, Inc. — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-variant-numeric: lining-nums;
@@ -33,7 +33,7 @@
       color: #444;
     }
     @bottom-center {
-      content: "LGD (Lower Garden District Properties), Inc. — Page " counter(page)
+      content: "LGD (Lower Garden District) Properties, Inc. — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-variant-numeric: lining-nums;
@@ -459,7 +459,7 @@
 <body>
 <main class="sheet-stack">
 <section class="document sheet" data-doc="application">
-<h1 class="company">LGD (Lower Garden District Properties), Inc.</h1>
+<h1 class="company">LGD (Lower Garden District) Properties, Inc.</h1>
 <p class="subtitle">APPLICATION FOR APARTMENT</p>
 <p class="field row"><span class="label">Address of property</span><span class="blank fixed" data-premises style="flex-grow: 20"></span><span class="label">Desired Date of occupancy</span><span class="blank fixed" style="flex-grow: 12"></span></p>
 <p class="field row"><span class="label">Monthly rental rate $</span><span class="blank fixed" data-fill="rent" style="flex-grow: 10"></span><span class="label">Term of lease</span><span class="blank fixed" data-fill="term" style="flex-grow: 10"></span><span class="label">Security deposit $</span><span class="blank fixed" data-fill="deposit" style="flex-grow: 6"></span></p>
@@ -506,7 +506,7 @@
 <p class="field row"><span class="label">Date</span><span class="blank fixed" style="flex-grow: 34"></span></p>
 </section>
 <section class="document sheet" data-doc="lease">
-<h1 class="company">LGD (Lower Garden District Properties), Inc.</h1>
+<h1 class="company">LGD (Lower Garden District) Properties, Inc.</h1>
 <p class="subtitle">RESIDENTIAL LEASE</p>
 <p class="preamble"><span data-fill="lessor" class="blank medium"></span>(hereinafter referred to as Lessor) hereby leases to <span data-fill="lessee" class="blank medium"></span> (hereinafter referred to as Lessee) the premises known as <span class="blank medium" data-premises></span> in New Orleans, Louisiana for use as a private residence only.</p>
 <p class="section">1. <strong>TERM</strong> This lease is for a term commencing on the <span data-fill="start-day" class="blank tiny"></span> day of <span data-fill="start-month" class="blank word"></span> 20<span data-fill="start-year" class="blank tiny"></span>, and ending on the last day of <span data-fill="end-month" class="blank word"></span> 20 <span data-fill="end-year" class="blank tiny"></span>.  If Lessee, or Lessor, desires that this lease terminate at the expiration of its term, written notice must be given to the other party at least 30 days prior to that date to be effective only on the first day of the month. Failure of either party to give this required notice will automatically renew this lease and all of the terms thereof except that the term of the lease will be one month. This provision is a continuing one and will apply at the expiration of the original term and at the expiration of each subsequent term. All other notices required to or by Lessor, or Lessee, will be in accordance with the law.  If Lessee and Lessor desire to renew this lease at the end of one year, there will be an automatic five percent (5%) increase in the rent.  Failure to give proper moving notice will result in forfeiture of any deposits.</p>
@@ -566,7 +566,7 @@
 </div>
 </section>
 <section class="document sheet" data-doc="deposit">
-<h1 class="company">LGD (Lower Garden District Properties), Inc.</h1>
+<h1 class="company">LGD (Lower Garden District) Properties, Inc.</h1>
 <p class="subtitle">SECURITY DEPOSIT AGREEMENT</p>
 <p class="fill">Received from <span data-fill="lessee" class="blank medium"></span> on <span data-fill="received-date" class="blank word"></span></p>
 <p class="fill"><span data-fill="deposit-words" class="blank medium"></span> dollars $<span data-fill="deposit" class="blank word"></span></p>
@@ -1044,7 +1044,7 @@
       pages.forEach(function (page, i) {
         if (i > 0) { pdf.addPage(); }
         pdf.addImage(page.image, "JPEG", MARGIN_IN, MARGIN_IN, 8.5 - 2 * MARGIN_IN, page.heightIn);
-        // "LGD (Lower Garden District Properties), Inc. - Page 1 of 8", top and
+        // "LGD (Lower Garden District) Properties, Inc. - Page 1 of 8", top and
         // bottom, counting the whole file as a printout does.
         var line = (header ? header + " - " : "") + "Page " + (i + 1) + " of " + pages.length;
         pdf.setFont("times", "normal");
@@ -1632,7 +1632,7 @@
   }
 
   // --- What fills the blanks -----------------------------------------
-  var COMPANY = "LGD (Lower Garden District Properties), Inc.";
+  var COMPANY = "LGD (Lower Garden District) Properties, Inc.";
   if (CLIENT && CLIENT.name && CLIENT.name !== COMPANY) {
     COMPANY = CLIENT.name;
     document.querySelectorAll("h1.company").forEach(function (heading) {

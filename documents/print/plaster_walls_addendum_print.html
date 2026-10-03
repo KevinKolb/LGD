@@ -25,7 +25,7 @@
     size: letter;
     margin: 0.85in;
     @top-center {
-      content: "LGD (Lower Garden District Properties), Inc. — Page " counter(page)
+      content: "LGD (Lower Garden District) Properties, Inc. — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-variant-numeric: lining-nums;
@@ -33,7 +33,7 @@
       color: #444;
     }
     @bottom-center {
-      content: "LGD (Lower Garden District Properties), Inc. — Page " counter(page)
+      content: "LGD (Lower Garden District) Properties, Inc. — Page " counter(page)
                " of " counter(pages);
       font-family: "Gelasio", Georgia, "Times New Roman", Times, serif;
       font-variant-numeric: lining-nums;
@@ -399,7 +399,7 @@
 </head>
 <body>
 <main class="sheet">
-<h1 class="company">LGD (Lower Garden District Properties), Inc.</h1>
+<h1 class="company">LGD (Lower Garden District) Properties, Inc.</h1>
 <p class="subtitle">PLASTER WALLS ADDENDUM</p>
 <p class="incorporation">This Addendum is made part of and incorporated into the Lease Agreement dated <span class="blank word"></span>, 20<span class="blank tiny"></span>, between <span class="blank medium"></span> (Lessor) and <span class="blank medium"></span> (Lessee) for the premises located at <strong><u>1523 St. Andrew St., New Orleans, LA 70130</u></strong>. Where this Addendum and the Lease Agreement differ, this Addendum controls. All other terms of the Lease Agreement remain in full force and effect.</p>
 <p>The walls and ceilings of the leased premises are historical or delicate plaster, not modern drywall.  Plaster is brittle, prone to cracking, and easily damaged by improper hanging methods, excessive weight, or inadequate hardware.  To preserve the plaster walls, Lessee agrees to the following.</p>
@@ -854,7 +854,7 @@
       pages.forEach(function (page, i) {
         if (i > 0) { pdf.addPage(); }
         pdf.addImage(page.image, "JPEG", MARGIN_IN, MARGIN_IN, 8.5 - 2 * MARGIN_IN, page.heightIn);
-        // "LGD (Lower Garden District Properties), Inc. - Page 1 of 8", top and
+        // "LGD (Lower Garden District) Properties, Inc. - Page 1 of 8", top and
         // bottom, counting the whole file as a printout does.
         var line = (header ? header + " - " : "") + "Page " + (i + 1) + " of " + pages.length;
         pdf.setFont("times", "normal");

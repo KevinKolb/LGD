@@ -60,7 +60,7 @@ STARTER: dict[str, Any] = {
     "managers": [
         {
             "id": "lgd",
-            "name": "LGD (Lower Garden District Properties), Inc.",
+            "name": "LGD (Lower Garden District) Properties, Inc.",
             "signer_name": "REPLACE ME",
             "email": "replace-me@example.com",
         },

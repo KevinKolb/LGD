@@ -168,7 +168,7 @@ BLANK = re.compile(r"_{2,}")
 # need their own copy. Hardcoded LGD: a 2.0 migration (see CLAUDE.md).
 # LLC became Inc on 2026-09-28, at the user's request, and the user set
 # this exact form - comma and period - for every document the same day.
-COMPANY_NAME = "LGD (Lower Garden District Properties), Inc."
+COMPANY_NAME = "LGD (Lower Garden District) Properties, Inc."
 # Its id in `managers` and in documents/properties.json. A document is for
 # the client the manager is working in (shared/home.js keeps it in the
 # browser as "lgd-client"); with none known, it is this one.

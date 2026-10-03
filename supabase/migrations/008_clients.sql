@@ -19,7 +19,7 @@
 -- second company has had since the starter accounts; an id is data, so it
 -- stays, and only the name shown changes.
 insert into public.managers (id, name, signer_name, email)
-values ('lgd', 'LGD (Lower Garden District Properties), Inc.', '', ''),
+values ('lgd', 'LGD (Lower Garden District) Properties, Inc.', '', ''),
        ('robertson', 'Orange Street, Inc.', '', '')
 on conflict (id) do update set name = excluded.name;
 

@@ -23,7 +23,7 @@ alter table public.managers add column if not exists address text;
 -- and Steve A. Hartnett signing as Lessor/Agent (his name heads the
 -- security deposit form). Orange Street has none of this yet.
 update public.managers set
-  name = 'LGD (Lower Garden District Properties), Inc.',
+  name = 'LGD (Lower Garden District) Properties, Inc.',
   signer_name = 'Steve A. Hartnett',
   contact_name = 'Pam and Steve Hartnett',
   email = 'LGD@neworleans.properties',

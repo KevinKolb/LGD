@@ -279,7 +279,7 @@
       pages.forEach(function (page, i) {
         if (i > 0) { pdf.addPage(); }
         pdf.addImage(page.image, "JPEG", MARGIN_IN, MARGIN_IN, 8.5 - 2 * MARGIN_IN, page.heightIn);
-        // "LGD (Lower Garden District Properties), Inc. - Page 1 of 8", top and
+        // "LGD (Lower Garden District) Properties, Inc. - Page 1 of 8", top and
         // bottom, counting the whole file as a printout does.
         var line = (header ? header + " - " : "") + "Page " + (i + 1) + " of " + pages.length;
         pdf.setFont("times", "normal");

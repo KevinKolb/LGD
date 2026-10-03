@@ -1275,14 +1275,14 @@ document.getElementById("gate-signout").addEventListener("click", async () => {
   // link to the applicant page, where they choose Apply and create their
   // account with this address. Nothing is sent by the site itself.
   function emailLink(person) {
-    const subject = "Your rental application - LGD (Lower Garden District Properties), Inc.";
+    const subject = "Your rental application - LGD (Lower Garden District) Properties, Inc.";
     const place = apartment(person);
     const apply = new URL("../applicant/", window.location.href).href;
     const body = `Hello${person.first_name ? " " + person.first_name : ""},\n\n`
       + (place ? `You are approved to apply for ${place}. ` : "You are approved to apply. ")
       + `To apply, go to\n${apply}\nchoose Apply, and create your account with this email address `
       + `(${person.email}).\n\n`
-      + "Thank you,\nLGD (Lower Garden District Properties), Inc.";
+      + "Thank you,\nLGD (Lower Garden District) Properties, Inc.";
     return `mailto:${encodeURIComponent(person.email)}`
       + `?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }

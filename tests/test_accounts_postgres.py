@@ -150,7 +150,7 @@ async def test_list_reports_managers_and_password_state(
     await accounts._pg_list(DSN)
 
     out = capsys.readouterr().out
-    assert "lgd" in out and "LGD (Lower Garden District Properties), Inc." in out
+    assert "lgd" in out and "LGD (Lower Garden District) Properties, Inc." in out
     assert "NO PASSWORD" in out
     assert "kevin" in out and "admin" in out
 
