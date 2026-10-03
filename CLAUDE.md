@@ -1096,7 +1096,13 @@ addresses**, so a new address typed on the admin page must also be added
 once under Email Routing -> Destination addresses and its link clicked;
 until then the Worker falls back. An address at residentialguide.app
 itself is refused (it would loop). The page cannot verify addresses in
-Cloudflare itself: that would need a Cloudflare API token on a server.
+Cloudflare itself: that would need a Cloudflare API token on a server. Below it, **Send as manager@residentialguide.app** (the user, same day:
+"add instructions on setting email receiver as a send as of
+manager@residentialguide.app") holds the steps, folded under "Show the
+steps for Gmail": an app password, Gmail's Send mail as through
+smtp.gmail.com:587, confirming through the forwarded mail, replying from
+the address mail came to, and adding `include:_spf.google.com` to the
+domain's SPF record in Cloudflare.
 
 ## Saved for later: `_saved/`
 

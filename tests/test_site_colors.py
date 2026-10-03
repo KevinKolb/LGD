@@ -159,6 +159,9 @@ def test_mail_to_the_domain_is_forwarded_to_the_admin_pages_address() -> None:
     assert "clean like '%@residentialguide.app'" in sql
     admin = (root / "admin" / "index.html").read_text(encoding="utf-8")
     assert 'window.LGD.auth.rpc("set_mail_forward", { address: input.value })' in admin
+    # And how to send as manager@ from the inbox it lands in (the user, same day).
+    assert 'return section("Send as manager@residentialguide.app",' in admin
+    assert "smtp.gmail.com, Port: 587" in admin and "include:_spf.google.com" in admin
     worker = (root / "cloudflare" / "email-worker.js").read_text(encoding="utf-8")
     assert '"/rest/v1/rpc/mail_forward_target"' in worker and "await message.forward(to);" in worker
     assert "sb_secret_" not in worker.replace("sb_secret_...", "")
