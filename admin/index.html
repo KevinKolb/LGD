@@ -126,6 +126,12 @@
   .color-preview .body { padding: 12px 16px; display: flex; gap: 10px; flex-wrap: wrap; background: #fff; }
   .color-preview .sample { padding: 8px 14px; border-radius: 6px; font-weight: 600; font-size: 14px; }
   .color-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .mail-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .mail-row input { flex: 1 1 220px; font: inherit; font-size: 16px; padding: 8px 10px;
+                    border: 1px solid var(--line); border-radius: 6px; }
+  .mail-row button { font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 6px; cursor: pointer;
+                     border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink, #fff); }
+  .mail-row button:disabled { opacity: .5; cursor: progress; }
   .color-actions button {
     font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 6px; cursor: pointer;
     border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
@@ -339,6 +345,44 @@ function colorsSection(backend) {
     main.row, second.row, previewBox, el("div", { class: "color-actions" }, save, reset), message);
 }
 
+// --- Email forwarding (the user, 2026-10-03) --------------------------------
+//
+// "setup manager@residentialguide.app and a catch all on cloudflare to
+// forward to an email address specified on the admin tab." Mail to any
+// address at residentialguide.app goes, through Cloudflare's Email Worker
+// (cloudflare/email-worker.js), to the address saved here - one for the
+// whole site (set_mail_forward, supabase/migrations/018).
+function mailSection() {
+  const input = el("input", { type: "email", id: "mail-forward", autocomplete: "email",
+                              placeholder: "you@example.com", "aria-label": "Forward mail to" });
+  const save = el("button", { type: "button", text: "Save" });
+  const message = el("p", { class: "color-msg", role: "status", "aria-live": "polite" });
+  const say = (text, kind) => { message.textContent = text; message.className = "color-msg" + (kind ? " " + kind : ""); };
+  save.addEventListener("click", async () => {
+    save.disabled = true;
+    say("Saving…");
+    try {
+      const result = await window.LGD.auth.rpc("set_mail_forward", { address: input.value });
+      input.value = result.address || "";
+      say(result.address
+        ? "Saved. Mail to residentialguide.app now goes to " + result.address +
+          ". If it is new, add it once in Cloudflare under Email Routing, Destination addresses, and click the link Cloudflare emails."
+        : "Cleared. Mail goes to the fallback address set in Cloudflare.");
+    } catch (error) {
+      say(error.message, "error");
+    } finally {
+      save.disabled = false;
+    }
+  });
+  window.LGD.auth.rpc("get_mail_forward", {})
+    .then((result) => { input.value = result.address || ""; })
+    .catch(() => say("The saved address could not be loaded. Has migration 018 been run?", "error"));
+  return section("Email for residentialguide.app",
+    "Mail sent to manager@residentialguide.app, or to any other address at residentialguide.app, " +
+      "is forwarded to this address. It is one address for the whole site.",
+    el("div", { class: "mail-row" }, input, save), message);
+}
+
 async function boot() {
   const app = document.getElementById("app");
   try {
@@ -406,7 +450,8 @@ async function explainWithoutBackend(app) {
       return;
     }
     app.replaceChildren(
-      colorsSection("supabase"));
+      colorsSection("supabase"),
+      mailSection());
   } catch (error) {
     say("The admin page could not load: " + (error && error.message ? error.message : error) +
         ". Check your connection and reload.");

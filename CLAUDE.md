@@ -1077,6 +1077,27 @@ named the old path. Staying on GitHub Pages was the user's choice;
 Cloudflare Pages was considered (free, and its Functions could send email
 and Supabase invites server-side) and may be revisited.
 
+### Email at residentialguide.app
+
+The user, 2026-10-03: "setup manager@residentialguide.app and a catch all
+on cloudflare to forward to an email address specified on the admin tab."
+Cloudflare Email Routing (free; it adds its own MX and SPF records to the
+domain's DNS) sends `manager@` and the catch-all to an **Email Worker**,
+`cloudflare/email-worker.js`, pasted into Cloudflare by hand - this
+repository does not deploy it. For each message the Worker asks
+`mail_forward_target()` (`supabase/migrations/018`, granted to
+`service_role` only) for the address saved on the Admin Portal's **Email
+for residentialguide.app** section (`get_mail_forward` /
+`set_mail_forward`, managers; `site_settings` key `mail_forward`, one for
+the whole site), and forwards there, else to its `FALLBACK`. Its
+`SUPABASE_KEY` is the project's secret key, a Worker secret - never in this
+repository or a page. Cloudflare forwards only to **verified destination
+addresses**, so a new address typed on the admin page must also be added
+once under Email Routing -> Destination addresses and its link clicked;
+until then the Worker falls back. An address at residentialguide.app
+itself is refused (it would loop). The page cannot verify addresses in
+Cloudflare itself: that would need a Cloudflare API token on a server.
+
 ## Saved for later: `_saved/`
 
 Finished work that is not live yet goes in `_saved/`, with a line in its

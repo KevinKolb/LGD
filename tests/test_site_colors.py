@@ -143,3 +143,22 @@ def test_signed_out_pages_are_black_white_and_gray():
     page = (ROOT / "index.html").read_text(encoding="utf-8")
     assert '<script src="shared/theme.js"></script>' in page
     assert "theme-orange" not in page and "lgd-org" not in page
+
+
+def test_mail_to_the_domain_is_forwarded_to_the_admin_pages_address() -> None:
+    """The user, 2026-10-03: "setup manager@residentialguide.app and a catch
+    all on cloudflare to forward to an email address specified on the admin
+    tab." Migration 018, the admin page's section and the Email Worker."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    sql = (root / "supabase" / "migrations" / "018_mail_forward.sql").read_text(encoding="utf-8")
+    assert "grant execute on function public.set_mail_forward(text) to authenticated;" in sql
+    # Only the Worker, with the secret key, reads where mail goes.
+    assert "revoke all on function public.mail_forward_target() from public, anon, authenticated;" in sql
+    assert "grant execute on function public.mail_forward_target() to service_role;" in sql
+    assert "clean like '%@residentialguide.app'" in sql
+    admin = (root / "admin" / "index.html").read_text(encoding="utf-8")
+    assert 'window.LGD.auth.rpc("set_mail_forward", { address: input.value })' in admin
+    worker = (root / "cloudflare" / "email-worker.js").read_text(encoding="utf-8")
+    assert '"/rest/v1/rpc/mail_forward_target"' in worker and "await message.forward(to);" in worker
+    assert "sb_secret_" not in worker.replace("sb_secret_...", "")
